@@ -36,7 +36,7 @@ export async function createCertificate(formData: FormData): Promise<ActionResul
 
   const parsed = createCertificateSchema.safeParse(raw);
   if (!parsed.success) {
-    return { success: false, error: parsed.error.errors[0].message };
+    return { success: false, error: parsed.error.issues[0].message };
   }
 
   const data = parsed.data;
@@ -108,7 +108,7 @@ export async function updateCertificate(
   };
 
   const parsed = updateCertificateSchema.safeParse(raw);
-  if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
+  if (!parsed.success) return { success: false, error: parsed.error.issues[0].message };
 
   const data = parsed.data;
 

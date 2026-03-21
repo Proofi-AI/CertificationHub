@@ -27,7 +27,7 @@ export async function updateProfile(formData: FormData): Promise<ActionResult<Us
   };
 
   const parsed = updateProfileSchema.safeParse(raw);
-  if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
+  if (!parsed.success) return { success: false, error: parsed.error.issues[0].message };
 
   const data = parsed.data;
 

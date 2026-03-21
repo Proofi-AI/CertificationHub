@@ -31,13 +31,13 @@ export function EmailLayout({ preview, children }: EmailLayoutProps) {
           }}
         >
           <Text style={{ fontSize: "20px", fontWeight: "bold", color: "#111827", marginBottom: "4px" }}>
-            CertificationHub
+            proofi.ai
           </Text>
           <Hr style={{ borderColor: "#e5e7eb", margin: "16px 0 24px" }} />
           <Section>{children}</Section>
           <Hr style={{ borderColor: "#e5e7eb", margin: "24px 0 16px" }} />
           <Text style={{ fontSize: "12px", color: "#9ca3af" }}>
-            © {new Date().getFullYear()} CertificationHub. All rights reserved.
+            © {new Date().getFullYear()} proofi.ai. All rights reserved.
           </Text>
         </Container>
       </Body>

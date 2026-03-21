@@ -9,9 +9,8 @@ import type { ActionResult } from "@/types";
 import { createElement } from "react";
 import { VerificationEmail } from "../../emails/VerificationEmail";
 
-export async function registerUser(formData: FormData): Promise<ActionResult<{ email: string }>> {
+export async function registerUser(formData: FormData): Promise<ActionResult<{ email: string; password: string }>> {
   const raw = {
-    name: formData.get("name"),
     email: formData.get("email"),
     password: formData.get("password"),
     confirmPassword: formData.get("confirmPassword"),
@@ -19,10 +18,10 @@ export async function registerUser(formData: FormData): Promise<ActionResult<{ e
 
   const parsed = registerSchema.safeParse(raw);
   if (!parsed.success) {
-    return { success: false, error: parsed.error.errors[0].message };
+    return { success: false, error: parsed.error.issues[0].message };
   }
 
-  const { name, email, password } = parsed.data;
+  const { email, password } = parsed.data;
 
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) {
@@ -33,15 +32,17 @@ export async function registerUser(formData: FormData): Promise<ActionResult<{ e
 
   const user = await prisma.user.create({
     data: {
-      name,
       email,
       passwordHash,
     },
   });
 
-  await sendVerificationEmail(user.id, email, name);
+  // Send verification email in the background — don't block sign-in
+  sendVerificationEmail(user.id, email, null).catch((err) =>
+    console.error("[register] Failed to send verification email:", err)
+  );
 
-  return { success: true, data: { email } };
+  return { success: true, data: { email, password } };
 }
 
 export async function sendVerificationEmail(
@@ -64,7 +65,7 @@ export async function sendVerificationEmail(
 
   await sendEmail({
     to: email,
-    subject: "Verify your CertificationHub email",
+    subject: "Verify your proofi.ai email",
     template: createElement(VerificationEmail, {
       name: name ?? "there",
       verifyUrl,
@@ -77,12 +78,13 @@ export async function resendVerificationEmail(email: string): Promise<ActionResu
   if (!user) return { success: false, error: "User not found." };
   if (user.emailVerified) return { success: false, error: "Email is already verified." };
 
+  // Rate limit: check if a token was created in the last 5 minutes using expiresAt
   const recentToken = await prisma.verificationToken.findFirst({
     where: {
       userId: user.id,
       type: "EMAIL_VERIFICATION",
-      createdAt: { gte: new Date(Date.now() - 5 * 60 * 1000) },
-    } as Parameters<typeof prisma.verificationToken.findFirst>[0]["where"],
+      expiresAt: { gte: new Date(Date.now() + 23 * 60 * 60 * 1000) }, // created < 1hr ago
+    },
   });
 
   if (recentToken) {

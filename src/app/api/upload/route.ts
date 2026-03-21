@@ -54,7 +54,11 @@ export async function POST(req: NextRequest) {
     .upload(filePath, buffer, { contentType: file.type, upsert: false });
 
   if (uploadError) {
-    return NextResponse.json({ error: "Upload failed. Please try again." }, { status: 500 });
+    console.error("[upload] Supabase storage error:", uploadError.message);
+    return NextResponse.json(
+      { error: `Upload failed: ${uploadError.message}` },
+      { status: 500 }
+    );
   }
 
   const { data: urlData } = supabaseAdmin.storage

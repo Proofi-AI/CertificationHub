@@ -8,12 +8,12 @@ interface VerificationEmailProps {
 
 export function VerificationEmail({ name, verifyUrl }: VerificationEmailProps) {
   return (
-    <EmailLayout preview="Verify your CertificationHub email address">
+    <EmailLayout preview="Verify your proofi.ai email address">
       <Text style={{ fontSize: "16px", color: "#374151", lineHeight: "1.6" }}>
         Hi {name},
       </Text>
       <Text style={{ fontSize: "16px", color: "#374151", lineHeight: "1.6" }}>
-        Thanks for signing up for CertificationHub! Please verify your email address by clicking
+        Thanks for signing up for proofi.ai! Please verify your email address by clicking
         the button below. This link expires in 24 hours.
       </Text>
       <Button

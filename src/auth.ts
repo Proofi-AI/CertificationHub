@@ -12,7 +12,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(prisma),
   session: { strategy: "jwt" },
   providers: [
-    ...authConfig.providers.filter((p) => p.id !== "credentials"),
+    ...authConfig.providers.filter((p) => (p as { id?: string }).id !== "credentials"),
     Credentials({
       name: "credentials",
       credentials: {
@@ -49,6 +49,17 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.id = user.id;
         token.username = (user as { username?: string | null }).username ?? null;
         token.emailVerified = (user as { emailVerified?: Date | null }).emailVerified ?? null;
+      }
+      // If emailVerified is still null, re-check the DB (user may have verified
+      // after the token was first issued without signing out)
+      if (!token.emailVerified && token.id && !account) {
+        const dbUser = await prisma.user.findUnique({
+          where: { id: token.id as string },
+          select: { emailVerified: true },
+        });
+        if (dbUser?.emailVerified) {
+          token.emailVerified = dbUser.emailVerified;
+        }
       }
       // On OAuth sign-in, ensure username is set
       if (account && account.provider !== "credentials") {

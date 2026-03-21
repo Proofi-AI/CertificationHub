@@ -7,41 +7,36 @@ export default auth(async function middleware(req) {
   const { nextUrl } = req;
   const isLoggedIn = !!req.auth;
   const session = req.auth;
+  const isEmailVerified = !!session?.user?.emailVerified;
 
   const isPublicProfile = nextUrl.pathname.startsWith("/u/");
   const isApiAuth = nextUrl.pathname.startsWith("/api/auth");
   const isApiCron = nextUrl.pathname.startsWith("/api/cron");
+  const isApiVerify = nextUrl.pathname.startsWith("/api/verify-email");
   const isAuthRoute =
     nextUrl.pathname.startsWith("/login") ||
     nextUrl.pathname.startsWith("/register");
   const isVerifyEmail = nextUrl.pathname.startsWith("/verify-email");
   const isLanding = nextUrl.pathname === "/";
 
-  // Always allow public routes
-  if (isPublicProfile || isApiAuth || isApiCron || isLanding || isVerifyEmail) {
+  // Always allow public + auth-infrastructure routes
+  if (isPublicProfile || isApiAuth || isApiCron || isApiVerify || isLanding) {
     return;
   }
 
-  // Redirect logged-in users away from auth pages
-  if (isAuthRoute && isLoggedIn) {
-    return Response.redirect(new URL("/dashboard", nextUrl));
-  }
+  // Always allow the verify-email page (signed-in or not)
+  if (isVerifyEmail) return;
 
-  // Redirect unauthenticated users to login
-  if (!isAuthRoute && !isLoggedIn) {
+  // Unauthenticated user trying to access a protected page → send to login
+  if (!isLoggedIn && !isAuthRoute) {
     const loginUrl = new URL("/login", nextUrl);
     loginUrl.searchParams.set("callbackUrl", nextUrl.pathname);
     return Response.redirect(loginUrl);
   }
 
-  // Force email verification wall for credentials users
-  if (
-    isLoggedIn &&
-    !session?.user?.emailVerified &&
-    !isVerifyEmail &&
-    !isApiAuth
-  ) {
-    return Response.redirect(new URL("/verify-email", nextUrl));
+  // Signed-in user visiting login/register → send to dashboard
+  if (isAuthRoute && isLoggedIn) {
+    return Response.redirect(new URL("/dashboard", nextUrl));
   }
 });
 

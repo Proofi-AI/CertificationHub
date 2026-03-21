@@ -13,12 +13,7 @@ export const authConfig: NextAuthConfig = {
     }),
     Apple({
       clientId: process.env.APPLE_ID!,
-      clientSecret: {
-        appleId: process.env.APPLE_ID!,
-        teamId: process.env.APPLE_TEAM_ID!,
-        privateKey: process.env.APPLE_PRIVATE_KEY!,
-        keyId: process.env.APPLE_KEY_ID!,
-      },
+      clientSecret: process.env.APPLE_PRIVATE_KEY ?? "",
     }),
     Credentials({
       name: "credentials",
@@ -37,21 +32,21 @@ export const authConfig: NextAuthConfig = {
     error: "/login",
   },
   callbacks: {
-    authorized({ auth, request: { nextUrl } }) {
-      const isLoggedIn = !!auth?.user;
-      const isAuthRoute = nextUrl.pathname.startsWith("/login") || nextUrl.pathname.startsWith("/register");
-      const isPublicProfile = nextUrl.pathname.startsWith("/u/");
-      const isVerifyEmail = nextUrl.pathname.startsWith("/verify-email");
-      const isApiAuth = nextUrl.pathname.startsWith("/api/auth");
-
-      if (isPublicProfile || isApiAuth) return true;
-      if (isVerifyEmail) return true;
-      if (isAuthRoute) {
-        if (isLoggedIn) return Response.redirect(new URL("/dashboard", nextUrl));
-        return true;
-      }
-      if (!isLoggedIn) return false;
+    // Always allow — the custom middleware in middleware.ts handles all routing logic.
+    authorized() {
       return true;
+    },
+    // Map JWT token fields to session so middleware can read them.
+    session({ session, token }) {
+      if (token) {
+        (session.user as { id?: string; username?: string | null; emailVerified?: Date | null }).id =
+          token.id as string;
+        (session.user as { id?: string; username?: string | null; emailVerified?: Date | null }).username =
+          (token.username as string | null) ?? null;
+        (session.user as { id?: string; username?: string | null; emailVerified?: Date | null }).emailVerified =
+          (token.emailVerified as Date | null) ?? null;
+      }
+      return session;
     },
   },
 };

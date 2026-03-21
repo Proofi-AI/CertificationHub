@@ -33,5 +33,9 @@ export async function GET(req: NextRequest) {
     }),
   ]);
 
-  return NextResponse.redirect(new URL("/login?verified=true", req.url));
+  // Redirect to sign-out first so the stale JWT (which has emailVerified=null)
+  // is cleared. NextAuth will redirect to /login after signing out.
+  const signOutUrl = new URL("/api/auth/signout", req.url);
+  signOutUrl.searchParams.set("callbackUrl", "/login?verified=true");
+  return NextResponse.redirect(signOutUrl);
 }
