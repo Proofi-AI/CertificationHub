@@ -29,7 +29,7 @@ export default function SignUpPage() {
 
     const supabase = createClient();
 
-    const { error: signUpError } = await supabase.auth.signUp({
+    const { data, error: signUpError } = await supabase.auth.signUp({
       email: form.email,
       password: form.password,
       options: {
@@ -45,6 +45,14 @@ export default function SignUpPage() {
       } else {
         setError(signUpError.message);
       }
+      setLoading(false);
+      return;
+    }
+
+    // Supabase returns no error but empty identities when the email is already registered.
+    // This is intentional on their end (prevents email enumeration) but we handle it explicitly.
+    if (data.user && data.user.identities && data.user.identities.length === 0) {
+      setError("An account with this email already exists. Try signing in instead.");
       setLoading(false);
       return;
     }
