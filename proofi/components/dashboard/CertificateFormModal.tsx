@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { Certificate } from "@prisma/client";
-import { DOMAINS, MAX_FILE_SIZE_BYTES, ACCEPTED_IMAGE_TYPES } from "@/lib/constants";
+import { DOMAINS, MAX_FILE_SIZE_BYTES, ACCEPTED_FILE_TYPES, ACCEPTED_FILE_ACCEPT } from "@/lib/constants";
 import { uploadCertificateImage } from "@/lib/utils/storage";
 
 interface Props {
@@ -27,10 +27,15 @@ export default function CertificateFormModal({ initialData, onSave, onClose }: P
     domain: initialData?.domain ?? DOMAINS[0].value,
     customDomain: "",
     credentialId: initialData?.credentialId ?? "",
-    imageUrl: initialData?.imageUrl ?? "",
   });
   const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(initialData?.imageUrl ?? null);
+  const [imagePreview, setImagePreview] = useState<string | null>(
+    initialData?.imageUrl && !initialData.imageUrl.endsWith(".pdf") ? initialData.imageUrl : null
+  );
+  const [existingFileUrl, setExistingFileUrl] = useState<string | null>(initialData?.imageUrl ?? null);
+  const [isPdf, setIsPdf] = useState(
+    initialData?.imageUrl?.endsWith(".pdf") ?? false
+  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -47,11 +52,11 @@ export default function CertificateFormModal({ initialData, onSave, onClose }: P
     setError(null);
   };
 
-  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
-      setError("Only JPG, PNG, or WebP images are accepted.");
+    if (!ACCEPTED_FILE_TYPES.includes(file.type)) {
+      setError("Only JPG, PNG, WebP, or PDF files are accepted.");
       return;
     }
     if (file.size > MAX_FILE_SIZE_BYTES) {
@@ -59,69 +64,113 @@ export default function CertificateFormModal({ initialData, onSave, onClose }: P
       return;
     }
     setImageFile(file);
-    setImagePreview(URL.createObjectURL(file));
+    setError(null);
+    if (file.type === "application/pdf") {
+      setImagePreview(null);
+      setIsPdf(true);
+    } else {
+      setImagePreview(URL.createObjectURL(file));
+      setIsPdf(false);
+    }
   };
+
+  const clearFile = () => {
+    setImageFile(null);
+    setImagePreview(null);
+    setIsPdf(false);
+    setExistingFileUrl(null);
+    if (fileRef.current) fileRef.current.value = "";
+  };
+
+  const hasFile = !!imageFile || !!existingFileUrl;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
+
     if (!form.name || !form.issuer || !form.issuedAt || !form.domain) {
       setError("Please fill in all required fields.");
       return;
     }
 
-    const effectiveDomain = form.domain === "Other" && form.customDomain.trim()
-      ? form.customDomain.trim()
-      : form.domain;
+    // Image is mandatory
+    if (!hasFile) {
+      setError("Please upload a certificate image or PDF.");
+      return;
+    }
+
+    const effectiveDomain =
+      form.domain === "Other" && form.customDomain.trim()
+        ? form.customDomain.trim()
+        : form.domain;
 
     setLoading(true);
-    setError(null);
 
     try {
-      let imageUrl = form.imageUrl;
+      let imageUrl = existingFileUrl ?? "";
 
-      if (imageFile) {
-        const tempId = isEdit ? initialData!.id : crypto.randomUUID();
-        // We need the userId — we get it from the API after creating
-        // For edit, upload now; for create, upload and pass URL
-        imageUrl = await uploadCertificateImage(imageFile, "__temp__", tempId);
-      }
+      if (isEdit) {
+        // For edits: update the record first, then upload new file if selected
+        const payload = {
+          name: form.name,
+          issuer: form.issuer,
+          issuedAt: form.issuedAt,
+          expiresAt: form.noExpiry ? null : form.expiresAt || null,
+          domain: effectiveDomain,
+          credentialId: form.credentialId || null,
+          imageUrl,
+        };
 
-      const payload = {
-        name: form.name,
-        issuer: form.issuer,
-        issuedAt: form.issuedAt,
-        expiresAt: form.noExpiry ? null : (form.expiresAt || null),
-        domain: effectiveDomain,
-        credentialId: form.credentialId || null,
-        imageUrl: imageUrl || null,
-      };
-
-      const url = isEdit ? `/api/certificates/${initialData!.id}` : "/api/certificates";
-      const method = isEdit ? "PUT" : "POST";
-
-      const res = await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      const json = await res.json();
-      if (!res.ok) { setError(json.error || "Something went wrong."); setLoading(false); return; }
-
-      // If we used __temp__ userId for image upload, re-upload with real userId
-      if (imageFile && !isEdit) {
-        const realId = json.data.id;
-        const userId = json.data.userId;
-        const finalUrl = await uploadCertificateImage(imageFile, userId, realId);
-        const patchRes = await fetch(`/api/certificates/${realId}`, {
+        const res = await fetch(`/api/certificates/${initialData!.id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ imageUrl: finalUrl }),
+          body: JSON.stringify(payload),
+        });
+        const json = await res.json();
+        if (!res.ok) { setError(json.error || "Save failed."); setLoading(false); return; }
+
+        // Upload new file if selected
+        if (imageFile) {
+          imageUrl = await uploadCertificateImage(imageFile, json.data.userId, json.data.id);
+          const patchRes = await fetch(`/api/certificates/${initialData!.id}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ imageUrl }),
+          });
+          const patchJson = await patchRes.json();
+          onSave(patchJson.data);
+        } else {
+          onSave(json.data);
+        }
+      } else {
+        // For creates: create record first to get the id, then upload
+        const res = await fetch("/api/certificates", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: form.name,
+            issuer: form.issuer,
+            issuedAt: form.issuedAt,
+            expiresAt: form.noExpiry ? null : form.expiresAt || null,
+            domain: effectiveDomain,
+            credentialId: form.credentialId || null,
+            imageUrl: null,
+          }),
+        });
+        const json = await res.json();
+        if (!res.ok) { setError(json.error || "Failed to create certificate."); setLoading(false); return; }
+
+        // Upload the file using the real certId
+        imageUrl = await uploadCertificateImage(imageFile!, json.data.userId, json.data.id);
+
+        // Update the certificate with the imageUrl
+        const patchRes = await fetch(`/api/certificates/${json.data.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ imageUrl }),
         });
         const patchJson = await patchRes.json();
         onSave(patchJson.data);
-      } else {
-        onSave(json.data);
       }
 
       onClose();
@@ -151,7 +200,9 @@ export default function CertificateFormModal({ initialData, onSave, onClose }: P
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           {/* Certificate name */}
           <div>
-            <label className="text-xs text-white/50 mb-1.5 block">Certificate name <span className="text-red-400">*</span></label>
+            <label className="text-xs text-white/50 mb-1.5 block">
+              Certificate name <span className="text-red-400">*</span>
+            </label>
             <input
               value={form.name}
               onChange={(e) => handleField("name", e.target.value)}
@@ -163,7 +214,9 @@ export default function CertificateFormModal({ initialData, onSave, onClose }: P
 
           {/* Issuer */}
           <div>
-            <label className="text-xs text-white/50 mb-1.5 block">Issuer / Company <span className="text-red-400">*</span></label>
+            <label className="text-xs text-white/50 mb-1.5 block">
+              Issuer / Company <span className="text-red-400">*</span>
+            </label>
             <input
               value={form.issuer}
               onChange={(e) => handleField("issuer", e.target.value)}
@@ -176,7 +229,9 @@ export default function CertificateFormModal({ initialData, onSave, onClose }: P
           {/* Dates */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-xs text-white/50 mb-1.5 block">Date issued <span className="text-red-400">*</span></label>
+              <label className="text-xs text-white/50 mb-1.5 block">
+                Date issued <span className="text-red-400">*</span>
+              </label>
               <input
                 type="date"
                 value={form.issuedAt}
@@ -210,7 +265,9 @@ export default function CertificateFormModal({ initialData, onSave, onClose }: P
 
           {/* Domain */}
           <div>
-            <label className="text-xs text-white/50 mb-1.5 block">Domain <span className="text-red-400">*</span></label>
+            <label className="text-xs text-white/50 mb-1.5 block">
+              Domain <span className="text-red-400">*</span>
+            </label>
             <select
               value={form.domain}
               onChange={(e) => handleField("domain", e.target.value)}
@@ -231,41 +288,89 @@ export default function CertificateFormModal({ initialData, onSave, onClose }: P
             )}
           </div>
 
-          {/* Image upload */}
+          {/* File upload — mandatory */}
           <div>
-            <label className="text-xs text-white/50 mb-1.5 block">Certificate image</label>
-            {imagePreview ? (
-              <div className="relative rounded-xl overflow-hidden border border-white/10 h-36">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
-                <button
-                  type="button"
-                  onClick={() => { setImageFile(null); setImagePreview(null); handleField("imageUrl", ""); }}
-                  className="absolute top-2 right-2 w-7 h-7 bg-black/60 hover:bg-black/80 rounded-full flex items-center justify-center text-white/80 hover:text-white transition-all"
-                >
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
+            <label className="text-xs text-white/50 mb-1.5 block">
+              Certificate file <span className="text-red-400">*</span>
+              <span className="text-white/25 ml-1">(Image or PDF, max 5MB)</span>
+            </label>
+
+            {hasFile ? (
+              <div className="relative rounded-xl border border-white/10 overflow-hidden">
+                {/* Image preview */}
+                {imagePreview && (
+                  <div className="h-40">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
+                  </div>
+                )}
+                {/* PDF indicator */}
+                {isPdf && (
+                  <div className="h-24 flex items-center justify-center gap-3 bg-red-500/10">
+                    <svg className="w-8 h-8 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+                    </svg>
+                    <div>
+                      <p className="text-sm font-medium text-red-300">PDF selected</p>
+                      <p className="text-xs text-white/40">{imageFile?.name ?? "Existing PDF"}</p>
+                    </div>
+                  </div>
+                )}
+                {/* Existing image from URL (no local file) */}
+                {!imagePreview && !isPdf && existingFileUrl && (
+                  <div className="h-40">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={existingFileUrl} alt="Current" className="w-full h-full object-cover" />
+                  </div>
+                )}
+                {/* Actions bar */}
+                <div className="flex items-center gap-2 p-3 bg-black/20">
+                  <button
+                    type="button"
+                    onClick={() => fileRef.current?.click()}
+                    className="flex-1 text-xs text-white/50 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg py-1.5 transition-all"
+                  >
+                    Replace file
+                  </button>
+                  <button
+                    type="button"
+                    onClick={clearFile}
+                    className="text-xs text-red-400 hover:text-red-300 bg-red-500/10 hover:bg-red-500/15 border border-red-500/20 rounded-lg py-1.5 px-3 transition-all"
+                  >
+                    Remove
+                  </button>
+                </div>
               </div>
             ) : (
               <button
                 type="button"
                 onClick={() => fileRef.current?.click()}
-                className="w-full h-24 border border-dashed border-white/15 hover:border-violet-500/40 rounded-xl flex flex-col items-center justify-center gap-2 text-white/30 hover:text-white/60 transition-all"
+                className="w-full h-28 border-2 border-dashed border-white/15 hover:border-violet-500/50 rounded-xl flex flex-col items-center justify-center gap-2 text-white/30 hover:text-white/60 transition-all"
               >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
                 </svg>
-                <span className="text-xs">Click to upload image</span>
+                <div className="text-center">
+                  <p className="text-xs font-medium">Click to upload</p>
+                  <p className="text-xs text-white/20 mt-0.5">JPG, PNG, WebP, or PDF</p>
+                </div>
               </button>
             )}
-            <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleImageSelect} />
+
+            <input
+              ref={fileRef}
+              type="file"
+              accept={ACCEPTED_FILE_ACCEPT}
+              className="hidden"
+              onChange={handleFileSelect}
+            />
           </div>
 
           {/* Credential ID */}
           <div>
-            <label className="text-xs text-white/50 mb-1.5 block">Credential ID <span className="text-white/25">(optional)</span></label>
+            <label className="text-xs text-white/50 mb-1.5 block">
+              Credential ID <span className="text-white/25">(optional)</span>
+            </label>
             <input
               value={form.credentialId}
               onChange={(e) => handleField("credentialId", e.target.value)}
@@ -284,7 +389,7 @@ export default function CertificateFormModal({ initialData, onSave, onClose }: P
             </div>
           )}
 
-          {/* Submit */}
+          {/* Buttons */}
           <div className="flex gap-3 pt-2">
             <button
               type="button"
@@ -304,7 +409,7 @@ export default function CertificateFormModal({ initialData, onSave, onClose }: P
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                   </svg>
-                  Saving…
+                  {imageFile && !isEdit ? "Uploading & saving…" : "Saving…"}
                 </span>
               ) : (
                 isEdit ? "Save changes" : "Add certificate"

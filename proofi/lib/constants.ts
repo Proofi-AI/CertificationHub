@@ -32,5 +32,6 @@ export const DOMAIN_GRAD: Record<string, string> = {
 };
 
 export const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
-export const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
+export const ACCEPTED_FILE_TYPES = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
+export const ACCEPTED_FILE_ACCEPT = "image/jpeg,image/png,image/webp,application/pdf";
 export const SLUG_REGEX = /^[a-z0-9-]{3,30}$/;
