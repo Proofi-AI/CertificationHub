@@ -1,17 +1,53 @@
 @import "tailwindcss";
 
+/* ─── Dark-mode variant ─────────────────────────────────────── */
+/* dark: classes activate whenever an ancestor has .dark */
+@variant dark (.dark &);
+
+/* ─── Theme tokens ──────────────────────────────────────────── */
 :root {
-  --background: #0a0a0f;
+  /* Light mode (default) */
+  --bg:            #f1f1f7;
+  --surface:       #ffffff;
+  --surface-alt:   #f6f6fb;
+  --border:        rgba(0, 0, 0, 0.08);
+  --border-input:  rgba(0, 0, 0, 0.10);
+  --border-hover:  rgba(0, 0, 0, 0.14);
+  --nav-bg:        rgba(241, 241, 247, 0.88);
+  --hover-bg:      rgba(0, 0, 0, 0.04);
+  --hover-bg-2:    rgba(0, 0, 0, 0.07);
+  --input-bg:      rgba(0, 0, 0, 0.04);
+  --card-shadow:   0 2px 12px rgba(0, 0, 0, 0.07), 0 1px 3px rgba(0, 0, 0, 0.04);
+  --card-glow-mul: 0 4px 20px rgba(0, 0, 0, 0.10);
+  --scrollbar-bg:  #e5e5ef;
+  --scrollbar-thumb: #b0b0c4;
+
+  --background: #f1f1f7;
+  --foreground: #0d0d1a;
+}
+
+.dark {
+  /* Dark mode */
+  --bg:            #04040a;
+  --surface:       #0d0d18;
+  --surface-alt:   #111120;
+  --border:        rgba(255, 255, 255, 0.06);
+  --border-input:  rgba(255, 255, 255, 0.08);
+  --border-hover:  rgba(255, 255, 255, 0.11);
+  --nav-bg:        rgba(4, 4, 10, 0.85);
+  --hover-bg:      rgba(255, 255, 255, 0.05);
+  --hover-bg-2:    rgba(255, 255, 255, 0.08);
+  --input-bg:      rgba(255, 255, 255, 0.04);
+  --card-shadow:   0 2px 16px rgba(0, 0, 0, 0.35);
+  --card-glow-mul: 0 4px 16px rgba(0, 0, 0, 0.50);
+  --scrollbar-bg:  #0a0a0f;
+  --scrollbar-thumb: #374151;
+
+  --background: #04040a;
   --foreground: #f0f0f5;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
+/* ─── Base ──────────────────────────────────────────────────── */
 body {
   background: var(--background);
   color: var(--foreground);
@@ -20,11 +56,23 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-html {
-  scroll-behavior: smooth;
+html { scroll-behavior: smooth; }
+
+/* ─── Scrollbar ─────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--scrollbar-bg); }
+::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 3px; }
+
+/* ─── Autofill ──────────────────────────────────────────────── */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--foreground);
+  -webkit-box-shadow: 0 0 0px 1000px var(--surface) inset;
+  transition: background-color 5000s ease-in-out 0s;
 }
 
-/* Gradient text */
+/* ─── Utilities ─────────────────────────────────────────────── */
 .gradient-text {
   background: linear-gradient(135deg, #a78bfa 0%, #60a5fa 50%, #34d399 100%);
   -webkit-background-clip: text;
@@ -32,40 +80,8 @@ html {
   background-clip: text;
 }
 
-/* Glass card */
-.glass {
-  background: rgba(255, 255, 255, 0.04);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-/* Animated gradient BG */
-@keyframes gradient-shift {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
-}
-
 @keyframes float {
   0%, 100% { transform: translateY(0px); }
-  50% { transform: translateY(-12px); }
+  50%       { transform: translateY(-12px); }
 }
-
-.float-animation {
-  animation: float 5s ease-in-out infinite;
-}
-
-/* Custom scrollbar */
-::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: #0a0a0f; }
-::-webkit-scrollbar-thumb { background: #374151; border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: #4b5563; }
-
-/* Autofill fix */
-input:-webkit-autofill,
-input:-webkit-autofill:hover,
-input:-webkit-autofill:focus {
-  -webkit-text-fill-color: #f0f0f5;
-  -webkit-box-shadow: 0 0 0px 1000px #111827 inset;
-  transition: background-color 5000s ease-in-out 0s;
-}
+.float-animation { animation: float 5s ease-in-out infinite; }

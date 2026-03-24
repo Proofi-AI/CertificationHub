@@ -12,18 +12,17 @@ export default async function SettingsPage() {
   const profile = await ensureUserRecord(user);
 
   return (
-    <div className="min-h-screen text-[#f0f0f5]" style={{ background: "#04040a" }}>
-
-      {/* Background glow */}
-      <div className="fixed top-0 right-0 w-[700px] h-[500px] pointer-events-none" style={{ background: "radial-gradient(ellipse at top right, rgba(124,58,237,0.05), transparent 70%)" }} />
-      <div className="fixed bottom-0 left-0 w-[500px] h-[400px] pointer-events-none" style={{ background: "radial-gradient(ellipse at bottom left, rgba(59,130,246,0.04), transparent 70%)" }} />
+    <div className="min-h-screen" style={{ background: "var(--bg)", color: "var(--foreground)" }}>
+      {/* Subtle background glow */}
+      <div className="fixed top-0 right-0 w-[600px] h-[500px] pointer-events-none opacity-60 dark:opacity-100"
+        style={{ background: "radial-gradient(ellipse at top right, rgba(124,58,237,0.05), transparent 70%)" }} />
 
       {/* Sticky header */}
       <div
         className="sticky top-0 z-10"
         style={{
-          borderBottom: "1px solid rgba(255,255,255,0.05)",
-          background: "rgba(4,4,10,0.85)",
+          borderBottom: "1px solid var(--border)",
+          background: "var(--nav-bg)",
           backdropFilter: "blur(20px)",
           WebkitBackdropFilter: "blur(20px)",
         }}
@@ -31,17 +30,20 @@ export default async function SettingsPage() {
         <div className="max-w-3xl mx-auto px-6 h-16 flex items-center gap-4">
           <Link
             href="/dashboard"
-            className="flex items-center gap-2 text-sm font-medium text-white/35 hover:text-white/80 transition-all duration-200 group"
+            className="flex items-center gap-2 text-sm font-medium transition-all duration-200 group text-slate-500 hover:text-slate-800 dark:text-white/35 dark:hover:text-white/80"
           >
-            <div className="w-7 h-7 rounded-lg flex items-center justify-center bg-white/[0.05] group-hover:bg-white/[0.09] border border-white/[0.07] transition-all">
+            <div
+              className="w-7 h-7 rounded-lg flex items-center justify-center transition-all"
+              style={{ background: "var(--hover-bg)", border: "1px solid var(--border)" }}
+            >
               <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
               </svg>
             </div>
             Back
           </Link>
-          <div className="w-px h-5 bg-white/[0.08]" />
-          <h1 className="text-sm font-bold text-white/80 tracking-tight">Settings</h1>
+          <div className="w-px h-5" style={{ background: "var(--border)" }} />
+          <h1 className="text-sm font-bold tracking-tight text-slate-700 dark:text-white/80">Settings</h1>
         </div>
       </div>
 
@@ -49,17 +51,17 @@ export default async function SettingsPage() {
       <div className="max-w-3xl mx-auto px-6 py-10">
         <div className="flex gap-10">
 
-          {/* Left sidebar nav */}
+          {/* Sidebar nav */}
           <div className="hidden md:block w-48 shrink-0 pt-1">
             <nav className="sticky top-24 space-y-1">
-              <p className="text-[10px] font-bold text-white/20 uppercase tracking-[0.14em] px-3 mb-3">Account</p>
+              <p className="text-[10px] font-bold uppercase tracking-[0.14em] px-3 mb-3 text-slate-400 dark:text-white/20">Account</p>
               <a
                 href="#profile"
                 className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200"
                 style={{
-                  color: "rgba(167,139,250,1)",
-                  background: "rgba(124,58,237,0.12)",
-                  border: "1px solid rgba(124,58,237,0.2)",
+                  color: "#7c3aed",
+                  background: "rgba(124,58,237,0.08)",
+                  border: "1px solid rgba(124,58,237,0.18)",
                 }}
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -70,11 +72,11 @@ export default async function SettingsPage() {
             </nav>
           </div>
 
-          {/* Main content */}
+          {/* Main */}
           <div id="profile" className="flex-1 min-w-0">
             <div className="mb-7">
-              <h2 className="text-xl font-black text-white tracking-tight">Profile settings</h2>
-              <p className="text-sm text-white/35 mt-1">Manage your public profile and personal information</p>
+              <h2 className="text-xl font-black tracking-tight text-slate-900 dark:text-white">Profile settings</h2>
+              <p className="text-sm mt-1 text-slate-500 dark:text-white/35">Manage your public profile and personal information</p>
             </div>
             <ProfilePanel initialProfile={profile} />
           </div>

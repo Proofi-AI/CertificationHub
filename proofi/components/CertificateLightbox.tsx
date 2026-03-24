@@ -94,8 +94,8 @@ export default function CertificateLightbox({ src, alt, isPdf = false, onClose }
       <div className="absolute inset-0 bg-black/90 backdrop-blur-md" onClick={onClose} />
 
       {/* Top bar */}
-      <div className="relative z-10 flex items-center justify-between px-5 py-3 border-b border-white/8 bg-[#0a0a0f]/70 backdrop-blur-md shrink-0">
-        <p className="text-sm font-medium text-white/80 truncate max-w-xs">{alt}</p>
+      <div className="relative z-10 flex items-center justify-between px-5 py-3 shrink-0" style={{ borderBottom: "1px solid var(--border)", background: "var(--nav-bg)", backdropFilter: "blur(16px)" }}>
+        <p className="text-sm font-medium truncate max-w-xs text-slate-700 dark:text-white/80">{alt}</p>
 
         <div className="flex items-center gap-2">
           {/* Zoom controls */}
@@ -103,7 +103,7 @@ export default function CertificateLightbox({ src, alt, isPdf = false, onClose }
             onClick={zoomOut}
             disabled={zoom <= MIN_ZOOM}
             title="Zoom out (–)"
-            className="w-8 h-8 flex items-center justify-center rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-white/60 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+            className="w-8 h-8 flex items-center justify-center rounded-lg transition-all disabled:opacity-30 disabled:cursor-not-allowed bg-black/[0.05] hover:bg-black/[0.10] border border-black/[0.09] text-slate-500 hover:text-slate-900 dark:bg-white/5 dark:hover:bg-white/10 dark:border-white/10 dark:text-white/60 dark:hover:text-white"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607zM13.5 10.5h-6" />
@@ -113,7 +113,7 @@ export default function CertificateLightbox({ src, alt, isPdf = false, onClose }
           <button
             onClick={resetZoom}
             title="Reset zoom (0)"
-            className="min-w-[3.5rem] h-8 flex items-center justify-center rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-mono text-white/60 hover:text-white transition-all"
+            className="min-w-[3.5rem] h-8 flex items-center justify-center rounded-lg transition-all text-xs font-mono bg-black/[0.05] hover:bg-black/[0.10] border border-black/[0.09] text-slate-500 hover:text-slate-900 dark:bg-white/5 dark:hover:bg-white/10 dark:border-white/10 dark:text-white/60 dark:hover:text-white"
           >
             {zoomPct}%
           </button>
@@ -122,14 +122,14 @@ export default function CertificateLightbox({ src, alt, isPdf = false, onClose }
             onClick={zoomIn}
             disabled={zoom >= MAX_ZOOM}
             title="Zoom in (+)"
-            className="w-8 h-8 flex items-center justify-center rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-white/60 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+            className="w-8 h-8 flex items-center justify-center rounded-lg transition-all disabled:opacity-30 disabled:cursor-not-allowed bg-black/[0.05] hover:bg-black/[0.10] border border-black/[0.09] text-slate-500 hover:text-slate-900 dark:bg-white/5 dark:hover:bg-white/10 dark:border-white/10 dark:text-white/60 dark:hover:text-white"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607zM10.5 7.5v6m3-3h-6" />
             </svg>
           </button>
 
-          <div className="w-px h-5 bg-white/10 mx-1" />
+          <div className="w-px h-5 mx-1" style={{ background: "var(--border)" }} />
 
           {/* Open original */}
           {!isPdf && (
@@ -138,7 +138,7 @@ export default function CertificateLightbox({ src, alt, isPdf = false, onClose }
               target="_blank"
               rel="noopener noreferrer"
               title="Open original"
-              className="w-8 h-8 flex items-center justify-center rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-white/60 hover:text-white transition-all"
+              className="w-8 h-8 flex items-center justify-center rounded-lg transition-all bg-black/[0.05] hover:bg-black/[0.10] border border-black/[0.09] text-slate-500 hover:text-slate-900 dark:bg-white/5 dark:hover:bg-white/10 dark:border-white/10 dark:text-white/60 dark:hover:text-white"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
@@ -150,7 +150,7 @@ export default function CertificateLightbox({ src, alt, isPdf = false, onClose }
           <button
             onClick={onClose}
             title="Close (Esc)"
-            className="w-8 h-8 flex items-center justify-center rounded-lg bg-white/5 hover:bg-red-500/20 border border-white/10 hover:border-red-500/30 text-white/60 hover:text-red-400 transition-all"
+            className="w-8 h-8 flex items-center justify-center rounded-lg transition-all bg-black/[0.05] hover:bg-red-500/10 border border-black/[0.09] hover:border-red-500/30 text-slate-500 hover:text-red-600 dark:bg-white/5 dark:hover:bg-red-500/20 dark:border-white/10 dark:hover:border-red-500/30 dark:text-white/60 dark:hover:text-red-400"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -195,21 +195,21 @@ export default function CertificateLightbox({ src, alt, isPdf = false, onClose }
       </div>
 
       {/* Bottom hint bar */}
-      <div className="relative z-10 flex items-center justify-center gap-6 py-2.5 border-t border-white/5 bg-[#0a0a0f]/60 backdrop-blur-md shrink-0">
-        <span className="text-xs text-white/25 flex items-center gap-1.5">
-          <kbd className="px-1.5 py-0.5 rounded bg-white/8 border border-white/10 font-mono text-[10px]">scroll</kbd>
+      <div className="relative z-10 flex items-center justify-center gap-6 py-2.5 shrink-0" style={{ borderTop: "1px solid var(--border)", background: "var(--nav-bg)", backdropFilter: "blur(16px)" }}>
+        <span className="text-xs flex items-center gap-1.5 text-slate-400 dark:text-white/25">
+          <kbd className="px-1.5 py-0.5 rounded font-mono text-[10px] bg-black/[0.06] border border-black/[0.09] text-slate-500 dark:bg-white/8 dark:border-white/10 dark:text-white/40">scroll</kbd>
           Zoom
         </span>
-        <span className="text-xs text-white/25 flex items-center gap-1.5">
-          <kbd className="px-1.5 py-0.5 rounded bg-white/8 border border-white/10 font-mono text-[10px]">drag</kbd>
+        <span className="text-xs flex items-center gap-1.5 text-slate-400 dark:text-white/25">
+          <kbd className="px-1.5 py-0.5 rounded font-mono text-[10px] bg-black/[0.06] border border-black/[0.09] text-slate-500 dark:bg-white/8 dark:border-white/10 dark:text-white/40">drag</kbd>
           Pan
         </span>
-        <span className="text-xs text-white/25 flex items-center gap-1.5">
-          <kbd className="px-1.5 py-0.5 rounded bg-white/8 border border-white/10 font-mono text-[10px]">Esc</kbd>
+        <span className="text-xs flex items-center gap-1.5 text-slate-400 dark:text-white/25">
+          <kbd className="px-1.5 py-0.5 rounded font-mono text-[10px] bg-black/[0.06] border border-black/[0.09] text-slate-500 dark:bg-white/8 dark:border-white/10 dark:text-white/40">Esc</kbd>
           Close
         </span>
-        <span className="text-xs text-white/25 flex items-center gap-1.5">
-          <kbd className="px-1.5 py-0.5 rounded bg-white/8 border border-white/10 font-mono text-[10px]">0</kbd>
+        <span className="text-xs flex items-center gap-1.5 text-slate-400 dark:text-white/25">
+          <kbd className="px-1.5 py-0.5 rounded font-mono text-[10px] bg-black/[0.06] border border-black/[0.09] text-slate-500 dark:bg-white/8 dark:border-white/10 dark:text-white/40">0</kbd>
           Reset
         </span>
       </div>

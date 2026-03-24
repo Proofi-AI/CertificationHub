@@ -11,8 +11,6 @@ interface Props {
 
 type SlugStatus = "idle" | "checking" | "available" | "taken" | "invalid";
 
-const inputClass = "w-full bg-white/[0.04] border border-white/[0.08] focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/15 rounded-xl px-4 py-3 text-sm text-white placeholder-white/20 outline-none transition-all";
-
 export default function ProfilePanel({ initialProfile }: Props) {
   const [profile, setProfile] = useState(initialProfile);
   const [name, setName] = useState(initialProfile.name ?? "");
@@ -86,20 +84,19 @@ export default function ProfilePanel({ initialProfile }: Props) {
   const initials = (profile.name || "U").split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
   const saveDisabled = slugStatus === "taken" || slugStatus === "invalid" || bio.length > 160 || saving;
 
+  const inputClass = "w-full rounded-xl px-4 py-3 text-sm outline-none transition-all bg-black/[0.04] border border-black/[0.09] focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/15 text-slate-800 placeholder-slate-400 dark:bg-white/[0.04] dark:border-white/[0.08] dark:text-white dark:placeholder-white/20";
+
   return (
     <div className="space-y-5">
 
-      {/* Profile photo card */}
-      <div
-        className="rounded-2xl p-6"
-        style={{ background: "#0d0d18", border: "1px solid rgba(255,255,255,0.06)" }}
-      >
-        <p className="text-[11px] font-bold text-white/30 uppercase tracking-[0.12em] mb-5">Profile Photo</p>
+      {/* Profile photo */}
+      <div className="rounded-2xl p-6" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+        <p className="text-[11px] font-bold uppercase tracking-[0.12em] mb-5 text-slate-400 dark:text-white/30">Profile Photo</p>
         <div className="flex items-center gap-5">
           <div className="relative group cursor-pointer shrink-0" onClick={() => fileRef.current?.click()}>
             <div
               className="w-20 h-20 rounded-2xl overflow-hidden"
-              style={{ boxShadow: "0 0 0 2px rgba(124,58,237,0.45), 0 0 0 5px rgba(124,58,237,0.08), 0 8px 24px rgba(0,0,0,0.4)" }}
+              style={{ boxShadow: "0 0 0 2px rgba(124,58,237,0.45), 0 0 0 5px rgba(124,58,237,0.08), 0 8px 24px rgba(0,0,0,0.15)" }}
             >
               {profile.avatarUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
@@ -110,7 +107,7 @@ export default function ProfilePanel({ initialProfile }: Props) {
                 </div>
               )}
             </div>
-            <div className="absolute inset-0 rounded-2xl bg-black/55 opacity-0 group-hover:opacity-100 transition-all duration-200 flex items-center justify-center">
+            <div className="absolute inset-0 rounded-2xl bg-black/50 opacity-0 group-hover:opacity-100 transition-all duration-200 flex items-center justify-center">
               {avatarUploading ? (
                 <svg className="w-6 h-6 text-white animate-spin" fill="none" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
@@ -126,68 +123,51 @@ export default function ProfilePanel({ initialProfile }: Props) {
           <div>
             <button
               onClick={() => fileRef.current?.click()}
-              className="text-sm font-semibold transition-colors"
-              style={{ color: "#a78bfa" }}
-              onMouseEnter={(e) => (e.currentTarget.style.color = "#c4b5fd")}
-              onMouseLeave={(e) => (e.currentTarget.style.color = "#a78bfa")}
+              className="text-sm font-semibold text-violet-600 hover:text-violet-700 dark:text-violet-400 dark:hover:text-violet-300 transition-colors"
             >
               {avatarUploading ? "Uploading…" : "Change photo"}
             </button>
-            <p className="text-xs text-white/25 mt-1">JPG, PNG, or WebP · Max 5MB</p>
+            <p className="text-xs mt-1 text-slate-400 dark:text-white/25">JPG, PNG, or WebP · Max 5MB</p>
           </div>
         </div>
         <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleAvatarChange} />
       </div>
 
-      {/* Basic info card */}
-      <div
-        className="rounded-2xl p-6 space-y-5"
-        style={{ background: "#0d0d18", border: "1px solid rgba(255,255,255,0.06)" }}
-      >
-        <p className="text-[11px] font-bold text-white/30 uppercase tracking-[0.12em]">Basic Info</p>
+      {/* Basic info */}
+      <div className="rounded-2xl p-6 space-y-5" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+        <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-slate-400 dark:text-white/30">Basic Info</p>
 
         <div>
-          <label className="text-xs font-semibold text-white/40 mb-2 block">Full name</label>
+          <label className="text-xs font-semibold mb-2 block text-slate-500 dark:text-white/40">Full name</label>
           <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" className={inputClass} />
         </div>
 
         <div>
           <div className="flex items-center justify-between mb-2">
-            <label className="text-xs font-semibold text-white/40">Bio</label>
-            <span className={`text-xs font-medium tabular-nums ${bio.length > 160 ? "text-red-400" : "text-white/25"}`}>{bio.length} / 160</span>
+            <label className="text-xs font-semibold text-slate-500 dark:text-white/40">Bio</label>
+            <span className={`text-xs font-medium tabular-nums ${bio.length > 160 ? "text-red-500 dark:text-red-400" : "text-slate-400 dark:text-white/25"}`}>{bio.length} / 160</span>
           </div>
-          <textarea
-            value={bio}
-            onChange={(e) => setBio(e.target.value)}
-            rows={3}
-            placeholder="A short bio about yourself…"
-            className={`${inputClass} resize-none`}
-          />
+          <textarea value={bio} onChange={(e) => setBio(e.target.value)} rows={3} placeholder="A short bio about yourself…" className={`${inputClass} resize-none`} />
         </div>
       </div>
 
-      {/* Public profile card */}
-      <div
-        className="rounded-2xl p-6 space-y-5"
-        style={{ background: "#0d0d18", border: "1px solid rgba(255,255,255,0.06)" }}
-      >
-        <p className="text-[11px] font-bold text-white/30 uppercase tracking-[0.12em]">Public Profile</p>
+      {/* Public profile */}
+      <div className="rounded-2xl p-6 space-y-5" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+        <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-slate-400 dark:text-white/30">Public Profile</p>
 
-        {/* URL display */}
         <div>
-          <label className="text-xs font-semibold text-white/40 mb-2 block">Your public URL</label>
+          <label className="text-xs font-semibold mb-2 block text-slate-500 dark:text-white/40">Your public URL</label>
           <div
             className="flex items-center gap-3 rounded-xl px-4 py-3"
             style={{ background: "rgba(124,58,237,0.06)", border: "1px solid rgba(124,58,237,0.18)" }}
           >
-            <svg className="w-4 h-4 text-violet-400/60 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <svg className="w-4 h-4 text-violet-500/60 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244" />
             </svg>
-            <span className="text-sm text-white/50 font-mono flex-1 truncate">{publicUrl}</span>
+            <span className="text-sm font-mono flex-1 truncate text-slate-500 dark:text-white/50">{publicUrl}</span>
             <button
               onClick={handleCopy}
-              className="shrink-0 text-xs font-semibold flex items-center gap-1 transition-colors"
-              style={{ color: copied ? "#6ee7b7" : "#a78bfa" }}
+              className={`shrink-0 text-xs font-semibold flex items-center gap-1 transition-colors ${copied ? "text-emerald-600 dark:text-emerald-400" : "text-violet-600 dark:text-violet-400 hover:text-violet-700 dark:hover:text-violet-300"}`}
             >
               {copied ? (
                 <><svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>Copied!</>
@@ -198,13 +178,12 @@ export default function ProfilePanel({ initialProfile }: Props) {
           </div>
         </div>
 
-        {/* Slug */}
         <div>
-          <label className="text-xs font-semibold text-white/40 mb-2 block">Profile URL slug</label>
+          <label className="text-xs font-semibold mb-2 block text-slate-500 dark:text-white/40">Profile URL slug</label>
           <div className="flex items-center">
             <span
-              className="px-4 py-3 text-xs font-mono text-white/25 rounded-l-xl shrink-0"
-              style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRight: "none" }}
+              className="px-4 py-3 text-xs font-mono rounded-l-xl shrink-0 text-slate-400 dark:text-white/25"
+              style={{ background: "var(--input-bg)", border: "1px solid var(--border-input)", borderRight: "none" }}
             >
               proofi.ai/
             </span>
@@ -213,14 +192,14 @@ export default function ProfilePanel({ initialProfile }: Props) {
               onChange={handleSlugChange}
               placeholder="your-slug"
               maxLength={30}
-              className="flex-1 bg-white/[0.04] border border-white/[0.08] focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/15 rounded-r-xl px-4 py-3 text-sm text-white placeholder-white/20 outline-none transition-all"
+              className="flex-1 rounded-r-xl px-4 py-3 text-sm outline-none transition-all bg-black/[0.04] border border-black/[0.09] focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/15 text-slate-800 placeholder-slate-400 dark:bg-white/[0.04] dark:border-white/[0.08] dark:text-white dark:placeholder-white/20"
             />
           </div>
           {slugStatus !== "idle" && (
             <p className={`text-xs mt-2 flex items-center gap-1.5 font-medium ${
-              slugStatus === "available" ? "text-emerald-400" :
-              slugStatus === "taken" || slugStatus === "invalid" ? "text-red-400" :
-              "text-white/35"
+              slugStatus === "available" ? "text-emerald-600 dark:text-emerald-400" :
+              slugStatus === "taken" || slugStatus === "invalid" ? "text-red-600 dark:text-red-400" :
+              "text-slate-400 dark:text-white/35"
             }`}>
               {slugStatus === "checking" && <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>}
               {slugStatus === "available" && "✓ Available"}
@@ -234,18 +213,15 @@ export default function ProfilePanel({ initialProfile }: Props) {
 
       {/* Save message */}
       {saveMsg && (
-        <div
-          className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium ${
-            saveMsg.type === "success"
-              ? "text-emerald-300 bg-emerald-500/10 border border-emerald-500/20"
-              : "text-red-300 bg-red-500/10 border border-red-500/20"
-          }`}
-        >
-          {saveMsg.type === "success" ? (
-            <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
-          ) : (
-            <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" /></svg>
-          )}
+        <div className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium ${
+          saveMsg.type === "success"
+            ? "text-emerald-700 bg-emerald-50 border border-emerald-200 dark:text-emerald-300 dark:bg-emerald-500/10 dark:border-emerald-500/20"
+            : "text-red-700 bg-red-50 border border-red-200 dark:text-red-300 dark:bg-red-500/10 dark:border-red-500/20"
+        }`}>
+          {saveMsg.type === "success"
+            ? <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+            : <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" /></svg>
+          }
           {saveMsg.text}
         </div>
       )}

@@ -196,10 +196,10 @@ export default function CertificateFormModal({ initialData, onSave, onClose }: P
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
 
       {/* Panel */}
-      <div className="relative w-full max-w-lg glass border border-white/15 rounded-2xl shadow-2xl max-h-[90vh] overflow-y-auto">
-        <div className="sticky top-0 flex items-center justify-between px-6 py-4 border-b border-white/8 bg-[#0a0a0f]/80 backdrop-blur-md z-10">
-          <h2 className="font-semibold text-base">{isEdit ? "Edit certificate" : "Add certificate"}</h2>
-          <button onClick={onClose} className="text-white/40 hover:text-white transition-colors p-1">
+      <div className="relative w-full max-w-lg rounded-2xl shadow-2xl max-h-[90vh] overflow-y-auto" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+        <div className="sticky top-0 flex items-center justify-between px-6 py-4 z-10" style={{ borderBottom: "1px solid var(--border)", background: "var(--nav-bg)", backdropFilter: "blur(16px)" }}>
+          <h2 className="font-semibold text-base text-slate-900 dark:text-white">{isEdit ? "Edit certificate" : "Add certificate"}</h2>
+          <button onClick={onClose} className="transition-colors p-1 text-slate-400 hover:text-slate-700 dark:text-white/40 dark:hover:text-white">
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -209,57 +209,52 @@ export default function CertificateFormModal({ initialData, onSave, onClose }: P
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           {/* Certificate name */}
           <div>
-            <label className="text-xs text-white/50 mb-1.5 block">
-              Certificate name <span className="text-red-400">*</span>
+            <label className="text-xs font-semibold mb-1.5 block text-slate-500 dark:text-white/50">
+              Certificate name <span className="text-red-500 dark:text-red-400">*</span>
             </label>
             <input
               value={form.name}
               onChange={(e) => handleField("name", e.target.value)}
               placeholder="AWS Solutions Architect"
               required
-              className="w-full bg-white/5 border border-white/10 focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20 rounded-xl px-4 py-2.5 text-sm text-white placeholder-white/25 outline-none transition-all"
+              className="w-full rounded-xl px-4 py-2.5 text-sm outline-none transition-all bg-black/[0.04] border border-black/[0.09] focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20 text-slate-800 placeholder-slate-400 dark:bg-white/5 dark:border-white/10 dark:text-white dark:placeholder-white/25"
             />
           </div>
 
           {/* Issuer */}
           <div>
-            <label className="text-xs text-white/50 mb-1.5 block">
-              Issuer / Company <span className="text-red-400">*</span>
+            <label className="text-xs font-semibold mb-1.5 block text-slate-500 dark:text-white/50">
+              Issuer / Company <span className="text-red-500 dark:text-red-400">*</span>
             </label>
             <input
               value={form.issuer}
               onChange={(e) => handleField("issuer", e.target.value)}
               placeholder="Amazon Web Services"
               required
-              className="w-full bg-white/5 border border-white/10 focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20 rounded-xl px-4 py-2.5 text-sm text-white placeholder-white/25 outline-none transition-all"
+              className="w-full rounded-xl px-4 py-2.5 text-sm outline-none transition-all bg-black/[0.04] border border-black/[0.09] focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20 text-slate-800 placeholder-slate-400 dark:bg-white/5 dark:border-white/10 dark:text-white dark:placeholder-white/25"
             />
           </div>
 
           {/* Dates */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-xs text-white/50 mb-1.5 block">
-                Date issued <span className="text-red-400">*</span>
+              <label className="text-xs font-semibold mb-1.5 block text-slate-500 dark:text-white/50">
+                Date issued <span className="text-red-500 dark:text-red-400">*</span>
               </label>
               <input
                 type="date"
                 value={form.issuedAt}
                 onChange={(e) => handleField("issuedAt", e.target.value)}
                 required
-                className="w-full bg-white/5 border border-white/10 focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20 rounded-xl px-4 py-2.5 text-sm text-white outline-none transition-all [color-scheme:dark]"
+                className="w-full rounded-xl px-4 py-2.5 text-sm outline-none transition-all bg-black/[0.04] border border-black/[0.09] focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20 text-slate-800 dark:bg-white/5 dark:border-white/10 dark:text-white [color-scheme:light] dark:[color-scheme:dark]"
               />
             </div>
             <div>
               <div className="flex items-center justify-between mb-1.5">
-                <label className="text-xs text-white/50">Expiry date</label>
+                <label className="text-xs font-semibold text-slate-500 dark:text-white/50">Expiry date</label>
                 <label className="flex items-center gap-1 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={form.noExpiry}
-                    onChange={(e) => handleField("noExpiry", e.target.checked)}
-                    className="w-3 h-3 accent-violet-500"
-                  />
-                  <span className="text-xs text-white/40">No expiry</span>
+                  <input type="checkbox" checked={form.noExpiry} onChange={(e) => handleField("noExpiry", e.target.checked)} className="w-3 h-3 accent-violet-500" />
+                  <span className="text-xs text-slate-400 dark:text-white/40">No expiry</span>
                 </label>
               </div>
               <input
@@ -267,21 +262,21 @@ export default function CertificateFormModal({ initialData, onSave, onClose }: P
                 value={form.expiresAt}
                 onChange={(e) => handleField("expiresAt", e.target.value)}
                 disabled={form.noExpiry}
-                className="w-full bg-white/5 border border-white/10 focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20 rounded-xl px-4 py-2.5 text-sm text-white outline-none transition-all [color-scheme:dark] disabled:opacity-40 disabled:cursor-not-allowed"
+                className="w-full rounded-xl px-4 py-2.5 text-sm outline-none transition-all bg-black/[0.04] border border-black/[0.09] focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20 text-slate-800 dark:bg-white/5 dark:border-white/10 dark:text-white [color-scheme:light] dark:[color-scheme:dark] disabled:opacity-40 disabled:cursor-not-allowed"
               />
             </div>
           </div>
 
           {/* Domain */}
           <div>
-            <label className="text-xs text-white/50 mb-1.5 block">
-              Domain <span className="text-red-400">*</span>
+            <label className="text-xs font-semibold mb-1.5 block text-slate-500 dark:text-white/50">
+              Domain <span className="text-red-500 dark:text-red-400">*</span>
             </label>
             <select
               value={form.domain}
               onChange={(e) => handleField("domain", e.target.value)}
               required
-              className="w-full bg-[#1a1a2e] border border-white/10 focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20 rounded-xl px-4 py-2.5 text-sm text-white outline-none transition-all"
+              className="w-full rounded-xl px-4 py-2.5 text-sm outline-none transition-all cursor-pointer bg-white border border-black/[0.09] focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20 text-slate-800 dark:bg-[#1a1a2e] dark:border-white/10 dark:text-white"
             >
               {DOMAINS.map((d) => (
                 <option key={d.value} value={d.value}>{d.label}</option>
@@ -292,36 +287,29 @@ export default function CertificateFormModal({ initialData, onSave, onClose }: P
                 value={form.customDomain}
                 onChange={(e) => handleField("customDomain", e.target.value)}
                 placeholder="Specify your domain…"
-                className="mt-2 w-full bg-white/5 border border-white/10 focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20 rounded-xl px-4 py-2.5 text-sm text-white placeholder-white/25 outline-none transition-all"
+                className="mt-2 w-full rounded-xl px-4 py-2.5 text-sm outline-none transition-all bg-black/[0.04] border border-black/[0.09] focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20 text-slate-800 placeholder-slate-400 dark:bg-white/5 dark:border-white/10 dark:text-white dark:placeholder-white/25"
               />
             )}
           </div>
 
-          {/* File upload — mandatory */}
+          {/* File upload */}
           <div>
-            <label className="text-xs text-white/50 mb-1.5 block">
-              Certificate file <span className="text-red-400">*</span>
-              <span className="text-white/25 ml-1">(Image or PDF, max 5MB)</span>
+            <label className="text-xs font-semibold mb-1.5 block text-slate-500 dark:text-white/50">
+              Certificate file <span className="text-red-500 dark:text-red-400">*</span>
+              <span className="ml-1 font-normal text-slate-400 dark:text-white/25">(Image or PDF, max 5MB)</span>
             </label>
 
             {hasFile ? (
-              <div className="relative rounded-xl border border-white/10 overflow-hidden">
-                {/* Image preview */}
+              <div className="relative rounded-xl overflow-hidden" style={{ border: "1px solid var(--border)" }}>
                 {imagePreview && (
                   <div className="h-40">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
                   </div>
                 )}
-                {/* PDF preview */}
                 {isPdf && pdfPreviewUrl && (
                   <div className="h-40 overflow-hidden bg-white">
-                    <iframe
-                      src={`${pdfPreviewUrl}#toolbar=0&navpanes=0&scrollbar=0`}
-                      className="w-full h-full pointer-events-none"
-                      style={{ border: "none" }}
-                      title="PDF preview"
-                    />
+                    <iframe src={`${pdfPreviewUrl}#toolbar=0&navpanes=0&scrollbar=0`} className="w-full h-full pointer-events-none" style={{ border: "none" }} title="PDF preview" />
                   </div>
                 )}
                 {isPdf && !pdfPreviewUrl && (
@@ -330,91 +318,71 @@ export default function CertificateFormModal({ initialData, onSave, onClose }: P
                       <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
                     </svg>
                     <div>
-                      <p className="text-sm font-medium text-red-300">PDF selected</p>
-                      <p className="text-xs text-white/40">{imageFile?.name ?? "Existing PDF"}</p>
+                      <p className="text-sm font-medium text-red-400">PDF selected</p>
+                      <p className="text-xs text-slate-400 dark:text-white/40">{imageFile?.name ?? "Existing PDF"}</p>
                     </div>
                   </div>
                 )}
-                {/* Existing image from URL (no local file) */}
                 {!imagePreview && !isPdf && existingFileUrl && (
                   <div className="h-40">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={existingFileUrl} alt="Current" className="w-full h-full object-cover" />
                   </div>
                 )}
-                {/* Actions bar */}
-                <div className="flex items-center gap-2 p-3 bg-black/20">
-                  <button
-                    type="button"
-                    onClick={() => fileRef.current?.click()}
-                    className="flex-1 text-xs text-white/50 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg py-1.5 transition-all"
-                  >
+                <div className="flex items-center gap-2 p-3" style={{ background: "var(--hover-bg)" }}>
+                  <button type="button" onClick={() => fileRef.current?.click()}
+                    className="flex-1 text-xs font-medium rounded-lg py-1.5 transition-all text-slate-500 hover:text-slate-800 bg-black/[0.04] hover:bg-black/[0.07] border border-black/[0.06] dark:text-white/50 dark:hover:text-white dark:bg-white/5 dark:hover:bg-white/10 dark:border-white/10">
                     Replace file
                   </button>
-                  <button
-                    type="button"
-                    onClick={clearFile}
-                    className="text-xs text-red-400 hover:text-red-300 bg-red-500/10 hover:bg-red-500/15 border border-red-500/20 rounded-lg py-1.5 px-3 transition-all"
-                  >
+                  <button type="button" onClick={clearFile}
+                    className="text-xs font-medium text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 bg-red-500/10 hover:bg-red-500/15 border border-red-500/20 rounded-lg py-1.5 px-3 transition-all">
                     Remove
                   </button>
                 </div>
               </div>
             ) : (
-              <button
-                type="button"
-                onClick={() => fileRef.current?.click()}
-                className="w-full h-28 border-2 border-dashed border-white/15 hover:border-violet-500/50 rounded-xl flex flex-col items-center justify-center gap-2 text-white/30 hover:text-white/60 transition-all"
-              >
+              <button type="button" onClick={() => fileRef.current?.click()}
+                className="w-full h-28 border-2 border-dashed rounded-xl flex flex-col items-center justify-center gap-2 transition-all border-black/[0.12] hover:border-violet-500/50 text-slate-400 hover:text-slate-600 dark:border-white/15 dark:hover:border-violet-500/50 dark:text-white/30 dark:hover:text-white/60">
                 <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
                 </svg>
                 <div className="text-center">
-                  <p className="text-xs font-medium">Click to upload</p>
-                  <p className="text-xs text-white/20 mt-0.5">JPG, PNG, WebP, or PDF</p>
+                  <p className="text-xs font-semibold">Click to upload</p>
+                  <p className="text-xs mt-0.5 text-slate-300 dark:text-white/20">JPG, PNG, WebP, or PDF</p>
                 </div>
               </button>
             )}
-
-            <input
-              ref={fileRef}
-              type="file"
-              accept={ACCEPTED_FILE_ACCEPT}
-              className="hidden"
-              onChange={handleFileSelect}
-            />
+            <input ref={fileRef} type="file" accept={ACCEPTED_FILE_ACCEPT} className="hidden" onChange={handleFileSelect} />
           </div>
 
           {/* Credential ID */}
           <div>
-            <label className="text-xs text-white/50 mb-1.5 block">
-              Credential ID <span className="text-white/25">(optional)</span>
+            <label className="text-xs font-semibold mb-1.5 block text-slate-500 dark:text-white/50">
+              Credential ID <span className="font-normal text-slate-400 dark:text-white/25">(optional)</span>
             </label>
             <input
               value={form.credentialId}
               onChange={(e) => handleField("credentialId", e.target.value)}
               placeholder="e.g. AWS-SAA-C03-1234567"
-              className="w-full bg-white/5 border border-white/10 focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20 rounded-xl px-4 py-2.5 text-sm text-white placeholder-white/25 outline-none transition-all"
+              className="w-full rounded-xl px-4 py-2.5 text-sm outline-none transition-all bg-black/[0.04] border border-black/[0.09] focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20 text-slate-800 placeholder-slate-400 dark:bg-white/5 dark:border-white/10 dark:text-white dark:placeholder-white/25"
             />
           </div>
 
           {/* Error */}
           {error && (
-            <div className="flex items-start gap-2 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
-              <svg className="w-4 h-4 text-red-400 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <div className="flex items-start gap-2 bg-red-50 border border-red-200 dark:bg-red-500/10 dark:border-red-500/20 rounded-xl px-4 py-3">
+              <svg className="w-4 h-4 text-red-500 dark:text-red-400 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
               </svg>
-              <p className="text-sm text-red-400">{error}</p>
+              <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
             </div>
           )}
 
           {/* Buttons */}
           <div className="flex gap-3 pt-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 py-2.5 rounded-xl border border-white/10 text-white/50 hover:text-white hover:bg-white/5 text-sm transition-all"
-            >
+            <button type="button" onClick={onClose}
+              className="flex-1 py-2.5 rounded-xl text-sm font-medium transition-all text-slate-600 hover:text-slate-900 border dark:text-white/50 dark:hover:text-white dark:hover:bg-white/5"
+              style={{ borderColor: "var(--border)" }}>
               Cancel
             </button>
             <button

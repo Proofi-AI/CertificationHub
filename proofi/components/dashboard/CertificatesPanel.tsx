@@ -60,37 +60,35 @@ export default function CertificatesPanel({ initialCertificates }: Props) {
     {
       label: "Total", value: totalCount,
       iconPath: "M9 12.75L11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 01-1.043 3.296 3.745 3.745 0 01-3.296 1.043A3.745 3.745 0 0112 21c-1.268 0-2.39-.63-3.068-1.593a3.745 3.745 0 01-3.296-1.043 3.745 3.745 0 01-1.043-3.296A3.745 3.745 0 013 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 011.043-3.296 3.745 3.745 0 013.296-1.043A3.745 3.745 0 0112 3c1.268 0 2.39.63 3.068 1.593a3.745 3.745 0 013.296 1.043 3.745 3.745 0 011.043 3.296A3.745 3.745 0 0121 12z",
-      gradient: "linear-gradient(135deg, rgba(124,58,237,0.18), rgba(99,102,241,0.08))",
-      border: "rgba(124,58,237,0.2)", iconColor: "#a78bfa",
+      bg: "rgba(124,58,237,0.1)", border: "rgba(124,58,237,0.18)", icon: "#7c3aed",
     },
     {
       label: "Public", value: publicCount,
       iconPath: "M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z M15 12a3 3 0 11-6 0 3 3 0 016 0z",
-      gradient: "linear-gradient(135deg, rgba(16,185,129,0.18), rgba(52,211,153,0.08))",
-      border: "rgba(16,185,129,0.2)", iconColor: "#6ee7b7",
+      bg: "rgba(16,185,129,0.1)", border: "rgba(16,185,129,0.18)", icon: "#10b981",
     },
     {
       label: "Private", value: privateCount,
       iconPath: "M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z",
-      gradient: "linear-gradient(135deg, rgba(245,158,11,0.18), rgba(251,191,36,0.08))",
-      border: "rgba(245,158,11,0.2)", iconColor: "#fcd34d",
+      bg: "rgba(245,158,11,0.1)", border: "rgba(245,158,11,0.18)", icon: "#f59e0b",
     },
     {
       label: "Domains", value: domainCount,
       iconPath: "M3.75 12h16.5m-16.5 3.75h16.5M3.75 19.5h16.5M5.625 4.5h12.75a1.875 1.875 0 010 3.75H5.625a1.875 1.875 0 010-3.75z",
-      gradient: "linear-gradient(135deg, rgba(14,165,233,0.18), rgba(59,130,246,0.08))",
-      border: "rgba(14,165,233,0.2)", iconColor: "#7dd3fc",
+      bg: "rgba(14,165,233,0.1)", border: "rgba(14,165,233,0.18)", icon: "#0ea5e9",
     },
   ];
 
   return (
     <div className="space-y-8">
 
-      {/* Page header */}
+      {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white tracking-tight">Certificates</h1>
-          <p className="text-sm text-white/35 mt-1">Manage and showcase your professional achievements</p>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Certificates</h1>
+          <p className="text-sm mt-1 text-slate-500 dark:text-white/35">
+            Manage and showcase your professional achievements
+          </p>
         </div>
         <button
           onClick={openAdd}
@@ -113,14 +111,14 @@ export default function CertificatesPanel({ initialCertificates }: Props) {
           <div
             key={s.label}
             className="relative rounded-2xl p-4 overflow-hidden"
-            style={{ background: s.gradient, border: `1px solid ${s.border}` }}
+            style={{ background: s.bg, border: `1px solid ${s.border}` }}
           >
             <div className="flex items-start justify-between gap-2">
               <div>
-                <p className="text-[28px] font-black text-white leading-none tracking-tight">{s.value}</p>
-                <p className="text-[11px] font-semibold text-white/40 mt-1.5 uppercase tracking-widest">{s.label}</p>
+                <p className="text-[28px] font-black leading-none tracking-tight text-slate-900 dark:text-white">{s.value}</p>
+                <p className="text-[11px] font-bold mt-1.5 uppercase tracking-widest text-slate-500 dark:text-white/40">{s.label}</p>
               </div>
-              <svg className="w-5 h-5 mt-0.5 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} style={{ color: s.iconColor }}>
+              <svg className="w-5 h-5 mt-0.5 opacity-75" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} style={{ color: s.icon }}>
                 <path strokeLinecap="round" strokeLinejoin="round" d={s.iconPath} />
               </svg>
             </div>
@@ -128,25 +126,29 @@ export default function CertificatesPanel({ initialCertificates }: Props) {
         ))}
       </div>
 
-      {/* Search + filter row */}
+      {/* Search + filter */}
       {totalCount > 0 && (
         <div className="flex items-center gap-3">
           <div className="relative flex-1">
-            <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none text-slate-400 dark:text-white/20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
             </svg>
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search by name or issuer…"
-              className="w-full bg-white/[0.04] border border-white/[0.07] focus:border-violet-500/40 focus:ring-1 focus:ring-violet-500/20 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder-white/20 outline-none transition-all"
+              className="w-full rounded-xl pl-10 pr-4 py-2.5 text-sm outline-none transition-all
+                bg-black/[0.04] border border-black/[0.08] focus:border-violet-500/40 focus:ring-1 focus:ring-violet-500/20 text-slate-800 placeholder-slate-400
+                dark:bg-white/[0.04] dark:border-white/[0.07] dark:text-white dark:placeholder-white/20"
             />
           </div>
           {allDomains.length > 2 && (
             <select
               value={domainFilter}
               onChange={(e) => setDomainFilter(e.target.value)}
-              className="bg-[#0d0d18] border border-white/[0.07] focus:border-violet-500/40 focus:ring-1 focus:ring-violet-500/20 rounded-xl px-3 py-2.5 text-sm text-white/60 outline-none transition-all cursor-pointer"
+              className="rounded-xl px-3 py-2.5 text-sm outline-none transition-all cursor-pointer
+                bg-white border border-black/[0.08] focus:border-violet-500/40 text-slate-700
+                dark:bg-[#0d0d18] dark:border-white/[0.07] dark:text-white/60"
             >
               {allDomains.map((d) => <option key={d} value={d}>{d}</option>)}
             </select>
@@ -156,25 +158,25 @@ export default function CertificatesPanel({ initialCertificates }: Props) {
 
       {/* Empty state */}
       {totalCount === 0 && (
-        <div className="relative rounded-3xl overflow-hidden p-16 text-center" style={{ background: "#0d0d18", border: "1px solid rgba(255,255,255,0.055)" }}>
+        <div className="relative rounded-3xl overflow-hidden p-16 text-center" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <div className="w-[400px] h-[400px] rounded-full blur-[100px]" style={{ background: "radial-gradient(circle, rgba(124,58,237,0.08), transparent 70%)" }} />
+            <div className="w-[400px] h-[400px] rounded-full blur-[100px]" style={{ background: "radial-gradient(circle, rgba(124,58,237,0.07), transparent 70%)" }} />
           </div>
           <div className="relative">
             <div
               className="w-20 h-20 rounded-3xl flex items-center justify-center mx-auto mb-6"
               style={{
-                background: "linear-gradient(135deg, rgba(124,58,237,0.25), rgba(79,70,229,0.1))",
-                border: "1px solid rgba(124,58,237,0.25)",
-                boxShadow: "0 0 48px rgba(124,58,237,0.2)",
+                background: "linear-gradient(135deg, rgba(124,58,237,0.2), rgba(79,70,229,0.08))",
+                border: "1px solid rgba(124,58,237,0.22)",
+                boxShadow: "0 0 48px rgba(124,58,237,0.15)",
               }}
             >
               <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} style={{ color: "#a78bfa" }}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 01-1.043 3.296 3.745 3.745 0 01-3.296 1.043A3.745 3.745 0 0112 21c-1.268 0-2.39-.63-3.068-1.593a3.745 3.745 0 01-3.296-1.043 3.745 3.745 0 01-1.043-3.296A3.745 3.745 0 013 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 011.043-3.296 3.745 3.745 0 013.296-1.043A3.745 3.745 0 0112 3c1.268 0 2.39.63 3.068 1.593a3.745 3.745 0 013.296 1.043 3.745 3.745 0 011.043 3.296A3.745 3.745 0 0121 12z" />
               </svg>
             </div>
-            <h3 className="text-xl font-bold text-white/90 mb-2">No certificates yet</h3>
-            <p className="text-white/35 text-sm mb-8 max-w-xs mx-auto leading-relaxed">
+            <h3 className="text-xl font-bold mb-2 text-slate-900 dark:text-white/90">No certificates yet</h3>
+            <p className="text-sm mb-8 max-w-xs mx-auto leading-relaxed text-slate-500 dark:text-white/35">
               Start building your professional portfolio. Add your first certificate and put your skills on display.
             </p>
             <button
@@ -197,11 +199,8 @@ export default function CertificatesPanel({ initialCertificates }: Props) {
       {/* No results */}
       {totalCount > 0 && filtered.length === 0 && (
         <div className="text-center py-16">
-          <p className="text-white/25 text-sm">No certificates match your search.</p>
-          <button
-            onClick={() => { setSearch(""); setDomainFilter("All"); }}
-            className="text-violet-400 hover:text-violet-300 text-sm mt-2 transition-colors"
-          >
+          <p className="text-sm text-slate-400 dark:text-white/25">No certificates match your search.</p>
+          <button onClick={() => { setSearch(""); setDomainFilter("All"); }} className="text-violet-600 dark:text-violet-400 hover:text-violet-700 dark:hover:text-violet-300 text-sm mt-2 transition-colors">
             Clear filters
           </button>
         </div>
@@ -211,23 +210,13 @@ export default function CertificatesPanel({ initialCertificates }: Props) {
       {filtered.length > 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
           {filtered.map((cert) => (
-            <CertificateCard
-              key={cert.id}
-              certificate={cert}
-              onEdit={openEdit}
-              onDelete={handleDelete}
-              onVisibilityToggle={handleVisibilityToggle}
-            />
+            <CertificateCard key={cert.id} certificate={cert} onEdit={openEdit} onDelete={handleDelete} onVisibilityToggle={handleVisibilityToggle} />
           ))}
         </div>
       )}
 
       {modalOpen && (
-        <CertificateFormModal
-          initialData={editTarget}
-          onSave={handleSave}
-          onClose={closeModal}
-        />
+        <CertificateFormModal initialData={editTarget} onSave={handleSave} onClose={closeModal} />
       )}
     </div>
   );

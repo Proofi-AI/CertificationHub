@@ -26,11 +26,12 @@ export default async function DashboardPage() {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
   return (
-    <div className="min-h-screen text-[#f0f0f5]" style={{ background: "#04040a" }}>
-      {/* Background glows */}
-      <div className="fixed top-0 right-0 w-[700px] h-[600px] pointer-events-none" style={{ background: "radial-gradient(ellipse at top right, rgba(124,58,237,0.05), transparent 70%)" }} />
-      <div className="fixed bottom-0 left-0 w-[500px] h-[500px] pointer-events-none" style={{ background: "radial-gradient(ellipse at bottom left, rgba(59,130,246,0.04), transparent 70%)" }} />
-      <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[900px] h-[500px] pointer-events-none" style={{ background: "radial-gradient(ellipse, rgba(79,70,229,0.025), transparent 65%)" }} />
+    <div className="min-h-screen" style={{ background: "var(--bg)", color: "var(--foreground)" }}>
+      {/* Background glows — subtle in both modes */}
+      <div className="fixed top-0 right-0 w-[700px] h-[600px] pointer-events-none opacity-60 dark:opacity-100"
+        style={{ background: "radial-gradient(ellipse at top right, rgba(124,58,237,0.05), transparent 70%)" }} />
+      <div className="fixed bottom-0 left-0 w-[500px] h-[500px] pointer-events-none opacity-60 dark:opacity-100"
+        style={{ background: "radial-gradient(ellipse at bottom left, rgba(59,130,246,0.04), transparent 70%)" }} />
 
       <DashboardShell
         profile={profile}
