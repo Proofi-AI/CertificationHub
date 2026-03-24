@@ -18,14 +18,18 @@ const toInputDate = (date: Date | string | null | undefined): string => {
 
 export default function CertificateFormModal({ initialData, onSave, onClose }: Props) {
   const isEdit = !!initialData;
+
+  const domainValues = DOMAINS.map((d) => d.value);
+  const isCustomDomain = initialData?.domain ? !domainValues.includes(initialData.domain) : false;
+
   const [form, setForm] = useState({
     name: initialData?.name ?? "",
     issuer: initialData?.issuer ?? "",
     issuedAt: toInputDate(initialData?.issuedAt),
     expiresAt: toInputDate(initialData?.expiresAt),
     noExpiry: !initialData?.expiresAt,
-    domain: initialData?.domain ?? DOMAINS[0].value,
-    customDomain: "",
+    domain: isCustomDomain ? "Other" : (initialData?.domain ?? DOMAINS[0].value),
+    customDomain: isCustomDomain ? (initialData?.domain ?? "") : "",
     credentialId: initialData?.credentialId ?? "",
   });
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -35,6 +39,9 @@ export default function CertificateFormModal({ initialData, onSave, onClose }: P
   const [existingFileUrl, setExistingFileUrl] = useState<string | null>(initialData?.imageUrl ?? null);
   const [isPdf, setIsPdf] = useState(
     initialData?.imageUrl?.endsWith(".pdf") ?? false
+  );
+  const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(
+    initialData?.imageUrl?.endsWith(".pdf") ? initialData.imageUrl : null
   );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -67,6 +74,7 @@ export default function CertificateFormModal({ initialData, onSave, onClose }: P
     setError(null);
     if (file.type === "application/pdf") {
       setImagePreview(null);
+      setPdfPreviewUrl(URL.createObjectURL(file));
       setIsPdf(true);
     } else {
       setImagePreview(URL.createObjectURL(file));
@@ -77,6 +85,7 @@ export default function CertificateFormModal({ initialData, onSave, onClose }: P
   const clearFile = () => {
     setImageFile(null);
     setImagePreview(null);
+    setPdfPreviewUrl(null);
     setIsPdf(false);
     setExistingFileUrl(null);
     if (fileRef.current) fileRef.current.value = "";
@@ -304,8 +313,18 @@ export default function CertificateFormModal({ initialData, onSave, onClose }: P
                     <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
                   </div>
                 )}
-                {/* PDF indicator */}
-                {isPdf && (
+                {/* PDF preview */}
+                {isPdf && pdfPreviewUrl && (
+                  <div className="h-40 overflow-hidden bg-white">
+                    <iframe
+                      src={`${pdfPreviewUrl}#toolbar=0&navpanes=0&scrollbar=0`}
+                      className="w-full h-full pointer-events-none"
+                      style={{ border: "none" }}
+                      title="PDF preview"
+                    />
+                  </div>
+                )}
+                {isPdf && !pdfPreviewUrl && (
                   <div className="h-24 flex items-center justify-center gap-3 bg-red-500/10">
                     <svg className="w-8 h-8 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
