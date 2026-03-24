@@ -11,6 +11,8 @@ interface Props {
 
 type SlugStatus = "idle" | "checking" | "available" | "taken" | "invalid";
 
+const inputClass = "w-full bg-white/[0.04] border border-white/[0.08] focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/15 rounded-xl px-4 py-3 text-sm text-white placeholder-white/20 outline-none transition-all";
+
 export default function ProfilePanel({ initialProfile }: Props) {
   const [profile, setProfile] = useState(initialProfile);
   const [name, setName] = useState(initialProfile.name ?? "");
@@ -28,18 +30,13 @@ export default function ProfilePanel({ initialProfile }: Props) {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
   const publicUrl = `${appUrl}/${profile.slug}`;
 
-  // ── Avatar upload ──────────────────────────────────────────────
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     setAvatarUploading(true);
     try {
       const url = await uploadAvatar(file, profile.id);
-      await fetch("/api/profile", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ avatarUrl: url }),
-      });
+      await fetch("/api/profile", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ avatarUrl: url }) });
       setProfile((p) => ({ ...p, avatarUrl: url }));
     } catch {
       setSaveMsg({ type: "error", text: "Avatar upload failed. Try again." });
@@ -48,7 +45,6 @@ export default function ProfilePanel({ initialProfile }: Props) {
     }
   };
 
-  // ── Slug validation ────────────────────────────────────────────
   const checkSlug = useCallback(async (value: string) => {
     if (value === initialProfile.slug) { setSlugStatus("idle"); return; }
     if (!SLUG_REGEX.test(value)) { setSlugStatus("invalid"); return; }
@@ -65,28 +61,22 @@ export default function ProfilePanel({ initialProfile }: Props) {
     slugTimer.current = setTimeout(() => checkSlug(val), 400);
   };
 
-  // ── Save ───────────────────────────────────────────────────────
   const handleSave = async () => {
     if (slugStatus === "taken" || slugStatus === "invalid") return;
     setSaving(true);
     setSaveMsg(null);
-    const res = await fetch("/api/profile", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, bio, slug }),
-    });
+    const res = await fetch("/api/profile", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name, bio, slug }) });
     const json = await res.json();
     if (!res.ok) {
       setSaveMsg({ type: "error", text: json.error || "Save failed." });
     } else {
       setProfile(json.data);
-      setSaveMsg({ type: "success", text: "Profile saved!" });
-      setTimeout(() => setSaveMsg(null), 3000);
+      setSaveMsg({ type: "success", text: "Profile saved successfully!" });
+      setTimeout(() => setSaveMsg(null), 3500);
     }
     setSaving(false);
   };
 
-  // ── Copy URL ───────────────────────────────────────────────────
   const handleCopy = async () => {
     await navigator.clipboard.writeText(publicUrl);
     setCopied(true);
@@ -97,131 +87,188 @@ export default function ProfilePanel({ initialProfile }: Props) {
   const saveDisabled = slugStatus === "taken" || slugStatus === "invalid" || bio.length > 160 || saving;
 
   return (
-    <div className="glass rounded-2xl border border-white/10 p-6 space-y-6">
-      <h2 className="font-semibold text-lg">Profile</h2>
+    <div className="space-y-5">
 
-      {/* Public URL */}
-      <div>
-        <label className="text-xs text-white/50 mb-2 block">Your public profile URL</label>
-        <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl px-4 py-2.5">
-          <span className="text-sm text-white/40 font-mono flex-1 truncate">{publicUrl}</span>
-          <button
-            onClick={handleCopy}
-            className="text-xs text-violet-400 hover:text-violet-300 font-medium transition-colors shrink-0 flex items-center gap-1"
-          >
-            {copied ? (
-              <><svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>Copied!</>
-            ) : (
-              <><svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>Copy</>
-            )}
-          </button>
-        </div>
-      </div>
-
-      {/* Avatar */}
-      <div>
-        <label className="text-xs text-white/50 mb-2 block">Profile photo</label>
-        <div className="flex items-center gap-4">
-          <div className="relative">
+      {/* Profile photo card */}
+      <div
+        className="rounded-2xl p-6"
+        style={{ background: "#0d0d18", border: "1px solid rgba(255,255,255,0.06)" }}
+      >
+        <p className="text-[11px] font-bold text-white/30 uppercase tracking-[0.12em] mb-5">Profile Photo</p>
+        <div className="flex items-center gap-5">
+          <div className="relative group cursor-pointer shrink-0" onClick={() => fileRef.current?.click()}>
             <div
-              className="w-16 h-16 rounded-2xl overflow-hidden cursor-pointer group"
-              onClick={() => fileRef.current?.click()}
+              className="w-20 h-20 rounded-2xl overflow-hidden"
+              style={{ boxShadow: "0 0 0 2px rgba(124,58,237,0.45), 0 0 0 5px rgba(124,58,237,0.08), 0 8px 24px rgba(0,0,0,0.4)" }}
             >
               {profile.avatarUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={profile.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
               ) : (
-                <div className="w-full h-full bg-gradient-to-br from-violet-500 to-blue-500 flex items-center justify-center text-xl font-bold text-white">
+                <div className="w-full h-full flex items-center justify-center text-2xl font-black text-white" style={{ background: "linear-gradient(135deg, #7c3aed, #4f46e5)" }}>
                   {initials}
                 </div>
               )}
-              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-2xl">
-                {avatarUploading ? (
-                  <svg className="w-5 h-5 text-white animate-spin" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                  </svg>
-                ) : (
-                  <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
-                  </svg>
-                )}
-              </div>
             </div>
-            <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleAvatarChange} />
+            <div className="absolute inset-0 rounded-2xl bg-black/55 opacity-0 group-hover:opacity-100 transition-all duration-200 flex items-center justify-center">
+              {avatarUploading ? (
+                <svg className="w-6 h-6 text-white animate-spin" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                </svg>
+              ) : (
+                <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+                </svg>
+              )}
+            </div>
           </div>
-          <p className="text-xs text-white/30 leading-relaxed">Click to upload<br />JPG, PNG, or WebP · Max 5MB</p>
+          <div>
+            <button
+              onClick={() => fileRef.current?.click()}
+              className="text-sm font-semibold transition-colors"
+              style={{ color: "#a78bfa" }}
+              onMouseEnter={(e) => (e.currentTarget.style.color = "#c4b5fd")}
+              onMouseLeave={(e) => (e.currentTarget.style.color = "#a78bfa")}
+            >
+              {avatarUploading ? "Uploading…" : "Change photo"}
+            </button>
+            <p className="text-xs text-white/25 mt-1">JPG, PNG, or WebP · Max 5MB</p>
+          </div>
         </div>
+        <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleAvatarChange} />
       </div>
 
-      {/* Name */}
-      <div>
-        <label className="text-xs text-white/50 mb-1.5 block">Full name</label>
-        <input
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          className="w-full bg-white/5 border border-white/10 focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20 rounded-xl px-4 py-2.5 text-sm text-white placeholder-white/25 outline-none transition-all"
-          placeholder="Your name"
-        />
-      </div>
+      {/* Basic info card */}
+      <div
+        className="rounded-2xl p-6 space-y-5"
+        style={{ background: "#0d0d18", border: "1px solid rgba(255,255,255,0.06)" }}
+      >
+        <p className="text-[11px] font-bold text-white/30 uppercase tracking-[0.12em]">Basic Info</p>
 
-      {/* Bio */}
-      <div>
-        <div className="flex items-center justify-between mb-1.5">
-          <label className="text-xs text-white/50">Bio</label>
-          <span className={`text-xs ${bio.length > 160 ? "text-red-400" : "text-white/30"}`}>{bio.length}/160</span>
+        <div>
+          <label className="text-xs font-semibold text-white/40 mb-2 block">Full name</label>
+          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" className={inputClass} />
         </div>
-        <textarea
-          value={bio}
-          onChange={(e) => setBio(e.target.value)}
-          rows={3}
-          className="w-full bg-white/5 border border-white/10 focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20 rounded-xl px-4 py-2.5 text-sm text-white placeholder-white/25 outline-none transition-all resize-none"
-          placeholder="A short bio about yourself…"
-        />
-      </div>
 
-      {/* Slug */}
-      <div>
-        <label className="text-xs text-white/50 mb-1.5 block">Profile URL</label>
-        <div className="flex items-center gap-0">
-          <span className="bg-white/5 border border-r-0 border-white/10 rounded-l-xl px-3 py-2.5 text-xs text-white/30 shrink-0">proofi.ai/</span>
-          <input
-            value={slug}
-            onChange={handleSlugChange}
-            className="flex-1 bg-white/5 border border-white/10 focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20 rounded-r-xl px-3 py-2.5 text-sm text-white placeholder-white/25 outline-none transition-all"
-            placeholder="your-slug"
-            maxLength={30}
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <label className="text-xs font-semibold text-white/40">Bio</label>
+            <span className={`text-xs font-medium tabular-nums ${bio.length > 160 ? "text-red-400" : "text-white/25"}`}>{bio.length} / 160</span>
+          </div>
+          <textarea
+            value={bio}
+            onChange={(e) => setBio(e.target.value)}
+            rows={3}
+            placeholder="A short bio about yourself…"
+            className={`${inputClass} resize-none`}
           />
         </div>
-        {slugStatus !== "idle" && (
-          <p className={`text-xs mt-1.5 flex items-center gap-1 ${
-            slugStatus === "available" ? "text-emerald-400" :
-            slugStatus === "taken" || slugStatus === "invalid" ? "text-red-400" :
-            "text-white/40"
-          }`}>
-            {slugStatus === "checking" && <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" /></svg>}
-            {slugStatus === "available" && "✓ Available"}
-            {slugStatus === "taken" && "✗ Already taken"}
-            {slugStatus === "invalid" && "✗ 3–30 characters, letters, numbers, and hyphens only"}
-            {slugStatus === "checking" && "Checking…"}
-          </p>
-        )}
+      </div>
+
+      {/* Public profile card */}
+      <div
+        className="rounded-2xl p-6 space-y-5"
+        style={{ background: "#0d0d18", border: "1px solid rgba(255,255,255,0.06)" }}
+      >
+        <p className="text-[11px] font-bold text-white/30 uppercase tracking-[0.12em]">Public Profile</p>
+
+        {/* URL display */}
+        <div>
+          <label className="text-xs font-semibold text-white/40 mb-2 block">Your public URL</label>
+          <div
+            className="flex items-center gap-3 rounded-xl px-4 py-3"
+            style={{ background: "rgba(124,58,237,0.06)", border: "1px solid rgba(124,58,237,0.18)" }}
+          >
+            <svg className="w-4 h-4 text-violet-400/60 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244" />
+            </svg>
+            <span className="text-sm text-white/50 font-mono flex-1 truncate">{publicUrl}</span>
+            <button
+              onClick={handleCopy}
+              className="shrink-0 text-xs font-semibold flex items-center gap-1 transition-colors"
+              style={{ color: copied ? "#6ee7b7" : "#a78bfa" }}
+            >
+              {copied ? (
+                <><svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>Copied!</>
+              ) : (
+                <><svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>Copy</>
+              )}
+            </button>
+          </div>
+        </div>
+
+        {/* Slug */}
+        <div>
+          <label className="text-xs font-semibold text-white/40 mb-2 block">Profile URL slug</label>
+          <div className="flex items-center">
+            <span
+              className="px-4 py-3 text-xs font-mono text-white/25 rounded-l-xl shrink-0"
+              style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRight: "none" }}
+            >
+              proofi.ai/
+            </span>
+            <input
+              value={slug}
+              onChange={handleSlugChange}
+              placeholder="your-slug"
+              maxLength={30}
+              className="flex-1 bg-white/[0.04] border border-white/[0.08] focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/15 rounded-r-xl px-4 py-3 text-sm text-white placeholder-white/20 outline-none transition-all"
+            />
+          </div>
+          {slugStatus !== "idle" && (
+            <p className={`text-xs mt-2 flex items-center gap-1.5 font-medium ${
+              slugStatus === "available" ? "text-emerald-400" :
+              slugStatus === "taken" || slugStatus === "invalid" ? "text-red-400" :
+              "text-white/35"
+            }`}>
+              {slugStatus === "checking" && <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>}
+              {slugStatus === "available" && "✓ Available"}
+              {slugStatus === "taken" && "✗ Already taken"}
+              {slugStatus === "invalid" && "✗ 3–30 characters, letters, numbers, and hyphens only"}
+              {slugStatus === "checking" && "Checking availability…"}
+            </p>
+          )}
+        </div>
       </div>
 
       {/* Save message */}
       {saveMsg && (
-        <p className={`text-sm ${saveMsg.type === "success" ? "text-emerald-400" : "text-red-400"}`}>
+        <div
+          className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium ${
+            saveMsg.type === "success"
+              ? "text-emerald-300 bg-emerald-500/10 border border-emerald-500/20"
+              : "text-red-300 bg-red-500/10 border border-red-500/20"
+          }`}
+        >
+          {saveMsg.type === "success" ? (
+            <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+          ) : (
+            <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" /></svg>
+          )}
           {saveMsg.text}
-        </p>
+        </div>
       )}
 
       {/* Save button */}
       <button
         onClick={handleSave}
         disabled={saveDisabled}
-        className="w-full bg-gradient-to-r from-violet-600 to-blue-600 hover:from-violet-500 hover:to-blue-500 text-white font-semibold py-2.5 px-4 rounded-xl text-sm transition-all shadow-lg shadow-violet-500/20 disabled:opacity-40 disabled:cursor-not-allowed"
+        className="w-full py-3 rounded-xl text-sm font-bold text-white transition-all duration-200 hover:scale-[1.01] active:scale-100 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100"
+        style={{
+          background: "linear-gradient(135deg, #7c3aed, #4f46e5)",
+          boxShadow: saveDisabled ? "none" : "0 4px 20px rgba(124,58,237,0.35), inset 0 1px 0 rgba(255,255,255,0.12)",
+        }}
       >
-        {saving ? "Saving…" : "Save profile"}
+        {saving ? (
+          <span className="flex items-center justify-center gap-2">
+            <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+            </svg>
+            Saving…
+          </span>
+        ) : "Save changes"}
       </button>
     </div>
   );
