@@ -1,11 +1,7 @@
-"use client";
-
-import { useState } from "react";
 import Link from "next/link";
 import type { User } from "@prisma/client";
 import type { Certificate } from "@prisma/client";
 import CertificatesPanel from "./CertificatesPanel";
-import SettingsModal from "./SettingsModal";
 import LogoutButton from "@/components/LogoutButton";
 
 interface Props {
@@ -16,8 +12,6 @@ interface Props {
 }
 
 export default function DashboardShell({ profile, certificates, appUrl, initials }: Props) {
-  const [settingsOpen, setSettingsOpen] = useState(false);
-
   return (
     <>
       {/* Navbar */}
@@ -43,8 +37,8 @@ export default function DashboardShell({ profile, certificates, appUrl, initials
             </Link>
 
             {/* Settings button */}
-            <button
-              onClick={() => setSettingsOpen(true)}
+            <Link
+              href="/settings"
               className="flex items-center gap-1.5 text-xs text-white/40 hover:text-white/70 transition-colors border border-white/8 hover:border-white/20 rounded-lg px-3 py-1.5"
               title="Settings"
             >
@@ -53,7 +47,7 @@ export default function DashboardShell({ profile, certificates, appUrl, initials
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
               </svg>
               <span className="hidden sm:inline">Settings</span>
-            </button>
+            </Link>
 
             <div className="flex items-center gap-2">
               {profile.avatarUrl ? (
@@ -76,13 +70,6 @@ export default function DashboardShell({ profile, certificates, appUrl, initials
         <CertificatesPanel initialCertificates={certificates} />
       </div>
 
-      {/* Settings modal */}
-      {settingsOpen && (
-        <SettingsModal
-          initialProfile={profile}
-          onClose={() => setSettingsOpen(false)}
-        />
-      )}
     </>
   );
 }
