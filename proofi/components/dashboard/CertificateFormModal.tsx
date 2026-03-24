@@ -199,7 +199,7 @@ export default function CertificateFormModal({ initialData, onSave, onClose }: P
       <div className="relative w-full max-w-lg rounded-2xl shadow-2xl max-h-[90vh] overflow-y-auto" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
         <div className="sticky top-0 flex items-center justify-between px-6 py-4 z-10" style={{ borderBottom: "1px solid var(--border)", background: "var(--nav-bg)", backdropFilter: "blur(16px)" }}>
           <h2 className="font-semibold text-base text-slate-900 dark:text-white">{isEdit ? "Edit certificate" : "Add certificate"}</h2>
-          <button onClick={onClose} className="transition-colors p-1 text-slate-400 hover:text-slate-700 dark:text-white/40 dark:hover:text-white">
+          <button onClick={onClose} className="transition-colors p-1 text-slate-400 hover:text-slate-700 dark:text-white/55 dark:hover:text-white">
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -209,7 +209,7 @@ export default function CertificateFormModal({ initialData, onSave, onClose }: P
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           {/* Certificate name */}
           <div>
-            <label className="text-xs font-semibold mb-1.5 block text-slate-500 dark:text-white/50">
+            <label className="text-xs font-semibold mb-1.5 block text-slate-500 dark:text-white/65">
               Certificate name <span className="text-red-500 dark:text-red-400">*</span>
             </label>
             <input
@@ -217,13 +217,13 @@ export default function CertificateFormModal({ initialData, onSave, onClose }: P
               onChange={(e) => handleField("name", e.target.value)}
               placeholder="AWS Solutions Architect"
               required
-              className="w-full rounded-xl px-4 py-2.5 text-sm outline-none transition-all bg-black/[0.04] border border-black/[0.09] focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20 text-slate-800 placeholder-slate-400 dark:bg-white/5 dark:border-white/10 dark:text-white dark:placeholder-white/25"
+              className="w-full rounded-xl px-4 py-2.5 text-sm outline-none transition-all bg-black/[0.04] border border-black/[0.09] focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20 text-slate-800 placeholder-slate-400 dark:bg-white/[0.07] dark:border-white/[0.13] dark:text-white dark:placeholder-white/40"
             />
           </div>
 
           {/* Issuer */}
           <div>
-            <label className="text-xs font-semibold mb-1.5 block text-slate-500 dark:text-white/50">
+            <label className="text-xs font-semibold mb-1.5 block text-slate-500 dark:text-white/65">
               Issuer / Company <span className="text-red-500 dark:text-red-400">*</span>
             </label>
             <input
@@ -231,14 +231,14 @@ export default function CertificateFormModal({ initialData, onSave, onClose }: P
               onChange={(e) => handleField("issuer", e.target.value)}
               placeholder="Amazon Web Services"
               required
-              className="w-full rounded-xl px-4 py-2.5 text-sm outline-none transition-all bg-black/[0.04] border border-black/[0.09] focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20 text-slate-800 placeholder-slate-400 dark:bg-white/5 dark:border-white/10 dark:text-white dark:placeholder-white/25"
+              className="w-full rounded-xl px-4 py-2.5 text-sm outline-none transition-all bg-black/[0.04] border border-black/[0.09] focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20 text-slate-800 placeholder-slate-400 dark:bg-white/[0.07] dark:border-white/[0.13] dark:text-white dark:placeholder-white/40"
             />
           </div>
 
           {/* Dates */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-xs font-semibold mb-1.5 block text-slate-500 dark:text-white/50">
+              <label className="text-xs font-semibold mb-1.5 block text-slate-500 dark:text-white/65">
                 Date issued <span className="text-red-500 dark:text-red-400">*</span>
               </label>
               <input
@@ -251,10 +251,10 @@ export default function CertificateFormModal({ initialData, onSave, onClose }: P
             </div>
             <div>
               <div className="flex items-center justify-between mb-1.5">
-                <label className="text-xs font-semibold text-slate-500 dark:text-white/50">Expiry date</label>
+                <label className="text-xs font-semibold text-slate-500 dark:text-white/65">Expiry date</label>
                 <label className="flex items-center gap-1 cursor-pointer">
                   <input type="checkbox" checked={form.noExpiry} onChange={(e) => handleField("noExpiry", e.target.checked)} className="w-3 h-3 accent-violet-500" />
-                  <span className="text-xs text-slate-400 dark:text-white/40">No expiry</span>
+                  <span className="text-xs text-slate-400 dark:text-white/55">No expiry</span>
                 </label>
               </div>
               <input
@@ -269,14 +269,14 @@ export default function CertificateFormModal({ initialData, onSave, onClose }: P
 
           {/* Domain */}
           <div>
-            <label className="text-xs font-semibold mb-1.5 block text-slate-500 dark:text-white/50">
+            <label className="text-xs font-semibold mb-1.5 block text-slate-500 dark:text-white/65">
               Domain <span className="text-red-500 dark:text-red-400">*</span>
             </label>
             <select
               value={form.domain}
               onChange={(e) => handleField("domain", e.target.value)}
               required
-              className="w-full rounded-xl px-4 py-2.5 text-sm outline-none transition-all cursor-pointer bg-white border border-black/[0.09] focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20 text-slate-800 dark:bg-[#1a1a2e] dark:border-white/10 dark:text-white"
+              className="w-full rounded-xl px-4 py-2.5 text-sm outline-none transition-all cursor-pointer bg-white border border-black/[0.09] focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20 text-slate-800 dark:bg-[#111425] dark:border-white/[0.13] dark:text-white"
             >
               {DOMAINS.map((d) => (
                 <option key={d.value} value={d.value}>{d.label}</option>
@@ -287,14 +287,14 @@ export default function CertificateFormModal({ initialData, onSave, onClose }: P
                 value={form.customDomain}
                 onChange={(e) => handleField("customDomain", e.target.value)}
                 placeholder="Specify your domain…"
-                className="mt-2 w-full rounded-xl px-4 py-2.5 text-sm outline-none transition-all bg-black/[0.04] border border-black/[0.09] focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20 text-slate-800 placeholder-slate-400 dark:bg-white/5 dark:border-white/10 dark:text-white dark:placeholder-white/25"
+                className="mt-2 w-full rounded-xl px-4 py-2.5 text-sm outline-none transition-all bg-black/[0.04] border border-black/[0.09] focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20 text-slate-800 placeholder-slate-400 dark:bg-white/[0.07] dark:border-white/[0.13] dark:text-white dark:placeholder-white/40"
               />
             )}
           </div>
 
           {/* File upload */}
           <div>
-            <label className="text-xs font-semibold mb-1.5 block text-slate-500 dark:text-white/50">
+            <label className="text-xs font-semibold mb-1.5 block text-slate-500 dark:text-white/65">
               Certificate file <span className="text-red-500 dark:text-red-400">*</span>
               <span className="ml-1 font-normal text-slate-400 dark:text-white/25">(Image or PDF, max 5MB)</span>
             </label>
@@ -319,7 +319,7 @@ export default function CertificateFormModal({ initialData, onSave, onClose }: P
                     </svg>
                     <div>
                       <p className="text-sm font-medium text-red-400">PDF selected</p>
-                      <p className="text-xs text-slate-400 dark:text-white/40">{imageFile?.name ?? "Existing PDF"}</p>
+                      <p className="text-xs text-slate-400 dark:text-white/55">{imageFile?.name ?? "Existing PDF"}</p>
                     </div>
                   </div>
                 )}
@@ -331,7 +331,7 @@ export default function CertificateFormModal({ initialData, onSave, onClose }: P
                 )}
                 <div className="flex items-center gap-2 p-3" style={{ background: "var(--hover-bg)" }}>
                   <button type="button" onClick={() => fileRef.current?.click()}
-                    className="flex-1 text-xs font-medium rounded-lg py-1.5 transition-all text-slate-500 hover:text-slate-800 bg-black/[0.04] hover:bg-black/[0.07] border border-black/[0.06] dark:text-white/50 dark:hover:text-white dark:bg-white/5 dark:hover:bg-white/10 dark:border-white/10">
+                    className="flex-1 text-xs font-medium rounded-lg py-1.5 transition-all text-slate-500 hover:text-slate-800 bg-black/[0.04] hover:bg-black/[0.07] border border-black/[0.06] dark:text-white/65 dark:hover:text-white dark:bg-white/5 dark:hover:bg-white/10 dark:border-white/10">
                     Replace file
                   </button>
                   <button type="button" onClick={clearFile}
@@ -357,14 +357,14 @@ export default function CertificateFormModal({ initialData, onSave, onClose }: P
 
           {/* Credential ID */}
           <div>
-            <label className="text-xs font-semibold mb-1.5 block text-slate-500 dark:text-white/50">
+            <label className="text-xs font-semibold mb-1.5 block text-slate-500 dark:text-white/65">
               Credential ID <span className="font-normal text-slate-400 dark:text-white/25">(optional)</span>
             </label>
             <input
               value={form.credentialId}
               onChange={(e) => handleField("credentialId", e.target.value)}
               placeholder="e.g. AWS-SAA-C03-1234567"
-              className="w-full rounded-xl px-4 py-2.5 text-sm outline-none transition-all bg-black/[0.04] border border-black/[0.09] focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20 text-slate-800 placeholder-slate-400 dark:bg-white/5 dark:border-white/10 dark:text-white dark:placeholder-white/25"
+              className="w-full rounded-xl px-4 py-2.5 text-sm outline-none transition-all bg-black/[0.04] border border-black/[0.09] focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20 text-slate-800 placeholder-slate-400 dark:bg-white/[0.07] dark:border-white/[0.13] dark:text-white dark:placeholder-white/40"
             />
           </div>
 
@@ -381,7 +381,7 @@ export default function CertificateFormModal({ initialData, onSave, onClose }: P
           {/* Buttons */}
           <div className="flex gap-3 pt-2">
             <button type="button" onClick={onClose}
-              className="flex-1 py-2.5 rounded-xl text-sm font-medium transition-all text-slate-600 hover:text-slate-900 border dark:text-white/50 dark:hover:text-white dark:hover:bg-white/5"
+              className="flex-1 py-2.5 rounded-xl text-sm font-medium transition-all text-slate-600 hover:text-slate-900 border dark:text-white/65 dark:hover:text-white dark:hover:bg-white/5"
               style={{ borderColor: "var(--border)" }}>
               Cancel
             </button>

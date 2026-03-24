@@ -86,7 +86,7 @@ export default function CertificatesPanel({ initialCertificates }: Props) {
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Certificates</h1>
-          <p className="text-sm mt-1 text-slate-500 dark:text-white/35">
+          <p className="text-sm mt-1 text-slate-500 dark:text-white/55">
             Manage and showcase your professional achievements
           </p>
         </div>
@@ -116,7 +116,7 @@ export default function CertificatesPanel({ initialCertificates }: Props) {
             <div className="flex items-start justify-between gap-2">
               <div>
                 <p className="text-[28px] font-black leading-none tracking-tight text-slate-900 dark:text-white">{s.value}</p>
-                <p className="text-[11px] font-bold mt-1.5 uppercase tracking-widest text-slate-500 dark:text-white/40">{s.label}</p>
+                <p className="text-[11px] font-bold mt-1.5 uppercase tracking-widest text-slate-500 dark:text-white/60">{s.label}</p>
               </div>
               <svg className="w-5 h-5 mt-0.5 opacity-75" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} style={{ color: s.icon }}>
                 <path strokeLinecap="round" strokeLinejoin="round" d={s.iconPath} />
@@ -130,7 +130,7 @@ export default function CertificatesPanel({ initialCertificates }: Props) {
       {totalCount > 0 && (
         <div className="flex items-center gap-3">
           <div className="relative flex-1">
-            <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none text-slate-400 dark:text-white/20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none text-slate-400 dark:text-white/40" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
             </svg>
             <input
@@ -139,7 +139,7 @@ export default function CertificatesPanel({ initialCertificates }: Props) {
               placeholder="Search by name or issuer…"
               className="w-full rounded-xl pl-10 pr-4 py-2.5 text-sm outline-none transition-all
                 bg-black/[0.04] border border-black/[0.08] focus:border-violet-500/40 focus:ring-1 focus:ring-violet-500/20 text-slate-800 placeholder-slate-400
-                dark:bg-white/[0.04] dark:border-white/[0.07] dark:text-white dark:placeholder-white/20"
+                dark:bg-white/[0.06] dark:border-white/[0.11] dark:text-white dark:placeholder-white/35"
             />
           </div>
           {allDomains.length > 2 && (
@@ -148,7 +148,7 @@ export default function CertificatesPanel({ initialCertificates }: Props) {
               onChange={(e) => setDomainFilter(e.target.value)}
               className="rounded-xl px-3 py-2.5 text-sm outline-none transition-all cursor-pointer
                 bg-white border border-black/[0.08] focus:border-violet-500/40 text-slate-700
-                dark:bg-[#0d0d18] dark:border-white/[0.07] dark:text-white/60"
+                dark:bg-[#111425] dark:border-white/[0.11] dark:text-white/75"
             >
               {allDomains.map((d) => <option key={d} value={d}>{d}</option>)}
             </select>
@@ -175,8 +175,8 @@ export default function CertificatesPanel({ initialCertificates }: Props) {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 01-1.043 3.296 3.745 3.745 0 01-3.296 1.043A3.745 3.745 0 0112 21c-1.268 0-2.39-.63-3.068-1.593a3.745 3.745 0 01-3.296-1.043 3.745 3.745 0 01-1.043-3.296A3.745 3.745 0 013 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 011.043-3.296 3.745 3.745 0 013.296-1.043A3.745 3.745 0 0112 3c1.268 0 2.39.63 3.068 1.593a3.745 3.745 0 013.296 1.043 3.745 3.745 0 011.043 3.296A3.745 3.745 0 0121 12z" />
               </svg>
             </div>
-            <h3 className="text-xl font-bold mb-2 text-slate-900 dark:text-white/90">No certificates yet</h3>
-            <p className="text-sm mb-8 max-w-xs mx-auto leading-relaxed text-slate-500 dark:text-white/35">
+            <h3 className="text-xl font-bold mb-2 text-slate-900 dark:text-white">No certificates yet</h3>
+            <p className="text-sm mb-8 max-w-xs mx-auto leading-relaxed text-slate-500 dark:text-white/55">
               Start building your professional portfolio. Add your first certificate and put your skills on display.
             </p>
             <button
@@ -199,7 +199,7 @@ export default function CertificatesPanel({ initialCertificates }: Props) {
       {/* No results */}
       {totalCount > 0 && filtered.length === 0 && (
         <div className="text-center py-16">
-          <p className="text-sm text-slate-400 dark:text-white/25">No certificates match your search.</p>
+          <p className="text-sm text-slate-400 dark:text-white/50">No certificates match your search.</p>
           <button onClick={() => { setSearch(""); setDomainFilter("All"); }} className="text-violet-600 dark:text-violet-400 hover:text-violet-700 dark:hover:text-violet-300 text-sm mt-2 transition-colors">
             Clear filters
           </button>

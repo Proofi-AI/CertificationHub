@@ -93,14 +93,14 @@ export default function ProfilePanel({ initialProfile }: Props) {
   const initials = (profile.name || "U").split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
   const saveDisabled = slugStatus === "taken" || slugStatus === "invalid" || bio.length > 160 || saving;
 
-  const inputClass = "w-full rounded-xl px-4 py-3 text-sm outline-none transition-all bg-black/[0.04] border border-black/[0.09] focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/15 text-slate-800 placeholder-slate-400 dark:bg-white/[0.04] dark:border-white/[0.08] dark:text-white dark:placeholder-white/20";
+  const inputClass = "w-full rounded-xl px-4 py-3 text-sm outline-none transition-all bg-black/[0.04] border border-black/[0.09] focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/15 text-slate-800 placeholder-slate-400 dark:bg-white/[0.06] dark:border-white/[0.12] dark:text-white dark:placeholder-white/35";
 
   return (
     <div className="space-y-5">
 
       {/* Profile photo */}
       <div className="rounded-2xl p-6" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
-        <p className="text-[11px] font-bold uppercase tracking-[0.12em] mb-5 text-slate-400 dark:text-white/30">Profile Photo</p>
+        <p className="text-[11px] font-bold uppercase tracking-[0.12em] mb-5 text-slate-400 dark:text-white/50">Profile Photo</p>
         <div className="flex items-center gap-5">
           <div className="relative group cursor-pointer shrink-0" onClick={() => fileRef.current?.click()}>
             <div
@@ -136,7 +136,7 @@ export default function ProfilePanel({ initialProfile }: Props) {
             >
               {avatarUploading ? "Uploading…" : "Change photo"}
             </button>
-            <p className="text-xs mt-1 text-slate-400 dark:text-white/25">JPG, PNG, or WebP · Max 5MB</p>
+            <p className="text-xs mt-1 text-slate-400 dark:text-white/60">JPG, PNG, or WebP · Max 5MB</p>
           </div>
         </div>
         <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleAvatarChange} />
@@ -144,17 +144,17 @@ export default function ProfilePanel({ initialProfile }: Props) {
 
       {/* Basic info */}
       <div className="rounded-2xl p-6 space-y-5" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
-        <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-slate-400 dark:text-white/30">Basic Info</p>
+        <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-slate-400 dark:text-white/50">Basic Info</p>
 
         <div>
-          <label className="text-xs font-semibold mb-2 block text-slate-500 dark:text-white/40">Full name</label>
+          <label className="text-xs font-semibold mb-2 block text-slate-500 dark:text-white/60">Full name</label>
           <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" className={inputClass} />
         </div>
 
         <div>
           <div className="flex items-center justify-between mb-2">
-            <label className="text-xs font-semibold text-slate-500 dark:text-white/40">Bio</label>
-            <span className={`text-xs font-medium tabular-nums ${bio.length > 160 ? "text-red-500 dark:text-red-400" : "text-slate-400 dark:text-white/25"}`}>{bio.length} / 160</span>
+            <label className="text-xs font-semibold text-slate-500 dark:text-white/60">Bio</label>
+            <span className={`text-xs font-medium tabular-nums ${bio.length > 160 ? "text-red-500 dark:text-red-400" : "text-slate-400 dark:text-white/60"}`}>{bio.length} / 160</span>
           </div>
           <textarea value={bio} onChange={(e) => setBio(e.target.value)} rows={3} placeholder="A short bio about yourself…" className={`${inputClass} resize-none`} />
         </div>
@@ -162,10 +162,10 @@ export default function ProfilePanel({ initialProfile }: Props) {
 
       {/* Public profile */}
       <div className="rounded-2xl p-6 space-y-5" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
-        <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-slate-400 dark:text-white/30">Public Profile</p>
+        <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-slate-400 dark:text-white/50">Public Profile</p>
 
         <div>
-          <label className="text-xs font-semibold mb-2 block text-slate-500 dark:text-white/40">Your public URL</label>
+          <label className="text-xs font-semibold mb-2 block text-slate-500 dark:text-white/60">Your public URL</label>
           <div
             className="flex items-center gap-3 rounded-xl px-4 py-3"
             style={{ background: "rgba(124,58,237,0.06)", border: "1px solid rgba(124,58,237,0.18)" }}
@@ -188,10 +188,10 @@ export default function ProfilePanel({ initialProfile }: Props) {
         </div>
 
         <div>
-          <label className="text-xs font-semibold mb-2 block text-slate-500 dark:text-white/40">Profile URL slug</label>
+          <label className="text-xs font-semibold mb-2 block text-slate-500 dark:text-white/60">Profile URL slug</label>
           <div className="flex items-center">
             <span
-              className="px-4 py-3 text-xs font-mono rounded-l-xl shrink-0 text-slate-400 dark:text-white/25"
+              className="px-4 py-3 text-xs font-mono rounded-l-xl shrink-0 text-slate-400 dark:text-white/60"
               style={{ background: "var(--input-bg)", border: "1px solid var(--border-input)", borderRight: "none" }}
             >
               proofi.ai/
@@ -208,7 +208,7 @@ export default function ProfilePanel({ initialProfile }: Props) {
             <p className={`text-xs mt-2 flex items-center gap-1.5 font-medium ${
               slugStatus === "available" ? "text-emerald-600 dark:text-emerald-400" :
               slugStatus === "taken" || slugStatus === "invalid" ? "text-red-600 dark:text-red-400" :
-              "text-slate-400 dark:text-white/35"
+              "text-slate-400 dark:text-white/55"
             }`}>
               {slugStatus === "checking" && <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>}
               {slugStatus === "available" && "✓ Available"}
@@ -222,8 +222,8 @@ export default function ProfilePanel({ initialProfile }: Props) {
 
       {/* Public profile appearance */}
       <div className="rounded-2xl p-6 space-y-4" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
-        <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-slate-400 dark:text-white/30">Public Profile Appearance</p>
-        <p className="text-xs text-slate-500 dark:text-white/35">Choose the default theme visitors see when they open your public profile URL.</p>
+        <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-slate-400 dark:text-white/50">Public Profile Appearance</p>
+        <p className="text-xs text-slate-500 dark:text-white/55">Choose the default theme visitors see when they open your public profile URL.</p>
         <div className="flex items-center gap-3">
           <button
             type="button"
@@ -237,13 +237,13 @@ export default function ProfilePanel({ initialProfile }: Props) {
             <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
               defaultTheme === "light" ? "bg-amber-100" : "bg-black/[0.06] dark:bg-white/[0.06]"
             }`}>
-              <svg className={`w-4 h-4 ${defaultTheme === "light" ? "text-amber-500" : "text-slate-400 dark:text-white/30"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <svg className={`w-4 h-4 ${defaultTheme === "light" ? "text-amber-500" : "text-slate-400 dark:text-white/50"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" />
               </svg>
             </div>
             <div className="text-left">
               <p className={`text-sm font-semibold ${defaultTheme === "light" ? "text-violet-600 dark:text-violet-400" : "text-slate-600 dark:text-white/50"}`}>Light</p>
-              <p className="text-xs text-slate-400 dark:text-white/25">Clean white background</p>
+              <p className="text-xs text-slate-400 dark:text-white/60">Clean white background</p>
             </div>
             {defaultTheme === "light" && (
               <svg className="w-4 h-4 text-violet-500 ml-auto shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
@@ -264,13 +264,13 @@ export default function ProfilePanel({ initialProfile }: Props) {
             <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
               defaultTheme === "dark" ? "bg-slate-800" : "bg-black/[0.06] dark:bg-white/[0.06]"
             }`}>
-              <svg className={`w-4 h-4 ${defaultTheme === "dark" ? "text-slate-300" : "text-slate-400 dark:text-white/30"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <svg className={`w-4 h-4 ${defaultTheme === "dark" ? "text-slate-300" : "text-slate-400 dark:text-white/50"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z" />
               </svg>
             </div>
             <div className="text-left">
               <p className={`text-sm font-semibold ${defaultTheme === "dark" ? "text-violet-600 dark:text-violet-400" : "text-slate-600 dark:text-white/50"}`}>Dark</p>
-              <p className="text-xs text-slate-400 dark:text-white/25">Sleek dark background</p>
+              <p className="text-xs text-slate-400 dark:text-white/60">Sleek dark background</p>
             </div>
             {defaultTheme === "dark" && (
               <svg className="w-4 h-4 text-violet-500 ml-auto shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>

@@ -27,24 +27,24 @@
 }
 
 .dark {
-  /* Dark mode */
-  --bg:            #04040a;
-  --surface:       #0d0d18;
-  --surface-alt:   #111120;
-  --border:        rgba(255, 255, 255, 0.06);
-  --border-input:  rgba(255, 255, 255, 0.08);
-  --border-hover:  rgba(255, 255, 255, 0.11);
-  --nav-bg:        rgba(4, 4, 10, 0.85);
-  --hover-bg:      rgba(255, 255, 255, 0.05);
-  --hover-bg-2:    rgba(255, 255, 255, 0.08);
-  --input-bg:      rgba(255, 255, 255, 0.04);
-  --card-shadow:   0 2px 16px rgba(0, 0, 0, 0.35);
-  --card-glow-mul: 0 4px 16px rgba(0, 0, 0, 0.50);
-  --scrollbar-bg:  #0a0a0f;
-  --scrollbar-thumb: #374151;
+  /* Deep blue-black with clear visual layers and readable contrast */
+  --bg:            #090c18;
+  --surface:       #111425;
+  --surface-alt:   #181c32;
+  --border:        rgba(255, 255, 255, 0.11);
+  --border-input:  rgba(255, 255, 255, 0.16);
+  --border-hover:  rgba(255, 255, 255, 0.26);
+  --nav-bg:        rgba(9, 12, 24, 0.92);
+  --hover-bg:      rgba(255, 255, 255, 0.07);
+  --hover-bg-2:    rgba(255, 255, 255, 0.11);
+  --input-bg:      rgba(255, 255, 255, 0.06);
+  --card-shadow:   0 2px 20px rgba(0, 0, 0, 0.50), 0 1px 3px rgba(0, 0, 0, 0.30);
+  --card-glow-mul: 0 8px 32px rgba(0, 0, 0, 0.55);
+  --scrollbar-bg:  #0b0e1e;
+  --scrollbar-thumb: #2d3158;
 
-  --background: #04040a;
-  --foreground: #f0f0f5;
+  --background: #090c18;
+  --foreground: #d8ddf0;
 }
 
 /* ─── Base ──────────────────────────────────────────────────── */

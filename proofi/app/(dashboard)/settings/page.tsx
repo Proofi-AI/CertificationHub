@@ -30,7 +30,7 @@ export default async function SettingsPage() {
         <div className="max-w-3xl mx-auto px-6 h-16 flex items-center gap-4">
           <Link
             href="/dashboard"
-            className="flex items-center gap-2 text-sm font-medium transition-all duration-200 group text-slate-500 hover:text-slate-800 dark:text-white/35 dark:hover:text-white/80"
+            className="flex items-center gap-2 text-sm font-medium transition-all duration-200 group text-slate-500 hover:text-slate-800 dark:text-white/55 dark:hover:text-white/80"
           >
             <div
               className="w-7 h-7 rounded-lg flex items-center justify-center transition-all"
@@ -43,7 +43,7 @@ export default async function SettingsPage() {
             Back
           </Link>
           <div className="w-px h-5" style={{ background: "var(--border)" }} />
-          <h1 className="text-sm font-bold tracking-tight text-slate-700 dark:text-white/80">Settings</h1>
+          <h1 className="text-sm font-bold tracking-tight text-slate-700 dark:text-white/90">Settings</h1>
         </div>
       </div>
 
@@ -54,7 +54,7 @@ export default async function SettingsPage() {
           {/* Sidebar nav */}
           <div className="hidden md:block w-48 shrink-0 pt-1">
             <nav className="sticky top-24 space-y-1">
-              <p className="text-[10px] font-bold uppercase tracking-[0.14em] px-3 mb-3 text-slate-400 dark:text-white/20">Account</p>
+              <p className="text-[10px] font-bold uppercase tracking-[0.14em] px-3 mb-3 text-slate-400 dark:text-white/40">Account</p>
               <a
                 href="#profile"
                 className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200"
@@ -76,7 +76,7 @@ export default async function SettingsPage() {
           <div id="profile" className="flex-1 min-w-0">
             <div className="mb-7">
               <h2 className="text-xl font-black tracking-tight text-slate-900 dark:text-white">Profile settings</h2>
-              <p className="text-sm mt-1 text-slate-500 dark:text-white/35">Manage your public profile and personal information</p>
+              <p className="text-sm mt-1 text-slate-500 dark:text-white/55">Manage your public profile and personal information</p>
             </div>
             <ProfilePanel initialProfile={profile} />
           </div>
