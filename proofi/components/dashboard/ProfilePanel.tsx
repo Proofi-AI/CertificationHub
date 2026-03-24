@@ -16,6 +16,9 @@ export default function ProfilePanel({ initialProfile }: Props) {
   const [name, setName] = useState(initialProfile.name ?? "");
   const [bio, setBio] = useState(initialProfile.bio ?? "");
   const [slug, setSlug] = useState(initialProfile.slug);
+  const [defaultTheme, setDefaultTheme] = useState<"dark" | "light">(
+    (initialProfile.defaultTheme as "dark" | "light") ?? "dark"
+  );
   const [slugStatus, setSlugStatus] = useState<SlugStatus>("idle");
   const [saving, setSaving] = useState(false);
   const [avatarUploading, setAvatarUploading] = useState(false);
@@ -63,16 +66,22 @@ export default function ProfilePanel({ initialProfile }: Props) {
     if (slugStatus === "taken" || slugStatus === "invalid") return;
     setSaving(true);
     setSaveMsg(null);
-    const res = await fetch("/api/profile", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name, bio, slug }) });
-    const json = await res.json();
-    if (!res.ok) {
-      setSaveMsg({ type: "error", text: json.error || "Save failed." });
-    } else {
-      setProfile(json.data);
-      setSaveMsg({ type: "success", text: "Profile saved successfully!" });
-      setTimeout(() => setSaveMsg(null), 3500);
+    try {
+      const res = await fetch("/api/profile", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name, bio, slug, defaultTheme }) });
+      const text = await res.text();
+      const json = text ? JSON.parse(text) : {};
+      if (!res.ok) {
+        setSaveMsg({ type: "error", text: json.error || "Save failed." });
+      } else {
+        setProfile(json.data);
+        setSaveMsg({ type: "success", text: "Profile saved successfully!" });
+        setTimeout(() => setSaveMsg(null), 3500);
+      }
+    } catch {
+      setSaveMsg({ type: "error", text: "Something went wrong. Please try again." });
+    } finally {
+      setSaving(false);
     }
-    setSaving(false);
   };
 
   const handleCopy = async () => {
@@ -208,6 +217,67 @@ export default function ProfilePanel({ initialProfile }: Props) {
               {slugStatus === "checking" && "Checking availability…"}
             </p>
           )}
+        </div>
+      </div>
+
+      {/* Public profile appearance */}
+      <div className="rounded-2xl p-6 space-y-4" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+        <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-slate-400 dark:text-white/30">Public Profile Appearance</p>
+        <p className="text-xs text-slate-500 dark:text-white/35">Choose the default theme visitors see when they open your public profile URL.</p>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => setDefaultTheme("light")}
+            className={`flex-1 flex items-center gap-3 rounded-xl px-4 py-3 border transition-all ${
+              defaultTheme === "light"
+                ? "border-violet-500/50 bg-violet-500/8"
+                : "border-black/[0.09] bg-black/[0.03] dark:border-white/[0.08] dark:bg-white/[0.03]"
+            }`}
+          >
+            <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
+              defaultTheme === "light" ? "bg-amber-100" : "bg-black/[0.06] dark:bg-white/[0.06]"
+            }`}>
+              <svg className={`w-4 h-4 ${defaultTheme === "light" ? "text-amber-500" : "text-slate-400 dark:text-white/30"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" />
+              </svg>
+            </div>
+            <div className="text-left">
+              <p className={`text-sm font-semibold ${defaultTheme === "light" ? "text-violet-600 dark:text-violet-400" : "text-slate-600 dark:text-white/50"}`}>Light</p>
+              <p className="text-xs text-slate-400 dark:text-white/25">Clean white background</p>
+            </div>
+            {defaultTheme === "light" && (
+              <svg className="w-4 h-4 text-violet-500 ml-auto shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+            )}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setDefaultTheme("dark")}
+            className={`flex-1 flex items-center gap-3 rounded-xl px-4 py-3 border transition-all ${
+              defaultTheme === "dark"
+                ? "border-violet-500/50 bg-violet-500/8"
+                : "border-black/[0.09] bg-black/[0.03] dark:border-white/[0.08] dark:bg-white/[0.03]"
+            }`}
+          >
+            <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
+              defaultTheme === "dark" ? "bg-slate-800" : "bg-black/[0.06] dark:bg-white/[0.06]"
+            }`}>
+              <svg className={`w-4 h-4 ${defaultTheme === "dark" ? "text-slate-300" : "text-slate-400 dark:text-white/30"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z" />
+              </svg>
+            </div>
+            <div className="text-left">
+              <p className={`text-sm font-semibold ${defaultTheme === "dark" ? "text-violet-600 dark:text-violet-400" : "text-slate-600 dark:text-white/50"}`}>Dark</p>
+              <p className="text-xs text-slate-400 dark:text-white/25">Sleek dark background</p>
+            </div>
+            {defaultTheme === "dark" && (
+              <svg className="w-4 h-4 text-violet-500 ml-auto shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+            )}
+          </button>
         </div>
       </div>
 

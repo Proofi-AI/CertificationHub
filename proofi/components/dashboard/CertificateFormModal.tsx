@@ -19,7 +19,7 @@ const toInputDate = (date: Date | string | null | undefined): string => {
 export default function CertificateFormModal({ initialData, onSave, onClose }: Props) {
   const isEdit = !!initialData;
 
-  const domainValues = DOMAINS.map((d) => d.value);
+  const domainValues = DOMAINS.map((d) => d.value as string);
   const isCustomDomain = initialData?.domain ? !domainValues.includes(initialData.domain) : false;
 
   const [form, setForm] = useState({
