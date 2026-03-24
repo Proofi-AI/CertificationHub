@@ -7,11 +7,12 @@ import { SLUG_REGEX } from "@/lib/constants";
 
 interface Props {
   initialProfile: User;
+  onClose?: () => void;
 }
 
 type SlugStatus = "idle" | "checking" | "available" | "taken" | "invalid";
 
-export default function ProfilePanel({ initialProfile }: Props) {
+export default function ProfilePanel({ initialProfile, onClose }: Props) {
   const [profile, setProfile] = useState(initialProfile);
   const [name, setName] = useState(initialProfile.name ?? "");
   const [bio, setBio] = useState(initialProfile.bio ?? "");
@@ -98,7 +99,20 @@ export default function ProfilePanel({ initialProfile }: Props) {
 
   return (
     <div className="glass rounded-2xl border border-white/10 p-6 space-y-6">
-      <h2 className="font-semibold text-lg">Profile</h2>
+      <div className="flex items-center justify-between">
+        <h2 className="font-semibold text-lg">Settings</h2>
+        {onClose && (
+          <button
+            onClick={onClose}
+            className="text-white/40 hover:text-white transition-colors p-1 -mr-1"
+            aria-label="Close settings"
+          >
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        )}
+      </div>
 
       {/* Public URL */}
       <div>
