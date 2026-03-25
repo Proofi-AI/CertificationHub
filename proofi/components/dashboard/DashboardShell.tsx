@@ -4,6 +4,7 @@ import type { Certificate } from "@prisma/client";
 import CertificatesPanel from "./CertificatesPanel";
 import LogoutButton from "@/components/LogoutButton";
 import ThemeToggle from "./ThemeToggle";
+import { parseFeatures } from "@/lib/features";
 
 interface Props {
   profile: User;
@@ -13,6 +14,7 @@ interface Props {
 }
 
 export default function DashboardShell({ profile, certificates, appUrl, initials }: Props) {
+  const features = parseFeatures(profile.features);
   return (
     <>
       <nav
@@ -109,7 +111,7 @@ export default function DashboardShell({ profile, certificates, appUrl, initials
       </nav>
 
       <div className="max-w-4xl mx-auto px-6 py-10">
-        <CertificatesPanel initialCertificates={certificates} />
+        <CertificatesPanel initialCertificates={certificates} features={features} />
       </div>
     </>
   );

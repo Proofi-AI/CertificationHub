@@ -9,6 +9,7 @@ interface Props {
   initialData: Certificate | null;
   onSave: (cert: Certificate) => void;
   onClose: () => void;
+  autoFillEnabled?: boolean;
 }
 
 const toInputDate = (date: Date | string | null | undefined): string => {
@@ -21,7 +22,7 @@ type ExtractNotice =
   | { type: "warn"; message: string }
   | null;
 
-export default function CertificateFormModal({ initialData, onSave, onClose }: Props) {
+export default function CertificateFormModal({ initialData, onSave, onClose, autoFillEnabled = false }: Props) {
   const isEdit = !!initialData;
 
   const domainValues = DOMAINS.map((d) => d.value as string);
@@ -148,8 +149,10 @@ export default function CertificateFormModal({ initialData, onSave, onClose }: P
       setImagePreview(URL.createObjectURL(file));
       setIsPdf(false);
     }
-    // Trigger extraction for all supported file types
-    runExtraction(file);
+    // Trigger extraction only when the feature is enabled
+    if (autoFillEnabled) {
+      runExtraction(file);
+    }
   };
 
   const clearFile = () => {
@@ -341,10 +344,12 @@ export default function CertificateFormModal({ initialData, onSave, onClose }: P
             )}
             <input ref={fileRef} type="file" accept={ACCEPTED_FILE_ACCEPT} className="hidden" onChange={handleFileSelect} />
 
-            {/* Hint text */}
-            <p className="mt-1.5 text-xs text-slate-400 dark:text-white/35">
-              Upload your certificate and we&apos;ll try to fill in the details for you automatically.
-            </p>
+            {/* Hint text — only shown when auto-fill is enabled */}
+            {autoFillEnabled && (
+              <p className="mt-1.5 text-xs text-slate-400 dark:text-white/35">
+                Upload your certificate and we&apos;ll try to fill in the details for you automatically.
+              </p>
+            )}
           </div>
 
           {/* Extraction loading state */}

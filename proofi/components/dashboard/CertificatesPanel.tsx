@@ -2,14 +2,16 @@
 
 import { useState, useMemo } from "react";
 import type { Certificate } from "@prisma/client";
+import type { UserFeatures } from "@/lib/features";
 import CertificateCard from "./CertificateCard";
 import CertificateFormModal from "./CertificateFormModal";
 
 interface Props {
   initialCertificates: Certificate[];
+  features: UserFeatures;
 }
 
-export default function CertificatesPanel({ initialCertificates }: Props) {
+export default function CertificatesPanel({ initialCertificates, features }: Props) {
   const [certificates, setCertificates] = useState<Certificate[]>(initialCertificates);
   const [modalOpen, setModalOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<Certificate | null>(null);
@@ -216,7 +218,7 @@ export default function CertificatesPanel({ initialCertificates }: Props) {
       )}
 
       {modalOpen && (
-        <CertificateFormModal initialData={editTarget} onSave={handleSave} onClose={closeModal} />
+        <CertificateFormModal initialData={editTarget} onSave={handleSave} onClose={closeModal} autoFillEnabled={features.autoFillFromImage} />
       )}
     </div>
   );

@@ -16,6 +16,7 @@ model User {
   avatarUrl    String?
   slug         String        @unique
   defaultTheme String        @default("dark")
+  features     Json          @default("{}")
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
   certificates Certificate[]
