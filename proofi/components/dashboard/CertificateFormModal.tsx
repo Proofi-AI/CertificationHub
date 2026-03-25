@@ -16,6 +16,11 @@ const toInputDate = (date: Date | string | null | undefined): string => {
   return new Date(date).toISOString().split("T")[0];
 };
 
+type ExtractNotice =
+  | { type: "success"; message: string }
+  | { type: "warn"; message: string }
+  | null;
+
 export default function CertificateFormModal({ initialData, onSave, onClose }: Props) {
   const isEdit = !!initialData;
 
@@ -44,6 +49,8 @@ export default function CertificateFormModal({ initialData, onSave, onClose }: P
     initialData?.imageUrl?.endsWith(".pdf") ? initialData.imageUrl : null
   );
   const [loading, setLoading] = useState(false);
+  const [extracting, setExtracting] = useState(false);
+  const [extractNotice, setExtractNotice] = useState<ExtractNotice>(null);
   const [error, setError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -59,6 +66,66 @@ export default function CertificateFormModal({ initialData, onSave, onClose }: P
     setError(null);
   };
 
+  const runExtraction = async (file: File) => {
+    setExtracting(true);
+    setExtractNotice(null);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const res = await fetch("/api/certificates/extract", {
+        method: "POST",
+        body: formData,
+      });
+
+      const json = await res.json();
+
+      if (!res.ok) {
+        console.error("[extract] API error:", json.error);
+        setExtractNotice({
+          type: "warn",
+          message: "Could not read certificate automatically. Please fill in the details manually.",
+        });
+        return;
+      }
+
+      const data = json.data as Record<string, string | null> | undefined;
+      if (!data) {
+        console.error("[extract] No data in response:", json);
+        setExtractNotice({
+          type: "warn",
+          message: "Could not read certificate automatically. Please fill in the details manually.",
+        });
+        return;
+      }
+
+      // Auto-fill only empty fields and only when extracted value is not null
+      setForm((prev) => ({
+        ...prev,
+        name: !prev.name && data.name ? data.name : prev.name,
+        issuer: !prev.issuer && data.issuer ? data.issuer : prev.issuer,
+        issuedAt: !prev.issuedAt && data.issuedAt ? data.issuedAt : prev.issuedAt,
+        expiresAt: !prev.expiresAt && data.expiresAt ? data.expiresAt : prev.expiresAt,
+        // If we got an expiresAt value, uncheck "no expiry"
+        noExpiry: !prev.expiresAt && data.expiresAt ? false : prev.noExpiry,
+        credentialId: !prev.credentialId && data.credentialId ? data.credentialId : prev.credentialId,
+      }));
+
+      setExtractNotice({
+        type: "success",
+        message: "Details filled from your certificate. Please review before saving.",
+      });
+    } catch (err) {
+      console.error("[extract] Unexpected error:", err);
+      setExtractNotice({
+        type: "warn",
+        message: "Could not read certificate automatically. Please fill in the details manually.",
+      });
+    } finally {
+      setExtracting(false);
+    }
+  };
+
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -72,6 +139,7 @@ export default function CertificateFormModal({ initialData, onSave, onClose }: P
     }
     setImageFile(file);
     setError(null);
+    setExtractNotice(null);
     if (file.type === "application/pdf") {
       setImagePreview(null);
       setPdfPreviewUrl(URL.createObjectURL(file));
@@ -80,6 +148,8 @@ export default function CertificateFormModal({ initialData, onSave, onClose }: P
       setImagePreview(URL.createObjectURL(file));
       setIsPdf(false);
     }
+    // Trigger extraction for all supported file types
+    runExtraction(file);
   };
 
   const clearFile = () => {
@@ -88,10 +158,12 @@ export default function CertificateFormModal({ initialData, onSave, onClose }: P
     setPdfPreviewUrl(null);
     setIsPdf(false);
     setExistingFileUrl(null);
+    setExtractNotice(null);
     if (fileRef.current) fileRef.current.value = "";
   };
 
   const hasFile = !!imageFile || !!existingFileUrl;
+  const isDisabled = loading || extracting;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -207,92 +279,7 @@ export default function CertificateFormModal({ initialData, onSave, onClose }: P
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          {/* Certificate name */}
-          <div>
-            <label className="text-xs font-semibold mb-1.5 block text-slate-500 dark:text-white/65">
-              Certificate name <span className="text-red-500 dark:text-red-400">*</span>
-            </label>
-            <input
-              value={form.name}
-              onChange={(e) => handleField("name", e.target.value)}
-              placeholder="AWS Solutions Architect"
-              required
-              className="w-full rounded-xl px-4 py-2.5 text-sm outline-none transition-all bg-black/[0.04] border border-black/[0.09] focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20 text-slate-800 placeholder-slate-400 dark:bg-white/[0.07] dark:border-white/[0.13] dark:text-white dark:placeholder-white/40"
-            />
-          </div>
-
-          {/* Issuer */}
-          <div>
-            <label className="text-xs font-semibold mb-1.5 block text-slate-500 dark:text-white/65">
-              Issuer / Company <span className="text-red-500 dark:text-red-400">*</span>
-            </label>
-            <input
-              value={form.issuer}
-              onChange={(e) => handleField("issuer", e.target.value)}
-              placeholder="Amazon Web Services"
-              required
-              className="w-full rounded-xl px-4 py-2.5 text-sm outline-none transition-all bg-black/[0.04] border border-black/[0.09] focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20 text-slate-800 placeholder-slate-400 dark:bg-white/[0.07] dark:border-white/[0.13] dark:text-white dark:placeholder-white/40"
-            />
-          </div>
-
-          {/* Dates */}
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="text-xs font-semibold mb-1.5 block text-slate-500 dark:text-white/65">
-                Date issued <span className="text-red-500 dark:text-red-400">*</span>
-              </label>
-              <input
-                type="date"
-                value={form.issuedAt}
-                onChange={(e) => handleField("issuedAt", e.target.value)}
-                required
-                className="w-full rounded-xl px-4 py-2.5 text-sm outline-none transition-all bg-black/[0.04] border border-black/[0.09] focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20 text-slate-800 dark:bg-white/5 dark:border-white/10 dark:text-white [color-scheme:light] dark:[color-scheme:dark]"
-              />
-            </div>
-            <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="text-xs font-semibold text-slate-500 dark:text-white/65">Expiry date</label>
-                <label className="flex items-center gap-1 cursor-pointer">
-                  <input type="checkbox" checked={form.noExpiry} onChange={(e) => handleField("noExpiry", e.target.checked)} className="w-3 h-3 accent-violet-500" />
-                  <span className="text-xs text-slate-400 dark:text-white/55">No expiry</span>
-                </label>
-              </div>
-              <input
-                type="date"
-                value={form.expiresAt}
-                onChange={(e) => handleField("expiresAt", e.target.value)}
-                disabled={form.noExpiry}
-                className="w-full rounded-xl px-4 py-2.5 text-sm outline-none transition-all bg-black/[0.04] border border-black/[0.09] focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20 text-slate-800 dark:bg-white/5 dark:border-white/10 dark:text-white [color-scheme:light] dark:[color-scheme:dark] disabled:opacity-40 disabled:cursor-not-allowed"
-              />
-            </div>
-          </div>
-
-          {/* Domain */}
-          <div>
-            <label className="text-xs font-semibold mb-1.5 block text-slate-500 dark:text-white/65">
-              Domain <span className="text-red-500 dark:text-red-400">*</span>
-            </label>
-            <select
-              value={form.domain}
-              onChange={(e) => handleField("domain", e.target.value)}
-              required
-              className="w-full rounded-xl px-4 py-2.5 text-sm outline-none transition-all cursor-pointer bg-white border border-black/[0.09] focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20 text-slate-800 dark:bg-[#111425] dark:border-white/[0.13] dark:text-white"
-            >
-              {DOMAINS.map((d) => (
-                <option key={d.value} value={d.value}>{d.label}</option>
-              ))}
-            </select>
-            {form.domain === "Other" && (
-              <input
-                value={form.customDomain}
-                onChange={(e) => handleField("customDomain", e.target.value)}
-                placeholder="Specify your domain…"
-                className="mt-2 w-full rounded-xl px-4 py-2.5 text-sm outline-none transition-all bg-black/[0.04] border border-black/[0.09] focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20 text-slate-800 placeholder-slate-400 dark:bg-white/[0.07] dark:border-white/[0.13] dark:text-white dark:placeholder-white/40"
-              />
-            )}
-          </div>
-
-          {/* File upload */}
+          {/* File upload — moved to top */}
           <div>
             <label className="text-xs font-semibold mb-1.5 block text-slate-500 dark:text-white/65">
               Certificate file <span className="text-red-500 dark:text-red-400">*</span>
@@ -330,19 +317,19 @@ export default function CertificateFormModal({ initialData, onSave, onClose }: P
                   </div>
                 )}
                 <div className="flex items-center gap-2 p-3" style={{ background: "var(--hover-bg)" }}>
-                  <button type="button" onClick={() => fileRef.current?.click()}
-                    className="flex-1 text-xs font-medium rounded-lg py-1.5 transition-all text-slate-500 hover:text-slate-800 bg-black/[0.04] hover:bg-black/[0.07] border border-black/[0.06] dark:text-white/65 dark:hover:text-white dark:bg-white/5 dark:hover:bg-white/10 dark:border-white/10">
+                  <button type="button" onClick={() => fileRef.current?.click()} disabled={isDisabled}
+                    className="flex-1 text-xs font-medium rounded-lg py-1.5 transition-all text-slate-500 hover:text-slate-800 bg-black/[0.04] hover:bg-black/[0.07] border border-black/[0.06] dark:text-white/65 dark:hover:text-white dark:bg-white/5 dark:hover:bg-white/10 dark:border-white/10 disabled:opacity-40 disabled:cursor-not-allowed">
                     Replace file
                   </button>
-                  <button type="button" onClick={clearFile}
-                    className="text-xs font-medium text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 bg-red-500/10 hover:bg-red-500/15 border border-red-500/20 rounded-lg py-1.5 px-3 transition-all">
+                  <button type="button" onClick={clearFile} disabled={isDisabled}
+                    className="text-xs font-medium text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 bg-red-500/10 hover:bg-red-500/15 border border-red-500/20 rounded-lg py-1.5 px-3 transition-all disabled:opacity-40 disabled:cursor-not-allowed">
                     Remove
                   </button>
                 </div>
               </div>
             ) : (
-              <button type="button" onClick={() => fileRef.current?.click()}
-                className="w-full h-28 border-2 border-dashed rounded-xl flex flex-col items-center justify-center gap-2 transition-all border-black/[0.12] hover:border-violet-500/50 text-slate-400 hover:text-slate-600 dark:border-white/15 dark:hover:border-violet-500/50 dark:text-white/30 dark:hover:text-white/60">
+              <button type="button" onClick={() => fileRef.current?.click()} disabled={isDisabled}
+                className="w-full h-28 border-2 border-dashed rounded-xl flex flex-col items-center justify-center gap-2 transition-all border-black/[0.12] hover:border-violet-500/50 text-slate-400 hover:text-slate-600 dark:border-white/15 dark:hover:border-violet-500/50 dark:text-white/30 dark:hover:text-white/60 disabled:opacity-40 disabled:cursor-not-allowed">
                 <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
                 </svg>
@@ -353,6 +340,131 @@ export default function CertificateFormModal({ initialData, onSave, onClose }: P
               </button>
             )}
             <input ref={fileRef} type="file" accept={ACCEPTED_FILE_ACCEPT} className="hidden" onChange={handleFileSelect} />
+
+            {/* Hint text */}
+            <p className="mt-1.5 text-xs text-slate-400 dark:text-white/35">
+              Upload your certificate and we&apos;ll try to fill in the details for you automatically.
+            </p>
+          </div>
+
+          {/* Extraction loading state */}
+          {extracting && (
+            <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-violet-500/10 border border-violet-500/20">
+              <svg className="w-4 h-4 animate-spin text-violet-400 shrink-0" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+              </svg>
+              <p className="text-sm text-violet-300">Reading certificate…</p>
+            </div>
+          )}
+
+          {/* Extraction notice */}
+          {!extracting && extractNotice && (
+            extractNotice.type === "success" ? (
+              <div className="flex items-start gap-2 bg-emerald-50 border border-emerald-200 dark:bg-emerald-500/10 dark:border-emerald-500/20 rounded-xl px-4 py-3">
+                <svg className="w-4 h-4 text-emerald-500 dark:text-emerald-400 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <p className="text-sm text-emerald-600 dark:text-emerald-400">{extractNotice.message}</p>
+              </div>
+            ) : (
+              <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 dark:bg-amber-500/10 dark:border-amber-500/20 rounded-xl px-4 py-3">
+                <svg className="w-4 h-4 text-amber-500 dark:text-amber-400 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+                </svg>
+                <p className="text-sm text-amber-600 dark:text-amber-400">{extractNotice.message}</p>
+              </div>
+            )
+          )}
+
+          {/* Certificate name */}
+          <div>
+            <label className="text-xs font-semibold mb-1.5 block text-slate-500 dark:text-white/65">
+              Certificate name <span className="text-red-500 dark:text-red-400">*</span>
+            </label>
+            <input
+              value={form.name}
+              onChange={(e) => handleField("name", e.target.value)}
+              placeholder="AWS Solutions Architect"
+              required
+              disabled={isDisabled}
+              className="w-full rounded-xl px-4 py-2.5 text-sm outline-none transition-all bg-black/[0.04] border border-black/[0.09] focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20 text-slate-800 placeholder-slate-400 dark:bg-white/[0.07] dark:border-white/[0.13] dark:text-white dark:placeholder-white/40 disabled:opacity-50 disabled:cursor-not-allowed"
+            />
+          </div>
+
+          {/* Issuer */}
+          <div>
+            <label className="text-xs font-semibold mb-1.5 block text-slate-500 dark:text-white/65">
+              Issuer / Company <span className="text-red-500 dark:text-red-400">*</span>
+            </label>
+            <input
+              value={form.issuer}
+              onChange={(e) => handleField("issuer", e.target.value)}
+              placeholder="Amazon Web Services"
+              required
+              disabled={isDisabled}
+              className="w-full rounded-xl px-4 py-2.5 text-sm outline-none transition-all bg-black/[0.04] border border-black/[0.09] focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20 text-slate-800 placeholder-slate-400 dark:bg-white/[0.07] dark:border-white/[0.13] dark:text-white dark:placeholder-white/40 disabled:opacity-50 disabled:cursor-not-allowed"
+            />
+          </div>
+
+          {/* Dates */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-semibold mb-1.5 block text-slate-500 dark:text-white/65">
+                Date issued <span className="text-red-500 dark:text-red-400">*</span>
+              </label>
+              <input
+                type="date"
+                value={form.issuedAt}
+                onChange={(e) => handleField("issuedAt", e.target.value)}
+                required
+                disabled={isDisabled}
+                className="w-full rounded-xl px-4 py-2.5 text-sm outline-none transition-all bg-black/[0.04] border border-black/[0.09] focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20 text-slate-800 dark:bg-white/5 dark:border-white/10 dark:text-white [color-scheme:light] dark:[color-scheme:dark] disabled:opacity-50 disabled:cursor-not-allowed"
+              />
+            </div>
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-xs font-semibold text-slate-500 dark:text-white/65">Expiry date</label>
+                <label className="flex items-center gap-1 cursor-pointer">
+                  <input type="checkbox" checked={form.noExpiry} onChange={(e) => handleField("noExpiry", e.target.checked)} disabled={isDisabled} className="w-3 h-3 accent-violet-500 disabled:cursor-not-allowed" />
+                  <span className="text-xs text-slate-400 dark:text-white/55">No expiry</span>
+                </label>
+              </div>
+              <input
+                type="date"
+                value={form.expiresAt}
+                onChange={(e) => handleField("expiresAt", e.target.value)}
+                disabled={isDisabled || form.noExpiry}
+                className="w-full rounded-xl px-4 py-2.5 text-sm outline-none transition-all bg-black/[0.04] border border-black/[0.09] focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20 text-slate-800 dark:bg-white/5 dark:border-white/10 dark:text-white [color-scheme:light] dark:[color-scheme:dark] disabled:opacity-40 disabled:cursor-not-allowed"
+              />
+            </div>
+          </div>
+
+          {/* Domain */}
+          <div>
+            <label className="text-xs font-semibold mb-1.5 block text-slate-500 dark:text-white/65">
+              Domain <span className="text-red-500 dark:text-red-400">*</span>
+            </label>
+            <select
+              value={form.domain}
+              onChange={(e) => handleField("domain", e.target.value)}
+              required
+              disabled={isDisabled}
+              className="w-full rounded-xl px-4 py-2.5 text-sm outline-none transition-all cursor-pointer bg-white border border-black/[0.09] focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20 text-slate-800 dark:bg-[#111425] dark:border-white/[0.13] dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {DOMAINS.map((d) => (
+                <option key={d.value} value={d.value}>{d.label}</option>
+              ))}
+            </select>
+            {form.domain === "Other" && (
+              <input
+                value={form.customDomain}
+                onChange={(e) => handleField("customDomain", e.target.value)}
+                placeholder="Specify your domain…"
+                disabled={isDisabled}
+                className="mt-2 w-full rounded-xl px-4 py-2.5 text-sm outline-none transition-all bg-black/[0.04] border border-black/[0.09] focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20 text-slate-800 placeholder-slate-400 dark:bg-white/[0.07] dark:border-white/[0.13] dark:text-white dark:placeholder-white/40 disabled:opacity-50 disabled:cursor-not-allowed"
+              />
+            )}
           </div>
 
           {/* Credential ID */}
@@ -364,7 +476,8 @@ export default function CertificateFormModal({ initialData, onSave, onClose }: P
               value={form.credentialId}
               onChange={(e) => handleField("credentialId", e.target.value)}
               placeholder="e.g. AWS-SAA-C03-1234567"
-              className="w-full rounded-xl px-4 py-2.5 text-sm outline-none transition-all bg-black/[0.04] border border-black/[0.09] focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20 text-slate-800 placeholder-slate-400 dark:bg-white/[0.07] dark:border-white/[0.13] dark:text-white dark:placeholder-white/40"
+              disabled={isDisabled}
+              className="w-full rounded-xl px-4 py-2.5 text-sm outline-none transition-all bg-black/[0.04] border border-black/[0.09] focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20 text-slate-800 placeholder-slate-400 dark:bg-white/[0.07] dark:border-white/[0.13] dark:text-white dark:placeholder-white/40 disabled:opacity-50 disabled:cursor-not-allowed"
             />
           </div>
 
@@ -387,7 +500,7 @@ export default function CertificateFormModal({ initialData, onSave, onClose }: P
             </button>
             <button
               type="submit"
-              disabled={loading}
+              disabled={isDisabled}
               className="flex-1 bg-gradient-to-r from-violet-600 to-blue-600 hover:from-violet-500 hover:to-blue-500 text-white font-semibold py-2.5 rounded-xl text-sm transition-all shadow-lg shadow-violet-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? (
