@@ -595,7 +595,7 @@ export default function ActivityPanel({ certificates, onEditCertificate }: Props
             <span className="text-base leading-none">🔥</span>
             <div>
               <p className="text-lg font-black text-slate-900 dark:text-white leading-none">{currentStreak}</p>
-              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-white/40 mt-0.5">Streak</p>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-white/40 mt-0.5">Monthly streak</p>
               {bestStreak > 1 && (
                 <p className="text-[10px] text-slate-400 dark:text-white/30">Best: {bestStreak}</p>
               )}
@@ -612,7 +612,7 @@ export default function ActivityPanel({ certificates, onEditCertificate }: Props
           <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-white/40 mt-0.5">This month</p>
           <div className="flex items-center gap-1 mt-0.5">
             {thisMonthDelta !== 0 && (
-              <span className={`text-[10px] font-semibold ${thisMonthDelta > 0 ? "text-emerald-500" : "text-slate-400 dark:text-white/30"}`}>
+              <span className={`text-[10px] font-semibold ${thisMonthDelta > 0 ? "text-emerald-500" : "text-red-500 dark:text-red-400"}`}>
                 {thisMonthDelta > 0 ? "↑" : "↓"}{Math.abs(thisMonthDelta)} vs last
               </span>
             )}
