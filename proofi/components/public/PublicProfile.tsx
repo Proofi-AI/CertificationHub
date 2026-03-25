@@ -177,7 +177,7 @@ export default function PublicProfile({ profile }: Props) {
           className="sticky top-0 z-10"
           style={{ borderBottom: "1px solid var(--border)", background: "var(--nav-bg)", backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)" }}
         >
-          <div className="max-w-4xl mx-auto px-6 h-14 flex items-center justify-between">
+          <div className="max-w-4xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
             <Link href="/" className="flex items-center gap-2">
               <div
                 className="w-6 h-6 rounded-md flex items-center justify-center"
@@ -210,19 +210,20 @@ export default function PublicProfile({ profile }: Props) {
 
               <Link
                 href="/signup"
-                className="text-xs font-semibold px-4 py-1.5 rounded-full text-white transition-all"
+                className="text-xs font-semibold px-3 sm:px-4 py-1.5 rounded-full text-white transition-all whitespace-nowrap"
                 style={{ background: "linear-gradient(135deg, #7c3aed, #4f46e5)", boxShadow: "0 2px 10px rgba(124,58,237,0.3)" }}
               >
-                Create your profile
+                <span className="hidden sm:inline">Create your profile</span>
+                <span className="sm:hidden">Get started</span>
               </Link>
             </div>
           </div>
         </nav>
 
-        <main className="max-w-4xl mx-auto px-6 py-12">
+        <main className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-12">
 
           {/* Profile header */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5 mb-10">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-5 mb-7 sm:mb-10">
             <div
               className="w-20 h-20 rounded-2xl overflow-hidden shrink-0"
               style={{ boxShadow: "0 0 0 2px rgba(124,58,237,0.45), 0 0 0 5px rgba(124,58,237,0.08), 0 8px 24px rgba(0,0,0,0.15)" }}

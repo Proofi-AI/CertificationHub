@@ -85,16 +85,16 @@ export default function CertificatesPanel({ initialCertificates, features }: Pro
     <div className="space-y-8">
 
       {/* Header */}
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Certificates</h1>
-          <p className="text-sm mt-1 text-slate-500 dark:text-white/55">
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Certificates</h1>
+          <p className="text-xs sm:text-sm mt-0.5 sm:mt-1 text-slate-500 dark:text-white/55 hidden sm:block">
             Manage and showcase your professional achievements
           </p>
         </div>
         <button
           onClick={openAdd}
-          className="shrink-0 flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white transition-all duration-200 hover:scale-[1.03] active:scale-100"
+          className="shrink-0 flex items-center gap-2 px-3 sm:px-5 py-2.5 rounded-xl text-sm font-semibold text-white transition-all duration-200 hover:scale-[1.03] active:scale-100"
           style={{
             background: "linear-gradient(135deg, #7c3aed, #4f46e5)",
             boxShadow: "0 4px 20px rgba(124,58,237,0.35), inset 0 1px 0 rgba(255,255,255,0.12)",
@@ -103,7 +103,8 @@ export default function CertificatesPanel({ initialCertificates, features }: Pro
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
           </svg>
-          Add Certificate
+          <span className="hidden xs:inline sm:inline">Add</span>
+          <span className="hidden sm:inline"> Certificate</span>
         </button>
       </div>
 
@@ -130,7 +131,7 @@ export default function CertificatesPanel({ initialCertificates, features }: Pro
 
       {/* Search + filter */}
       {totalCount > 0 && (
-        <div className="flex items-center gap-3">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
           <div className="relative flex-1">
             <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none text-slate-400 dark:text-white/40" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
@@ -139,7 +140,7 @@ export default function CertificatesPanel({ initialCertificates, features }: Pro
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search by name or issuer…"
-              className="w-full rounded-xl pl-10 pr-4 py-2.5 text-sm outline-none transition-all
+              className="w-full rounded-xl pl-10 pr-4 py-3 sm:py-2.5 text-sm outline-none transition-all
                 bg-black/[0.04] border border-black/[0.08] focus:border-violet-500/40 focus:ring-1 focus:ring-violet-500/20 text-slate-800 placeholder-slate-400
                 dark:bg-white/[0.06] dark:border-white/[0.11] dark:text-white dark:placeholder-white/35"
             />
@@ -148,7 +149,7 @@ export default function CertificatesPanel({ initialCertificates, features }: Pro
             <select
               value={domainFilter}
               onChange={(e) => setDomainFilter(e.target.value)}
-              className="rounded-xl px-3 py-2.5 text-sm outline-none transition-all cursor-pointer
+              className="w-full sm:w-auto rounded-xl px-3 py-3 sm:py-2.5 text-sm outline-none transition-all cursor-pointer
                 bg-white border border-black/[0.08] focus:border-violet-500/40 text-slate-700
                 dark:bg-[#111425] dark:border-white/[0.11] dark:text-white/75"
             >

@@ -27,7 +27,7 @@ export default async function SettingsPage() {
           WebkitBackdropFilter: "blur(20px)",
         }}
       >
-        <div className="max-w-3xl mx-auto px-6 h-16 flex items-center gap-4">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 h-14 sm:h-16 flex items-center gap-3 sm:gap-4">
           <Link
             href="/dashboard"
             className="flex items-center gap-2 text-sm font-medium transition-all duration-200 group text-slate-500 hover:text-slate-800 dark:text-white/55 dark:hover:text-white/80"
@@ -48,7 +48,7 @@ export default async function SettingsPage() {
       </div>
 
       {/* Content */}
-      <div className="max-w-3xl mx-auto px-6 py-10">
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
         <SettingsShell profile={profile} />
       </div>
     </div>

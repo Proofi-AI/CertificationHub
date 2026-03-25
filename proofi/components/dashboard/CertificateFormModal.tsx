@@ -269,22 +269,30 @@ export default function CertificateFormModal({ initialData, onSave, onClose, aut
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4">
       {/* Backdrop */}
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
 
-      {/* Panel */}
-      <div className="relative w-full max-w-lg rounded-2xl shadow-2xl max-h-[90vh] overflow-y-auto" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
-        <div className="sticky top-0 flex items-center justify-between px-6 py-4 z-10" style={{ borderBottom: "1px solid var(--border)", background: "var(--nav-bg)", backdropFilter: "blur(16px)" }}>
+      {/* Panel — full-screen sheet on mobile, centered modal on sm+ */}
+      <div
+        className="relative w-full sm:max-w-lg sm:rounded-2xl shadow-2xl max-h-[95vh] sm:max-h-[90vh] overflow-y-auto rounded-t-2xl"
+        style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
+      >
+        {/* Drag handle (mobile only) */}
+        <div className="sm:hidden flex justify-center pt-3 pb-1">
+          <div className="w-10 h-1 rounded-full bg-slate-300 dark:bg-white/20" />
+        </div>
+
+        <div className="sticky top-0 flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 z-10" style={{ borderBottom: "1px solid var(--border)", background: "var(--nav-bg)", backdropFilter: "blur(16px)" }}>
           <h2 className="font-semibold text-base text-slate-900 dark:text-white">{isEdit ? "Edit certificate" : "Add certificate"}</h2>
-          <button onClick={onClose} className="transition-colors p-1 text-slate-400 hover:text-slate-700 dark:text-white/55 dark:hover:text-white">
+          <button onClick={onClose} className="transition-colors p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:text-white/55 dark:hover:text-white hover:bg-black/[0.06] dark:hover:bg-white/[0.08]">
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4">
           {/* File upload — moved to top */}
           <div>
             <label className="text-xs font-semibold mb-1.5 block text-slate-500 dark:text-white/65">
@@ -416,7 +424,7 @@ export default function CertificateFormModal({ initialData, onSave, onClose, aut
           </div>
 
           {/* Dates */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 gap-3">
             <div>
               <label className="text-xs font-semibold mb-1.5 block text-slate-500 dark:text-white/65">
                 Date issued <span className="text-red-500 dark:text-red-400">*</span>

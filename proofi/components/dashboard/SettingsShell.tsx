@@ -39,63 +39,28 @@ const HEADINGS: Record<Tab, { title: string; subtitle: string }> = {
 export default function SettingsShell({ profile }: Props) {
   const [activeTab, setActiveTab] = useState<Tab>("profile");
   const features = parseFeatures(profile.features);
-
   const heading = HEADINGS[activeTab];
 
   return (
-    <div className="flex gap-10">
-      {/* Sidebar nav */}
-      <div className="hidden md:block w-48 shrink-0 pt-1">
-        <nav className="sticky top-24 space-y-1">
-          <p className="text-[10px] font-bold uppercase tracking-[0.14em] px-3 mb-3 text-slate-400 dark:text-white/40">
-            Account
-          </p>
-          {TABS.map((tab) => {
-            const isActive = activeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 text-left"
-                style={
-                  isActive
-                    ? {
-                        color: "#7c3aed",
-                        background: "rgba(124,58,237,0.08)",
-                        border: "1px solid rgba(124,58,237,0.18)",
-                      }
-                    : {
-                        color: "var(--muted)",
-                        background: "transparent",
-                        border: "1px solid transparent",
-                      }
-                }
-              >
-                <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d={tab.icon} />
-                </svg>
-                {tab.label}
-              </button>
-            );
-          })}
-        </nav>
-      </div>
-
-      {/* Mobile tab bar */}
-      <div className="md:hidden -mx-6 mb-6 flex border-b" style={{ borderColor: "var(--border)" }}>
+    <div>
+      {/* Mobile tab bar — sits above everything, full bleed */}
+      <div
+        className="md:hidden flex mb-6 -mx-4 sm:-mx-6 border-b"
+        style={{ borderColor: "var(--border)" }}
+      >
         {TABS.map((tab) => {
           const isActive = activeTab === tab.id;
           return (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-semibold transition-all border-b-2 ${
+              className={`flex-1 flex items-center justify-center gap-2 py-3.5 text-sm font-semibold transition-all border-b-2 -mb-px ${
                 isActive
                   ? "text-violet-600 dark:text-violet-400 border-violet-600 dark:border-violet-400"
                   : "text-slate-500 dark:text-white/50 border-transparent"
               }`}
             >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d={tab.icon} />
               </svg>
               {tab.label}
@@ -104,17 +69,57 @@ export default function SettingsShell({ profile }: Props) {
         })}
       </div>
 
-      {/* Panel */}
-      <div className="flex-1 min-w-0">
-        <div className="mb-7">
-          <h2 className="text-xl font-black tracking-tight text-slate-900 dark:text-white">
-            {heading.title}
-          </h2>
-          <p className="text-sm mt-1 text-slate-500 dark:text-white/55">{heading.subtitle}</p>
+      {/* Layout: sidebar (desktop) + panel */}
+      <div className="flex gap-10">
+        {/* Desktop sidebar */}
+        <div className="hidden md:block w-48 shrink-0 pt-1">
+          <nav className="sticky top-24 space-y-1">
+            <p className="text-[10px] font-bold uppercase tracking-[0.14em] px-3 mb-3 text-slate-400 dark:text-white/40">
+              Account
+            </p>
+            {TABS.map((tab) => {
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 text-left"
+                  style={
+                    isActive
+                      ? {
+                          color: "#7c3aed",
+                          background: "rgba(124,58,237,0.08)",
+                          border: "1px solid rgba(124,58,237,0.18)",
+                        }
+                      : {
+                          color: "var(--muted)",
+                          background: "transparent",
+                          border: "1px solid transparent",
+                        }
+                  }
+                >
+                  <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d={tab.icon} />
+                  </svg>
+                  {tab.label}
+                </button>
+              );
+            })}
+          </nav>
         </div>
 
-        {activeTab === "profile" && <ProfilePanel initialProfile={profile} />}
-        {activeTab === "features" && <FeaturesPanel initialFeatures={features} />}
+        {/* Panel */}
+        <div className="flex-1 min-w-0">
+          <div className="mb-6 sm:mb-7">
+            <h2 className="text-xl font-black tracking-tight text-slate-900 dark:text-white">
+              {heading.title}
+            </h2>
+            <p className="text-sm mt-1 text-slate-500 dark:text-white/55">{heading.subtitle}</p>
+          </div>
+
+          {activeTab === "profile" && <ProfilePanel initialProfile={profile} />}
+          {activeTab === "features" && <FeaturesPanel initialFeatures={features} />}
+        </div>
       </div>
     </div>
   );
