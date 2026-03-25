@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo } from "react";
 import type { Certificate } from "@prisma/client";
 
 interface Props {
@@ -84,9 +84,9 @@ function MiniCalendar({
   return (
     <div className="relative">
       {/* Day labels */}
-      <div className="grid grid-cols-7 mb-1">
+      <div className="grid grid-cols-7 mb-0.5">
         {DAYS.map((d) => (
-          <div key={d} className="text-center text-[10px] font-bold uppercase tracking-wide text-slate-400 dark:text-white/30 py-1">
+          <div key={d} className="text-center text-[9px] font-bold uppercase tracking-wide text-slate-400 dark:text-white/30 py-0.5">
             {d}
           </div>
         ))}
@@ -115,7 +115,7 @@ function MiniCalendar({
             <button
               key={day}
               onClick={() => handleDay(day)}
-              className={`relative flex flex-col items-center justify-center rounded-lg h-8 text-xs font-medium transition-all
+              className={`relative flex flex-col items-center justify-center rounded-md h-6 text-[11px] font-medium transition-all
                 ${isToday
                   ? "bg-violet-600 text-white font-bold"
                   : (issued || expiring)
@@ -174,135 +174,153 @@ function MiniCalendar({
   );
 }
 
-/* ─── sub-component: Heatmap ──────────────────────────────────────────── */
+/* ─── sub-component: Monthly bar chart ───────────────────────────────── */
 
-function ActivityHeatmap({ certificates }: { certificates: Certificate[] }) {
+function MonthlyBarChart({
+  certificates,
+  year,
+}: {
+  certificates: Certificate[];
+  year: number;
+}) {
   const today = new Date();
-  const tooltipRef = useRef<HTMLDivElement>(null);
-  const [tooltip, setTooltip] = useState<{ text: string; x: number; y: number } | null>(null);
+  const [hovered, setHovered] = useState<number | null>(null);
+  const currentYear = today.getFullYear();
+  const currentMonth = today.getMonth();
 
-  // Build 52-week grid ending today
-  const weeks = useMemo(() => {
-    const end = new Date(today);
-    // Align to Saturday so grid fills neatly
-    const endSat = new Date(end);
-    endSat.setDate(end.getDate() + (6 - end.getDay()));
-
-    const countMap = new Map<string, number>();
-    certificates.forEach((c) => {
-      const d = toDate(c.issuedAt);
-      if (!d) return;
-      const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
-      countMap.set(key, (countMap.get(key) ?? 0) + 1);
+  const bars = useMemo(() => {
+    return Array.from({ length: 12 }, (_, m) => {
+      const count = certificates.filter((c) => {
+        const issued = toDate(c.issuedAt);
+        return issued && issued.getFullYear() === year && issued.getMonth() === m;
+      }).length;
+      // Future months in the current year are "pending"
+      const isFuture = year === currentYear && m > currentMonth;
+      return { label: MONTHS[m], year, month: m, count, isFuture };
     });
+  }, [certificates, year]);
 
-    const result: { date: Date; count: number }[][] = [];
-    let cursor = new Date(endSat);
-    cursor.setDate(cursor.getDate() - 52 * 7 + 1);
-
-    for (let w = 0; w < 52; w++) {
-      const week: { date: Date; count: number }[] = [];
-      for (let d = 0; d < 7; d++) {
-        const day = new Date(cursor);
-        const key = `${day.getFullYear()}-${day.getMonth()}-${day.getDate()}`;
-        week.push({ date: day, count: countMap.get(key) ?? 0 });
-        cursor.setDate(cursor.getDate() + 1);
-      }
-      result.push(week);
-    }
-    return result;
-  }, [certificates]);
-
-  // Month labels
-  const monthLabels = useMemo(() => {
-    const labels: { label: string; col: number }[] = [];
-    let lastMonth = -1;
-    weeks.forEach((week, wi) => {
-      const m = week[0].date.getMonth();
-      if (m !== lastMonth) {
-        labels.push({ label: MONTHS[m], col: wi });
-        lastMonth = m;
-      }
-    });
-    return labels;
-  }, [weeks]);
-
-  const cellColor = (count: number) => {
-    if (count === 0) return "bg-black/[0.06] dark:bg-white/[0.06]";
-    if (count === 1) return "bg-violet-300 dark:bg-violet-700";
-    if (count === 2) return "bg-violet-400 dark:bg-violet-600";
-    return "bg-violet-600 dark:bg-violet-400";
-  };
+  const maxCount = Math.max(...bars.map((b) => b.count), 1);
 
   return (
-    <div className="relative">
-      {/* Month row */}
-      <div className="relative h-4 mb-1" style={{ display: "grid", gridTemplateColumns: `repeat(52, 1fr)` }}>
-        {monthLabels.map(({ label, col }) => (
-          <span
-            key={`${label}-${col}`}
-            className="absolute text-[10px] text-slate-400 dark:text-white/30 font-medium"
-            style={{ left: `${(col / 52) * 100}%` }}
-          >
-            {label}
-          </span>
-        ))}
-      </div>
+    <div className="relative pt-5">
+      {/* Bars */}
+      <div className="flex items-end gap-[3px] h-14">
+        {bars.map((bar, i) => {
+          const isCurrentMonth = year === currentYear && i === currentMonth;
+          const heightPct = bar.count === 0 ? 0 : Math.max((bar.count / maxCount) * 100, 12);
+          const isHovered = hovered === i;
 
-      {/* Grid */}
-      <div
-        className="overflow-x-auto pb-1"
-        style={{ display: "grid", gridTemplateColumns: `repeat(52, 1fr)`, gap: "2px" }}
-      >
-        {weeks.map((week, wi) => (
-          <div key={wi} className="flex flex-col gap-[2px]">
-            {week.map(({ date, count }, di) => (
+          return (
+            <div
+              key={i}
+              className="relative flex-1 flex flex-col items-center justify-end h-full cursor-default"
+              onMouseEnter={() => setHovered(i)}
+              onMouseLeave={() => setHovered(null)}
+            >
+              {/* Count label — shown on hover or always for current month */}
+              {bar.count > 0 && (isHovered || isCurrentMonth) && (
+                <span
+                  className="absolute -top-4 text-[10px] font-bold leading-none"
+                  style={{ color: isCurrentMonth ? "#7c3aed" : "var(--muted)" }}
+                >
+                  {bar.count}
+                </span>
+              )}
+
+              {/* Bar */}
               <div
-                key={di}
-                className={`w-full aspect-square rounded-[2px] cursor-default transition-opacity hover:opacity-80 ${cellColor(count)}`}
-                style={{ minWidth: 10, minHeight: 10 }}
-                onMouseEnter={(e) => {
-                  if (count === 0) return;
-                  const rect = (e.target as HTMLElement).getBoundingClientRect();
-                  const parentRect = (e.target as HTMLElement).closest(".heatmap-root")?.getBoundingClientRect();
-                  setTooltip({
-                    text: `${count} cert${count > 1 ? "s" : ""} on ${MONTHS[date.getMonth()]} ${date.getDate()}`,
-                    x: rect.left - (parentRect?.left ?? 0),
-                    y: rect.top - (parentRect?.top ?? 0) - 28,
-                  });
+                className="w-full rounded-t-sm transition-all duration-300"
+                style={{
+                  height: bar.count === 0 ? "3px" : `${heightPct}%`,
+                  background: bar.count === 0
+                    ? bar.isFuture
+                      ? "transparent"
+                      : "var(--border)"
+                    : isCurrentMonth
+                    ? "linear-gradient(to top, #6d28d9, #a78bfa)"
+                    : isHovered
+                    ? "linear-gradient(to top, rgba(124,58,237,0.7), rgba(167,139,250,0.7))"
+                    : "linear-gradient(to top, rgba(124,58,237,0.3), rgba(167,139,250,0.3))",
+                  borderRadius: bar.count === 0 ? "2px" : undefined,
+                  opacity: bar.isFuture ? 0 : bar.count === 0 ? 0.35 : 1,
                 }}
-                onMouseLeave={() => setTooltip(null)}
               />
-            ))}
-          </div>
-        ))}
+            </div>
+          );
+        })}
       </div>
 
-      {/* Tooltip */}
-      {tooltip && (
+      {/* Month labels */}
+      <div className="flex gap-[3px] mt-1">
+        {bars.map((bar, i) => {
+          const isCurrentMonth = year === currentYear && i === currentMonth;
+          return (
+            <div
+              key={i}
+              className="flex-1 text-center text-[8px] font-semibold leading-none"
+              style={{
+                color: isCurrentMonth ? "#7c3aed" : "var(--muted)",
+                opacity: bar.isFuture ? 0.25 : isCurrentMonth ? 1 : 0.6,
+              }}
+            >
+              {bar.label[0]}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Hover tooltip */}
+      {hovered !== null && bars[hovered].count > 0 && (
         <div
-          ref={tooltipRef}
-          className="absolute pointer-events-none z-10 px-2 py-1 rounded-lg text-[11px] font-medium text-white shadow-lg"
-          style={{
-            background: "rgba(15,10,30,0.85)",
-            left: tooltip.x,
-            top: tooltip.y,
-            whiteSpace: "nowrap",
-            transform: "translateX(-50%)",
-          }}
+          className="absolute top-0 left-1/2 -translate-x-1/2 pointer-events-none z-10 px-2 py-0.5 rounded-md text-[10px] font-semibold text-white whitespace-nowrap shadow-lg"
+          style={{ background: "rgba(15,10,30,0.82)" }}
         >
-          {tooltip.text}
+          {bars[hovered].count} cert{bars[hovered].count !== 1 ? "s" : ""} · {bars[hovered].label} {year}
         </div>
       )}
+    </div>
+  );
+}
 
-      {/* Legend */}
-      <div className="flex items-center gap-1.5 mt-2 justify-end">
-        <span className="text-[10px] text-slate-400 dark:text-white/30">Less</span>
-        {["bg-black/[0.06] dark:bg-white/[0.06]", "bg-violet-300 dark:bg-violet-700", "bg-violet-400 dark:bg-violet-600", "bg-violet-600 dark:bg-violet-400"].map((c, i) => (
-          <div key={i} className={`w-2.5 h-2.5 rounded-[2px] ${c}`} />
-        ))}
-        <span className="text-[10px] text-slate-400 dark:text-white/30">More</span>
+/* ─── sub-component: Activity bar card (owns year nav state) ─────────── */
+
+function ActivityBarCard({ certificates }: { certificates: Certificate[] }) {
+  const currentYear = new Date().getFullYear();
+  const [year, setYear] = useState(currentYear);
+  const isCurrentYear = year === currentYear;
+
+  return (
+    <div
+      className="rounded-xl p-3"
+      style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
+    >
+      <div className="flex items-center justify-between mb-1">
+        <h3 className="text-xs font-bold text-slate-800 dark:text-white">Activity</h3>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => setYear((y) => y - 1)}
+            className="w-5 h-5 rounded flex items-center justify-center transition-all hover:bg-black/[0.07] dark:hover:bg-white/[0.09]"
+          >
+            <svg className="w-3 h-3 text-slate-500 dark:text-white/50" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+            </svg>
+          </button>
+          <span className="text-[11px] font-bold text-slate-600 dark:text-white/70 tabular-nums w-9 text-center">
+            {year}
+          </span>
+          <button
+            onClick={() => setYear((y) => y + 1)}
+            disabled={isCurrentYear}
+            className="w-5 h-5 rounded flex items-center justify-center transition-all hover:bg-black/[0.07] dark:hover:bg-white/[0.09] disabled:opacity-25 disabled:cursor-not-allowed"
+          >
+            <svg className="w-3 h-3 text-slate-500 dark:text-white/50" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+            </svg>
+          </button>
+        </div>
       </div>
+      <MonthlyBarChart certificates={certificates} year={year} />
     </div>
   );
 }
@@ -320,7 +338,7 @@ function GoalRing({ certsThisYear }: { certsThisYear: number }) {
   }, []);
 
   const pct = Math.min(certsThisYear / goal, 1);
-  const r   = 28;
+  const r   = 22;
   const circ = 2 * Math.PI * r;
   const dash = circ * pct;
   const met  = certsThisYear >= goal;
@@ -335,13 +353,13 @@ function GoalRing({ certsThisYear }: { certsThisYear: number }) {
   };
 
   return (
-    <div className="flex items-center gap-4">
+    <div className="flex items-center gap-3">
       {/* Ring */}
       <div className="relative shrink-0">
-        <svg width="72" height="72" className="-rotate-90">
-          <circle cx="36" cy="36" r={r} fill="none" strokeWidth="6"
+        <svg width="56" height="56" className="-rotate-90">
+          <circle cx="28" cy="28" r={r} fill="none" strokeWidth="5"
             className="stroke-black/[0.08] dark:stroke-white/[0.08]" />
-          <circle cx="36" cy="36" r={r} fill="none" strokeWidth="6"
+          <circle cx="28" cy="28" r={r} fill="none" strokeWidth="5"
             stroke={met ? "#10b981" : "#7c3aed"}
             strokeDasharray={`${dash} ${circ}`}
             strokeLinecap="round"
@@ -349,21 +367,21 @@ function GoalRing({ certsThisYear }: { certsThisYear: number }) {
           />
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className={`text-base font-black leading-none ${met ? "text-emerald-500" : "text-slate-800 dark:text-white"}`}>
+          <span className={`text-sm font-black leading-none ${met ? "text-emerald-500" : "text-slate-800 dark:text-white"}`}>
             {certsThisYear}
           </span>
-          <span className="text-[9px] font-bold text-slate-400 dark:text-white/30 mt-0.5">/{goal}</span>
+          <span className="text-[9px] font-bold text-slate-400 dark:text-white/30">/{goal}</span>
         </div>
       </div>
 
       {/* Label */}
       <div className="min-w-0">
-        <p className="text-sm font-bold text-slate-800 dark:text-white">
+        <p className="text-xs font-bold text-slate-800 dark:text-white">
           {met ? "Goal reached! 🎉" : `${goal - certsThisYear} more to go`}
         </p>
-        <p className="text-xs text-slate-500 dark:text-white/50 mt-0.5">Annual goal</p>
+        <p className="text-[11px] text-slate-500 dark:text-white/50 mt-0.5">Annual goal</p>
         {editing ? (
-          <div className="flex items-center gap-1.5 mt-1.5">
+          <div className="flex items-center gap-1.5 mt-1">
             <input
               autoFocus
               type="number"
@@ -371,7 +389,7 @@ function GoalRing({ certsThisYear }: { certsThisYear: number }) {
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter") commitGoal(); if (e.key === "Escape") setEditing(false); }}
-              className="w-14 rounded-lg border px-2 py-1 text-xs outline-none
+              className="w-12 rounded-md border px-1.5 py-0.5 text-xs outline-none
                 bg-black/[0.04] border-black/[0.10] text-slate-800
                 dark:bg-white/[0.06] dark:border-white/[0.12] dark:text-white"
             />
@@ -380,7 +398,7 @@ function GoalRing({ certsThisYear }: { certsThisYear: number }) {
         ) : (
           <button
             onClick={() => { setDraft(String(goal)); setEditing(true); }}
-            className="text-xs text-violet-600 dark:text-violet-400 hover:underline mt-1"
+            className="text-[11px] text-violet-600 dark:text-violet-400 hover:underline mt-0.5"
           >
             Edit goal
           </button>
@@ -501,16 +519,16 @@ export default function ActivityPanel({ certificates, onEditCertificate }: Props
   const thisMonthDelta = thisMonthCerts.length - lastMonthCerts.length;
 
   return (
-    <div className="space-y-4 heatmap-root">
+    <div className="space-y-3 heatmap-root">
 
       {/* ── Calendar ── */}
       <div
-        className="rounded-2xl p-4"
+        className="rounded-2xl p-3"
         style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
       >
         {/* Calendar header */}
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-bold text-slate-800 dark:text-white">
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="text-xs font-bold text-slate-800 dark:text-white">
             {MONTHS[calMonth]} {calYear}
           </h3>
           <div className="flex items-center gap-1">
@@ -549,36 +567,36 @@ export default function ActivityPanel({ certificates, onEditCertificate }: Props
         />
 
         {/* Legend */}
-        <div className="flex items-center gap-3 mt-3 pt-3" style={{ borderTop: "1px solid var(--border)" }}>
-          <div className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-violet-500 inline-block" />
+        <div className="flex items-center gap-3 mt-2 pt-2" style={{ borderTop: "1px solid var(--border)" }}>
+          <div className="flex items-center gap-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-violet-500 inline-block" />
             <span className="text-[10px] text-slate-500 dark:text-white/40">Issued</span>
           </div>
-          <div className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-amber-400 inline-block" />
+          <div className="flex items-center gap-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block" />
             <span className="text-[10px] text-slate-500 dark:text-white/40">Expiring</span>
           </div>
-          <div className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-red-500 inline-block" />
+          <div className="flex items-center gap-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-red-500 inline-block" />
             <span className="text-[10px] text-slate-500 dark:text-white/40">Expired</span>
           </div>
         </div>
       </div>
 
       {/* ── Stats row: streak + this month ── */}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-2">
         {/* Streak */}
         <div
-          className="rounded-2xl p-4"
+          className="rounded-xl p-3"
           style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
         >
-          <div className="flex items-start gap-2">
-            <span className="text-2xl leading-none mt-0.5">🔥</span>
+          <div className="flex items-center gap-1.5">
+            <span className="text-base leading-none">🔥</span>
             <div>
-              <p className="text-2xl font-black text-slate-900 dark:text-white leading-none">{currentStreak}</p>
-              <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-white/40 mt-1">Month streak</p>
+              <p className="text-lg font-black text-slate-900 dark:text-white leading-none">{currentStreak}</p>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-white/40 mt-0.5">Streak</p>
               {bestStreak > 1 && (
-                <p className="text-[11px] text-slate-400 dark:text-white/35 mt-0.5">Best: {bestStreak}</p>
+                <p className="text-[10px] text-slate-400 dark:text-white/30">Best: {bestStreak}</p>
               )}
             </div>
           </div>
@@ -586,74 +604,56 @@ export default function ActivityPanel({ certificates, onEditCertificate }: Props
 
         {/* This month */}
         <div
-          className="rounded-2xl p-4"
+          className="rounded-xl p-3"
           style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
         >
-          <div>
-            <p className="text-2xl font-black text-slate-900 dark:text-white leading-none">{thisMonthCerts.length}</p>
-            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-white/40 mt-1">This month</p>
-            <div className="flex items-center gap-1 mt-0.5">
-              {thisMonthDelta !== 0 && (
-                <span className={`text-[11px] font-semibold ${thisMonthDelta > 0 ? "text-emerald-500" : "text-slate-400 dark:text-white/30"}`}>
-                  {thisMonthDelta > 0 ? "↑" : "↓"}{Math.abs(thisMonthDelta)} vs last
-                </span>
-              )}
-              {thisMonthDelta === 0 && lastMonthCerts.length > 0 && (
-                <span className="text-[11px] text-slate-400 dark:text-white/30">Same as last</span>
-              )}
-              {thisMonthDelta === 0 && lastMonthCerts.length === 0 && (
-                <span className="text-[11px] text-slate-400 dark:text-white/30">—</span>
-              )}
-            </div>
+          <p className="text-lg font-black text-slate-900 dark:text-white leading-none">{thisMonthCerts.length}</p>
+          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-white/40 mt-0.5">This month</p>
+          <div className="flex items-center gap-1 mt-0.5">
+            {thisMonthDelta !== 0 && (
+              <span className={`text-[10px] font-semibold ${thisMonthDelta > 0 ? "text-emerald-500" : "text-slate-400 dark:text-white/30"}`}>
+                {thisMonthDelta > 0 ? "↑" : "↓"}{Math.abs(thisMonthDelta)} vs last
+              </span>
+            )}
+            {thisMonthDelta === 0 && (
+              <span className="text-[10px] text-slate-400 dark:text-white/30">
+                {lastMonthCerts.length > 0 ? "Same as last" : "—"}
+              </span>
+            )}
           </div>
         </div>
       </div>
 
-      {/* ── Velocity badge ── */}
+      {/* ── Velocity + Goal ring in one card ── */}
       <div
-        className="rounded-2xl p-4 flex items-center justify-between"
+        className="rounded-xl p-3 flex items-center justify-between gap-3"
         style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
       >
         <div>
-          <p className="text-xs font-bold text-slate-500 dark:text-white/45 uppercase tracking-wide">Learning velocity</p>
-          <p className={`text-sm font-bold mt-0.5 ${velocity.color}`}>{velocity.icon} {velocity.label}</p>
+          <p className="text-[10px] font-bold text-slate-500 dark:text-white/45 uppercase tracking-wide">Velocity</p>
+          <p className={`text-xs font-bold mt-0.5 ${velocity.color}`}>{velocity.icon} {velocity.label}</p>
+        </div>
+        <div style={{ borderLeft: "1px solid var(--border)" }} className="pl-3">
+          <GoalRing certsThisYear={certsThisYear} />
         </div>
       </div>
 
-      {/* ── Annual goal ── */}
-      <div
-        className="rounded-2xl p-4"
-        style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
-      >
-        <GoalRing certsThisYear={certsThisYear} />
-      </div>
-
-      {/* ── Heatmap ── */}
-      <div
-        className="rounded-2xl p-4"
-        style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
-      >
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-bold text-slate-800 dark:text-white">12-month activity</h3>
-        </div>
-        <div className="overflow-x-auto">
-          <ActivityHeatmap certificates={certificates} />
-        </div>
-      </div>
+      {/* ── Monthly bar chart ── */}
+      <ActivityBarCard certificates={certificates} />
 
       {/* ── Expiry alerts ── */}
       {expiryAlerts.length > 0 && (
         <div
-          className="rounded-2xl p-4"
+          className="rounded-xl p-3"
           style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
         >
-          <h3 className="text-sm font-bold text-slate-800 dark:text-white mb-3 flex items-center gap-1.5">
-            <svg className="w-4 h-4 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <h3 className="text-xs font-bold text-slate-800 dark:text-white mb-2 flex items-center gap-1.5">
+            <svg className="w-3.5 h-3.5 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
             </svg>
             Expiry alerts
           </h3>
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             {expiryAlerts.map(({ cert, diff }) => {
               const isExpired  = diff < 0;
               const isCritical = diff >= 0 && diff <= 14;
@@ -667,16 +667,16 @@ export default function ActivityPanel({ certificates, onEditCertificate }: Props
                 <button
                   key={cert.id}
                   onClick={() => onEditCertificate(cert)}
-                  className="w-full text-left rounded-xl p-3 transition-all hover:opacity-90"
+                  className="w-full text-left rounded-lg px-2.5 py-2 transition-all hover:opacity-90"
                   style={{ background: color.bg, border: `1px solid ${color.border}` }}
                 >
-                  <p className="text-xs font-semibold text-slate-800 dark:text-white leading-snug">{cert.name}</p>
-                  <p className={`text-[11px] font-bold mt-0.5 ${color.text}`}>
+                  <p className="text-[11px] font-semibold text-slate-800 dark:text-white leading-snug truncate">{cert.name}</p>
+                  <p className={`text-[10px] font-bold mt-0.5 ${color.text}`}>
                     {isExpired
-                      ? `Expired ${Math.abs(diff)} day${Math.abs(diff) !== 1 ? "s" : ""} ago`
+                      ? `Expired ${Math.abs(diff)}d ago`
                       : diff === 0
                       ? "Expires today"
-                      : `Expires in ${diff} day${diff !== 1 ? "s" : ""}`}
+                      : `Expires in ${diff}d`}
                   </p>
                 </button>
               );

@@ -17,8 +17,8 @@ export default function DashboardClient({ initialCertificates, features }: Props
 
   return (
     <div className="flex flex-col lg:flex-row gap-6 lg:gap-8 items-start">
-      {/* Left: certificates (65%) */}
-      <div className="w-full lg:flex-[0_0_63%] lg:min-w-0">
+      {/* Left: certificates (76%) */}
+      <div className="w-full lg:flex-[0_0_75%] lg:min-w-0">
         <CertificatesPanel
           initialCertificates={certificates}
           features={features}
@@ -28,8 +28,8 @@ export default function DashboardClient({ initialCertificates, features }: Props
         />
       </div>
 
-      {/* Right: activity (35%) */}
-      <div className="w-full lg:flex-[0_0_35%] lg:min-w-0 lg:sticky lg:top-20">
+      {/* Right: activity (22%) */}
+      <div className="w-full lg:flex-[0_0_22%] lg:min-w-0 lg:sticky lg:top-20">
         <ActivityPanel
           certificates={certificates}
           onEditCertificate={(cert) => setExternalEdit(cert)}
