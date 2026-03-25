@@ -83,9 +83,12 @@ export default function CertificateFormModal({ initialData, onSave, onClose, aut
 
       if (!res.ok) {
         console.error("[extract] API error:", json.error);
+        const isQuota = res.status === 429;
         setExtractNotice({
           type: "warn",
-          message: "Could not read certificate automatically. Please fill in the details manually.",
+          message: isQuota
+            ? "AI quota limit reached. Please wait a moment and try again, or fill in the details manually."
+            : "Could not read certificate automatically. Please fill in the details manually.",
         });
         return;
       }

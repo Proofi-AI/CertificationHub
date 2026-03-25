@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-lite" });
 
     const result = await model.generateContent([
       EXTRACTION_PROMPT,
@@ -79,6 +79,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ data: parsed });
   } catch (err) {
     console.error("[extract] Gemini error:", err);
+
+    const message = err instanceof Error ? err.message : "";
+    if (message.includes("429") || message.includes("quota") || message.includes("Too Many Requests")) {
+      return NextResponse.json(
+        { error: "Gemini API quota exceeded. Please try again in a moment." },
+        { status: 429 }
+      );
+    }
+
     return NextResponse.json(
       { error: "Extraction failed. Please fill in the details manually." },
       { status: 500 }
