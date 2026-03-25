@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import type { Certificate } from "@prisma/client";
 import type { UserFeatures } from "@/lib/features";
 import CertificateCard from "./CertificateCard";
@@ -9,21 +9,50 @@ import CertificateFormModal from "./CertificateFormModal";
 interface Props {
   initialCertificates: Certificate[];
   features: UserFeatures;
+  onCertificatesChange?: (certs: Certificate[]) => void;
+  externalEdit?: Certificate | null;
+  onExternalEditDone?: () => void;
 }
 
-export default function CertificatesPanel({ initialCertificates, features }: Props) {
+export default function CertificatesPanel({
+  initialCertificates,
+  features,
+  onCertificatesChange,
+  externalEdit,
+  onExternalEditDone,
+}: Props) {
   const [certificates, setCertificates] = useState<Certificate[]>(initialCertificates);
   const [modalOpen, setModalOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<Certificate | null>(null);
   const [search, setSearch] = useState("");
   const [domainFilter, setDomainFilter] = useState("All");
 
+  // Open edit modal when parent requests editing a specific cert
+  useEffect(() => {
+    if (externalEdit) {
+      setEditTarget(externalEdit);
+      setModalOpen(true);
+    }
+  }, [externalEdit]);
+
   const openAdd = () => { setEditTarget(null); setModalOpen(true); };
   const openEdit = (cert: Certificate) => { setEditTarget(cert); setModalOpen(true); };
-  const closeModal = () => { setModalOpen(false); setEditTarget(null); };
+  const closeModal = () => {
+    setModalOpen(false);
+    setEditTarget(null);
+    onExternalEditDone?.();
+  };
+
+  const update = (fn: (prev: Certificate[]) => Certificate[]) => {
+    setCertificates((prev) => {
+      const next = fn(prev);
+      onCertificatesChange?.(next);
+      return next;
+    });
+  };
 
   const handleSave = (cert: Certificate) => {
-    setCertificates((prev) => {
+    update((prev) => {
       const idx = prev.findIndex((c) => c.id === cert.id);
       if (idx >= 0) { const next = [...prev]; next[idx] = cert; return next; }
       return [cert, ...prev];
@@ -31,18 +60,18 @@ export default function CertificatesPanel({ initialCertificates, features }: Pro
   };
 
   const handleDelete = async (id: string) => {
-    setCertificates((prev) => prev.filter((c) => c.id !== id));
+    update((prev) => prev.filter((c) => c.id !== id));
     await fetch(`/api/certificates/${id}`, { method: "DELETE" });
   };
 
   const handleVisibilityToggle = async (id: string, isPublic: boolean) => {
-    setCertificates((prev) => prev.map((c) => (c.id === id ? { ...c, isPublic } : c)));
+    update((prev) => prev.map((c) => (c.id === id ? { ...c, isPublic } : c)));
     const res = await fetch(`/api/certificates/${id}/visibility`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ isPublic }),
     });
-    if (!res.ok) setCertificates((prev) => prev.map((c) => (c.id === id ? { ...c, isPublic: !isPublic } : c)));
+    if (!res.ok) update((prev) => prev.map((c) => (c.id === id ? { ...c, isPublic: !isPublic } : c)));
   };
 
   const totalCount = certificates.length;

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { User } from "@prisma/client";
 import type { Certificate } from "@prisma/client";
-import CertificatesPanel from "./CertificatesPanel";
+import DashboardClient from "./DashboardClient";
 import LogoutButton from "@/components/LogoutButton";
 import ThemeToggle from "./ThemeToggle";
 import { parseFeatures } from "@/lib/features";
@@ -112,8 +112,8 @@ export default function DashboardShell({ profile, certificates, appUrl, initials
         </div>
       </nav>
 
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
-        <CertificatesPanel initialCertificates={certificates} features={features} />
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
+        <DashboardClient initialCertificates={certificates} features={features} />
       </div>
     </>
   );
