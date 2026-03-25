@@ -102,11 +102,12 @@ function MiniCalendar({
           const isToday = isSameDay(new Date(year, month, day), today);
 
           // Determine dot color
+          // Expiry: past → red, today or future → amber. Issue: violet.
           let dotColor = "";
           if (expiring) {
-            const d = toDate(expiring[0].expiresAt)!;
-            const diff = Math.ceil((d.getTime() - now.getTime()) / 86400000);
-            dotColor = diff < 0 ? "bg-red-500" : diff <= 14 ? "bg-red-400" : "bg-amber-400";
+            const cellDate = new Date(year, month, day);
+            const isPast = cellDate < new Date(today.getFullYear(), today.getMonth(), today.getDate());
+            dotColor = isPast ? "bg-red-500" : "bg-amber-400";
           } else if (issued) {
             dotColor = "bg-violet-500";
           }
@@ -124,7 +125,7 @@ function MiniCalendar({
                 }`}
             >
               {day}
-              {dotColor && !isToday && (
+              {dotColor && (
                 <span className={`absolute bottom-0.5 w-1 h-1 rounded-full ${dotColor}`} />
               )}
             </button>
