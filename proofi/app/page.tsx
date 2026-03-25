@@ -1,4 +1,5 @@
 import Link from "next/link";
+import LandingFeedbackForm from "@/components/feedback/LandingFeedbackForm";
 
 export default function LandingPage() {
   return (
@@ -393,6 +394,9 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
+
+      {/* Feedback Section */}
+      <LandingFeedbackForm />
 
       {/* Footer */}
       <footer className="border-t border-white/5 py-8 px-6">

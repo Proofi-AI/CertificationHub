@@ -17,9 +17,11 @@ model User {
   slug         String        @unique
   defaultTheme String        @default("dark")
   features     Json          @default("{}")
+  isAdmin      Boolean       @default(false)
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
   certificates Certificate[]
+  feedbacks    Feedback[]
 }
 
 model Certificate {
@@ -37,6 +39,24 @@ model Certificate {
   verifyStatus String    @default("self_reported")
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
+
+  @@index([userId])
+}
+
+model Feedback {
+  id        String   @id @default(cuid())
+  type      String   // 'bug', 'feature', 'general'
+  name      String?
+  email     String?
+  message   String
+  metadata  Json     @default("{}") // for OS, browser, URL
+  imageUrl  String?
+  priority  String?  // 'low', 'medium', 'high'
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  status    String   @default("open") // open, in-progress, resolved
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([userId])
 }

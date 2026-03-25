@@ -5,15 +5,17 @@ import DashboardClient from "./DashboardClient";
 import LogoutButton from "@/components/LogoutButton";
 import ThemeToggle from "./ThemeToggle";
 import { parseFeatures } from "@/lib/features";
+import FeedbackFAB from "@/components/feedback/FeedbackFAB";
 
 interface Props {
   profile: User;
   certificates: Certificate[];
   appUrl: string;
   initials: string;
+  userIsAdmin?: boolean;
 }
 
-export default function DashboardShell({ profile, certificates, appUrl, initials }: Props) {
+export default function DashboardShell({ profile, certificates, appUrl, initials, userIsAdmin }: Props) {
   const features = parseFeatures(profile.features);
 
   return (
@@ -68,6 +70,22 @@ export default function DashboardShell({ profile, certificates, appUrl, initials
             {/* Theme toggle */}
             <ThemeToggle />
 
+            {/* Admin Link */}
+            {userIsAdmin && (
+              <Link
+                href="/admin/feedback"
+                className="flex items-center gap-1.5 text-xs font-bold transition-all duration-200 px-2 sm:px-3 py-2 rounded-xl
+                  text-emerald-600 hover:text-emerald-700 hover:bg-emerald-500/10
+                  dark:text-emerald-400 dark:hover:text-emerald-300 dark:hover:bg-emerald-500/20"
+                title="Admin Feedback Inbox"
+              >
+                <svg className="w-4 h-4 sm:w-3.5 sm:h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <span className="hidden sm:inline">Admin Inbox</span>
+              </Link>
+            )}
+
             {/* Settings */}
             <Link
               href="/settings"
@@ -115,6 +133,9 @@ export default function DashboardShell({ profile, certificates, appUrl, initials
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
         <DashboardClient initialCertificates={certificates} features={features} />
       </div>
+
+      {/* Floating Feedback Widget */}
+      <FeedbackFAB />
     </>
   );
 }

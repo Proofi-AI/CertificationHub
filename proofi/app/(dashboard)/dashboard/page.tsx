@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
 import { ensureUserRecord } from "@/lib/auth/ensureUserRecord";
+import { isAdmin } from "@/lib/is-admin";
 import DashboardShell from "@/components/dashboard/DashboardShell";
 
 export default async function DashboardPage() {
@@ -24,6 +25,7 @@ export default async function DashboardPage() {
     .slice(0, 2);
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  const userIsAdmin = await isAdmin(user.email ?? undefined);
 
   return (
     <div className="min-h-screen" style={{ background: "var(--bg)", color: "var(--foreground)" }}>
@@ -38,6 +40,7 @@ export default async function DashboardPage() {
         certificates={certificates}
         appUrl={appUrl}
         initials={initials}
+        userIsAdmin={userIsAdmin}
       />
     </div>
   );
