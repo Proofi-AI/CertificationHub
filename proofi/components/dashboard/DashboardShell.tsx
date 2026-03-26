@@ -105,7 +105,7 @@ export default function DashboardShell({ profile, certificates, appUrl, initials
             <div className="hidden sm:block w-px h-5 mx-1" style={{ background: "var(--border)" }} />
 
             {/* Avatar */}
-            <div className="flex items-center gap-2">
+            <Link href="/settings" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
               <div
                 className="w-7 h-7 sm:w-8 sm:h-8 rounded-full overflow-hidden shrink-0"
                 style={{ boxShadow: "0 0 0 2px rgba(124,58,237,0.5), 0 0 0 4px rgba(124,58,237,0.1)" }}
@@ -123,7 +123,7 @@ export default function DashboardShell({ profile, certificates, appUrl, initials
               <span className="text-sm font-medium hidden md:block text-slate-600 dark:text-white/75">
                 {profile.name}
               </span>
-            </div>
+            </Link>
 
             <LogoutButton />
           </div>
