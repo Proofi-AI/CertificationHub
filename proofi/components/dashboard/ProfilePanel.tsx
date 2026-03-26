@@ -1,9 +1,25 @@
 "use client";
 
-import { useRef, useState, useCallback } from "react";
+import { useRef, useState, useCallback, useEffect } from "react";
 import type { User } from "@prisma/client";
 import { uploadAvatar } from "@/lib/utils/storage";
 import { SLUG_REGEX } from "@/lib/constants";
+
+/* ── Preset avatars (DiceBear fun-emoji, free CDN) ── */
+const PRESETS = [
+  { seed: "Zara",    bg: "b6e3f4" },
+  { seed: "Felix",   bg: "c0aede" },
+  { seed: "Luna",    bg: "ffd5dc" },
+  { seed: "Max",     bg: "d1fae5" },
+  { seed: "Nova",    bg: "ffdfbf" },
+  { seed: "Kai",     bg: "dbeafe" },
+  { seed: "Aria",    bg: "fce7f3" },
+  { seed: "Leo",     bg: "ede9fe" },
+  { seed: "Sam",     bg: "dcfce7" },
+  { seed: "Alex",    bg: "fef3c7" },
+];
+const dicebearUrl = (seed: string, bg: string) =>
+  `https://api.dicebear.com/9.x/fun-emoji/svg?seed=${seed}&backgroundColor=${bg}`;
 
 interface Props {
   initialProfile: User;
@@ -25,8 +41,20 @@ export default function ProfilePanel({ initialProfile }: Props) {
   const [saveMsg, setSaveMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [copied, setCopied] = useState(false);
 
-  const fileRef = useRef<HTMLInputElement>(null);
+  // Avatar picker modal
+  const [pickerOpen, setPickerOpen]       = useState(false);
+  const [pickerTab, setPickerTab]         = useState<"presets" | "upload">("presets");
+  const [pendingUrl, setPendingUrl]       = useState<string | null>(null);
+  const [dragOver, setDragOver]           = useState(false);
+  const [uploadError, setUploadError]     = useState<string | null>(null);
+
+  const fileRef   = useRef<HTMLInputElement>(null);
   const slugTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Reset picker state when opened
+  useEffect(() => {
+    if (pickerOpen) { setPendingUrl(null); setUploadError(null); setPickerTab("presets"); }
+  }, [pickerOpen]);
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
   const publicUrl = `${appUrl}/${profile.slug}`;
@@ -90,6 +118,40 @@ export default function ProfilePanel({ initialProfile }: Props) {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const applyAvatar = async (url: string) => {
+    setAvatarUploading(true);
+    try {
+      await fetch("/api/profile", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ avatarUrl: url }) });
+      setProfile((p) => ({ ...p, avatarUrl: url }));
+      setPickerOpen(false);
+    } catch {
+      setUploadError("Failed to save avatar. Try again.");
+    } finally {
+      setAvatarUploading(false);
+    }
+  };
+
+  const handleFileUpload = async (file: File) => {
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+      setUploadError("Only JPG, PNG, or WebP files are supported."); return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setUploadError("File must be under 5MB."); return;
+    }
+    setUploadError(null);
+    setAvatarUploading(true);
+    try {
+      const url = await uploadAvatar(file, profile.id);
+      await fetch("/api/profile", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ avatarUrl: url }) });
+      setProfile((p) => ({ ...p, avatarUrl: url }));
+      setPickerOpen(false);
+    } catch {
+      setUploadError("Upload failed. Try again.");
+    } finally {
+      setAvatarUploading(false);
+    }
+  };
+
   const initials = (profile.name || "U").split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
   const saveDisabled = slugStatus === "taken" || slugStatus === "invalid" || bio.length > 160 || saving;
 
@@ -98,49 +160,282 @@ export default function ProfilePanel({ initialProfile }: Props) {
   return (
     <div className="space-y-5">
 
-      {/* Profile photo */}
-      <div className="rounded-2xl p-6" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
-        <p className="text-[11px] font-bold uppercase tracking-[0.12em] mb-5 text-slate-400 dark:text-white/50">Profile Photo</p>
-        <div className="flex items-center gap-5">
-          <div className="relative group cursor-pointer shrink-0" onClick={() => fileRef.current?.click()}>
-            <div
-              className="w-20 h-20 rounded-2xl overflow-hidden"
-              style={{ boxShadow: "0 0 0 2px rgba(124,58,237,0.45), 0 0 0 5px rgba(124,58,237,0.08), 0 8px 24px rgba(0,0,0,0.15)" }}
-            >
-              {profile.avatarUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={profile.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-2xl font-black text-white" style={{ background: "linear-gradient(135deg, #7c3aed, #4f46e5)" }}>
-                  {initials}
+      {/* ── Identity card ── */}
+      <div
+        className="rounded-2xl overflow-hidden"
+        style={{ border: "1px solid var(--border)" }}
+      >
+        {/* Top gradient banner */}
+        <div
+          className="h-20 w-full relative"
+          style={{ background: "linear-gradient(135deg, #4c1d95 0%, #4338ca 50%, #0e7490 100%)" }}
+        >
+          {/* Decorative circles */}
+          <div className="absolute -right-6 -top-6 w-28 h-28 rounded-full opacity-20" style={{ background: "radial-gradient(circle, #fff, transparent)" }} />
+          <div className="absolute left-16 bottom-0 w-16 h-16 rounded-full opacity-10" style={{ background: "radial-gradient(circle, #fff, transparent)" }} />
+        </div>
+
+        {/* Avatar overlapping the banner */}
+        <div className="px-6 pb-5" style={{ background: "var(--surface)" }}>
+          <div className="flex items-end justify-between -mt-10 mb-4">
+            {/* Avatar with edit overlay */}
+            <div className="relative group cursor-pointer shrink-0" onClick={() => setPickerOpen(true)}>
+              <div
+                className="w-20 h-20 rounded-2xl overflow-hidden ring-4"
+                style={{ ringColor: "var(--surface)", boxShadow: "0 0 0 4px var(--surface), 0 0 0 6px rgba(124,58,237,0.4)" }}
+              >
+                {profile.avatarUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={profile.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-2xl font-black text-white" style={{ background: "linear-gradient(135deg, #7c3aed, #4f46e5)" }}>
+                    {initials}
+                  </div>
+                )}
+              </div>
+              {/* Hover overlay */}
+              <div className="absolute inset-0 rounded-2xl bg-black/55 opacity-0 group-hover:opacity-100 transition-all duration-200 flex items-center justify-center">
+                <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z" />
+                </svg>
+              </div>
+              {/* Loading spinner */}
+              {avatarUploading && (
+                <div className="absolute inset-0 rounded-2xl bg-black/60 flex items-center justify-center">
+                  <svg className="w-6 h-6 text-white animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                  </svg>
                 </div>
               )}
             </div>
-            <div className="absolute inset-0 rounded-2xl bg-black/50 opacity-0 group-hover:opacity-100 transition-all duration-200 flex items-center justify-center">
-              {avatarUploading ? (
-                <svg className="w-6 h-6 text-white animate-spin" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+
+            {/* Change avatar button */}
+            <button
+              onClick={() => setPickerOpen(true)}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all duration-200 border
+                text-violet-600 border-violet-500/30 bg-violet-500/8 hover:bg-violet-500/16
+                dark:text-violet-400 dark:border-violet-400/25 dark:bg-violet-400/8 dark:hover:bg-violet-400/14"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
+              </svg>
+              Change avatar
+            </button>
+          </div>
+
+          <div>
+            <p className="text-base font-bold text-slate-900 dark:text-white leading-tight">
+              {profile.name || "Your name"}
+            </p>
+            <p className="text-xs text-slate-400 dark:text-white/40 mt-0.5">proofi.ai/{profile.slug}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Hidden file input for custom upload */}
+      <input
+        ref={fileRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        className="hidden"
+        onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFileUpload(f); }}
+      />
+
+      {/* ── Avatar picker modal ── */}
+      {pickerOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(8px)" }}
+          onClick={(e) => { if (e.target === e.currentTarget) setPickerOpen(false); }}
+        >
+          <div
+            className="w-full max-w-lg rounded-2xl overflow-hidden shadow-2xl"
+            style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
+          >
+            {/* Modal header */}
+            <div className="flex items-center justify-between px-6 pt-5 pb-4" style={{ borderBottom: "1px solid var(--border)" }}>
+              <div>
+                <h2 className="text-base font-bold text-slate-900 dark:text-white">Choose your avatar</h2>
+                <p className="text-xs text-slate-500 dark:text-white/45 mt-0.5">Pick a preset or upload your own photo</p>
+              </div>
+              <button
+                onClick={() => setPickerOpen(false)}
+                className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-700 dark:text-white/40 dark:hover:text-white transition-colors hover:bg-black/[0.06] dark:hover:bg-white/[0.08]"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                 </svg>
-              ) : (
-                <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
-                </svg>
+              </button>
+            </div>
+
+            {/* Tabs */}
+            <div className="flex px-6 pt-4 gap-1">
+              {(["presets", "upload"] as const).map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => { setPickerTab(tab); setUploadError(null); }}
+                  className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all capitalize ${
+                    pickerTab === tab
+                      ? "bg-violet-600 text-white"
+                      : "text-slate-500 dark:text-white/50 hover:bg-black/[0.06] dark:hover:bg-white/[0.07]"
+                  }`}
+                >
+                  {tab === "presets" ? "Preset avatars" : "Upload photo"}
+                </button>
+              ))}
+            </div>
+
+            <div className="px-6 py-5">
+              {pickerTab === "presets" && (
+                <>
+                  {/* Preview of selected */}
+                  {pendingUrl && (
+                    <div className="flex items-center gap-3 mb-4 px-3 py-2.5 rounded-xl" style={{ background: "rgba(124,58,237,0.07)", border: "1px solid rgba(124,58,237,0.18)" }}>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={pendingUrl} alt="Preview" className="w-8 h-8 rounded-lg" />
+                      <p className="text-xs font-semibold text-violet-600 dark:text-violet-400 flex-1">Preview — click Apply to save</p>
+                    </div>
+                  )}
+
+                  {/* Grid */}
+                  <div className="grid grid-cols-5 gap-3">
+                    {PRESETS.map(({ seed, bg }) => {
+                      const url = dicebearUrl(seed, bg);
+                      const isActive = (pendingUrl ?? profile.avatarUrl) === url;
+                      return (
+                        <button
+                          key={seed}
+                          onClick={() => setPendingUrl(url)}
+                          className="relative group rounded-2xl overflow-hidden transition-all duration-200 hover:scale-105 hover:shadow-lg focus:outline-none"
+                          style={{
+                            boxShadow: isActive
+                              ? "0 0 0 2.5px #7c3aed, 0 4px 16px rgba(124,58,237,0.3)"
+                              : "0 1px 4px rgba(0,0,0,0.1)",
+                          }}
+                          title={seed}
+                        >
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={url}
+                            alt={seed}
+                            className="w-full aspect-square object-cover"
+                          />
+                          {/* Selected checkmark */}
+                          {isActive && (
+                            <div className="absolute inset-0 bg-violet-600/20 flex items-end justify-end p-1">
+                              <div className="w-5 h-5 rounded-full bg-violet-600 flex items-center justify-center">
+                                <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                </svg>
+                              </div>
+                            </div>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Apply / Cancel */}
+                  <div className="flex gap-3 mt-5">
+                    <button
+                      onClick={() => setPickerOpen(false)}
+                      className="flex-1 py-2.5 rounded-xl text-sm font-semibold border transition-all
+                        text-slate-600 border-black/[0.09] bg-black/[0.03] hover:bg-black/[0.06]
+                        dark:text-white/70 dark:border-white/[0.10] dark:bg-white/[0.04] dark:hover:bg-white/[0.08]"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={() => pendingUrl && applyAvatar(pendingUrl)}
+                      disabled={!pendingUrl || avatarUploading}
+                      className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed"
+                      style={{ background: "linear-gradient(135deg,#7c3aed,#4f46e5)", boxShadow: "0 4px 16px rgba(124,58,237,0.35)" }}
+                    >
+                      {avatarUploading ? (
+                        <span className="flex items-center justify-center gap-2">
+                          <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                          </svg>
+                          Saving…
+                        </span>
+                      ) : "Apply avatar"}
+                    </button>
+                  </div>
+                </>
+              )}
+
+              {pickerTab === "upload" && (
+                <>
+                  {/* Dropzone */}
+                  <div
+                    onClick={() => fileRef.current?.click()}
+                    onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+                    onDragLeave={() => setDragOver(false)}
+                    onDrop={(e) => {
+                      e.preventDefault(); setDragOver(false);
+                      const f = e.dataTransfer.files?.[0];
+                      if (f) handleFileUpload(f);
+                    }}
+                    className={`cursor-pointer rounded-2xl border-2 border-dashed p-10 text-center transition-all duration-200 ${
+                      dragOver
+                        ? "border-violet-500 bg-violet-500/8"
+                        : "border-black/[0.12] bg-black/[0.02] hover:border-violet-500/50 hover:bg-violet-500/4 dark:border-white/[0.12] dark:bg-white/[0.02] dark:hover:border-violet-400/50"
+                    }`}
+                  >
+                    {avatarUploading ? (
+                      <div className="flex flex-col items-center gap-3">
+                        <svg className="w-8 h-8 text-violet-500 animate-spin" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                        </svg>
+                        <p className="text-sm font-semibold text-violet-600 dark:text-violet-400">Uploading…</p>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center gap-3">
+                        <div className="w-14 h-14 rounded-2xl flex items-center justify-center" style={{ background: "rgba(124,58,237,0.1)", border: "1px solid rgba(124,58,237,0.2)" }}>
+                          <svg className="w-7 h-7 text-violet-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+                          </svg>
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold text-slate-700 dark:text-white">
+                            Drop your photo here
+                          </p>
+                          <p className="text-xs text-slate-400 dark:text-white/40 mt-1">
+                            or <span className="text-violet-600 dark:text-violet-400 font-semibold">click to browse</span>
+                          </p>
+                          <p className="text-[11px] text-slate-400 dark:text-white/30 mt-2">JPG, PNG, WebP · Max 5MB</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {uploadError && (
+                    <div className="mt-3 flex items-center gap-2 text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 rounded-xl px-4 py-3">
+                      <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+                      </svg>
+                      {uploadError}
+                    </div>
+                  )}
+
+                  <button
+                    onClick={() => setPickerOpen(false)}
+                    className="w-full mt-4 py-2.5 rounded-xl text-sm font-semibold border transition-all
+                      text-slate-600 border-black/[0.09] bg-black/[0.03] hover:bg-black/[0.06]
+                      dark:text-white/70 dark:border-white/[0.10] dark:bg-white/[0.04] dark:hover:bg-white/[0.08]"
+                  >
+                    Cancel
+                  </button>
+                </>
               )}
             </div>
           </div>
-          <div>
-            <button
-              onClick={() => fileRef.current?.click()}
-              className="text-sm font-semibold text-violet-600 hover:text-violet-700 dark:text-violet-400 dark:hover:text-violet-300 transition-colors"
-            >
-              {avatarUploading ? "Uploading…" : "Change photo"}
-            </button>
-            <p className="text-xs mt-1 text-slate-400 dark:text-white/60">JPG, PNG, or WebP · Max 5MB</p>
-          </div>
         </div>
-        <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleAvatarChange} />
-      </div>
+      )}
 
       {/* Basic info */}
       <div className="rounded-2xl p-6 space-y-5" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>

@@ -19,6 +19,8 @@ function LoginForm() {
       setError("Google sign-in failed. Please try again or use email and password.");
     } else if (urlError === "invalid_link") {
       setError("This verification link is invalid or has expired. Please sign up again.");
+    } else if (urlError === "reset_expired") {
+      setError("Your password reset link has expired. Please request a new one.");
     }
   }, [searchParams]);
 
@@ -115,9 +117,9 @@ function LoginForm() {
           <div>
             <div className="flex items-center justify-between mb-1.5">
               <label className="text-xs font-medium text-white/60">Password</label>
-              <a href="#" className="text-xs text-violet-400 hover:text-violet-300 transition-colors">
+              <Link href="/forgot-password" className="text-xs text-violet-400 hover:text-violet-300 transition-colors">
                 Forgot password?
-              </a>
+              </Link>
             </div>
             <div className="relative">
               <input
