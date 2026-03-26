@@ -21,6 +21,31 @@ const PRESETS = [
 const dicebearUrl = (seed: string, bg: string) =>
   `https://api.dicebear.com/9.x/fun-emoji/svg?seed=${seed}&backgroundColor=${bg}`;
 
+/* ── Banner gradients — one per preset bg ── */
+const BANNER_GRADIENTS: Record<string, string> = {
+  b6e3f4: "linear-gradient(135deg, #0e7490 0%, #0284c7 50%, #38bdf8 100%)",
+  c0aede: "linear-gradient(135deg, #4c1d95 0%, #7c3aed 50%, #c4b5fd 100%)",
+  ffd5dc: "linear-gradient(135deg, #881337 0%, #e11d48 50%, #fb7185 100%)",
+  d1fae5: "linear-gradient(135deg, #064e3b 0%, #059669 50%, #6ee7b7 100%)",
+  ffdfbf: "linear-gradient(135deg, #78350f 0%, #d97706 50%, #fbbf24 100%)",
+  dbeafe: "linear-gradient(135deg, #1e3a8a 0%, #2563eb 50%, #93c5fd 100%)",
+  fce7f3: "linear-gradient(135deg, #831843 0%, #db2777 50%, #f9a8d4 100%)",
+  ede9fe: "linear-gradient(135deg, #3b0764 0%, #7c3aed 50%, #ddd6fe 100%)",
+  dcfce7: "linear-gradient(135deg, #14532d 0%, #16a34a 50%, #86efac 100%)",
+  fef3c7: "linear-gradient(135deg, #78350f 0%, #b45309 50%, #fde68a 100%)",
+};
+const DEFAULT_BANNER = "linear-gradient(135deg, #4c1d95 0%, #4338ca 50%, #0e7490 100%)";
+const getBannerGradient = (bg: string | null) => (bg && BANNER_GRADIENTS[bg]) ?? DEFAULT_BANNER;
+
+function extractPresetBg(url: string | null | undefined): string | null {
+  if (!url) return null;
+  try {
+    return new URL(url).searchParams.get("backgroundColor");
+  } catch {
+    return null;
+  }
+}
+
 interface Props {
   initialProfile: User;
 }
@@ -45,6 +70,8 @@ export default function ProfilePanel({ initialProfile }: Props) {
   const [pickerOpen, setPickerOpen]       = useState(false);
   const [pickerTab, setPickerTab]         = useState<"presets" | "upload">("presets");
   const [pendingUrl, setPendingUrl]       = useState<string | null>(null);
+  const [pendingBg, setPendingBg]         = useState<string | null>(null);
+  const [bannerBg, setBannerBg]           = useState<string | null>(() => extractPresetBg(initialProfile.avatarUrl));
   const [dragOver, setDragOver]           = useState(false);
   const [uploadError, setUploadError]     = useState<string | null>(null);
 
@@ -53,7 +80,7 @@ export default function ProfilePanel({ initialProfile }: Props) {
 
   // Reset picker state when opened
   useEffect(() => {
-    if (pickerOpen) { setPendingUrl(null); setUploadError(null); setPickerTab("presets"); }
+    if (pickerOpen) { setPendingUrl(null); setPendingBg(null); setUploadError(null); setPickerTab("presets"); }
   }, [pickerOpen]);
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
@@ -118,11 +145,12 @@ export default function ProfilePanel({ initialProfile }: Props) {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const applyAvatar = async (url: string) => {
+  const applyAvatar = async (url: string, bg?: string | null) => {
     setAvatarUploading(true);
     try {
       await fetch("/api/profile", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ avatarUrl: url }) });
       setProfile((p) => ({ ...p, avatarUrl: url }));
+      setBannerBg(bg ?? null);
       setPickerOpen(false);
     } catch {
       setUploadError("Failed to save avatar. Try again.");
@@ -144,6 +172,7 @@ export default function ProfilePanel({ initialProfile }: Props) {
       const url = await uploadAvatar(file, profile.id);
       await fetch("/api/profile", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ avatarUrl: url }) });
       setProfile((p) => ({ ...p, avatarUrl: url }));
+      setBannerBg(null);
       setPickerOpen(false);
     } catch {
       setUploadError("Upload failed. Try again.");
@@ -168,7 +197,10 @@ export default function ProfilePanel({ initialProfile }: Props) {
         {/* Top gradient banner */}
         <div
           className="h-20 w-full relative"
-          style={{ background: "linear-gradient(135deg, #4c1d95 0%, #4338ca 50%, #0e7490 100%)" }}
+          style={{
+            background: getBannerGradient(pickerOpen && pendingBg ? pendingBg : bannerBg),
+            transition: "background 0.35s ease",
+          }}
         >
           {/* Decorative circles */}
           <div className="absolute -right-6 -top-6 w-28 h-28 rounded-full opacity-20" style={{ background: "radial-gradient(circle, #fff, transparent)" }} />
@@ -307,7 +339,7 @@ export default function ProfilePanel({ initialProfile }: Props) {
                       return (
                         <button
                           key={seed}
-                          onClick={() => setPendingUrl(url)}
+                          onClick={() => { setPendingUrl(url); setPendingBg(bg); }}
                           className="relative group rounded-2xl overflow-hidden transition-all duration-200 hover:scale-105 hover:shadow-lg focus:outline-none"
                           style={{
                             boxShadow: isActive
@@ -348,7 +380,7 @@ export default function ProfilePanel({ initialProfile }: Props) {
                       Cancel
                     </button>
                     <button
-                      onClick={() => pendingUrl && applyAvatar(pendingUrl)}
+                      onClick={() => pendingUrl && applyAvatar(pendingUrl, pendingBg)}
                       disabled={!pendingUrl || avatarUploading}
                       className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed"
                       style={{ background: "linear-gradient(135deg,#7c3aed,#4f46e5)", boxShadow: "0 4px 16px rgba(124,58,237,0.35)" }}
