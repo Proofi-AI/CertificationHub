@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
 import { createClient } from "@/lib/supabase/server";
 import PublicProfile from "@/components/public/PublicProfile";
+import { scoreCertificate } from "@/lib/certStrength";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -34,24 +35,34 @@ export default async function PublicProfilePage({ params }: Props) {
 
   if (!user) notFound();
 
-  // Apply sortStrategy on the server for the public profile
+  // Apply sortStrategy — mirrors the exact same logic used in the dashboard CertificatesPanel
   const sortStrategy = user.sortStrategy ?? "recent";
-  if (sortStrategy === "alphabetical") {
-    user.certificates.sort((a, b) => a.name.localeCompare(b.name));
-  } else if (sortStrategy === "custom") {
-    user.certificates.sort((a, b) => {
-      const ao = a.sortOrder ?? 9999;
-      const bo = b.sortOrder ?? 9999;
-      return ao - bo;
-    });
-  } else if (sortStrategy === "domain") {
-    user.certificates.sort((a, b) => {
-      const dc = a.domain.localeCompare(b.domain);
-      if (dc !== 0) return dc;
-      return new Date(b.issuedAt).getTime() - new Date(a.issuedAt).getTime();
-    });
+  switch (sortStrategy) {
+    case "alphabetical":
+      user.certificates.sort((a, b) => a.name.localeCompare(b.name));
+      break;
+    case "custom":
+      user.certificates.sort((a, b) => (a.sortOrder ?? 9999) - (b.sortOrder ?? 9999));
+      break;
+    case "domain":
+      user.certificates.sort((a, b) => {
+        const dc = a.domain.localeCompare(b.domain);
+        return dc !== 0 ? dc : new Date(b.issuedAt).getTime() - new Date(a.issuedAt).getTime();
+      });
+      break;
+    case "strongest":
+      user.certificates.sort((a, b) => scoreCertificate(b).score - scoreCertificate(a).score);
+      break;
+    case "expiring":
+      user.certificates.sort((a, b) => {
+        if (!a.expiresAt && !b.expiresAt) return 0;
+        if (!a.expiresAt) return 1;
+        if (!b.expiresAt) return -1;
+        return new Date(a.expiresAt).getTime() - new Date(b.expiresAt).getTime();
+      });
+      break;
+    // "recent" is already handled by the prisma orderBy: { issuedAt: "desc" } above
   }
-  // "recent" is already handled by orderBy: { issuedAt: "desc" }
 
   // Increment view count — but only if the viewer is NOT the profile owner
   try {

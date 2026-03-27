@@ -521,8 +521,6 @@ export default function ActivityPanel({ certificates, onEditCertificate, profile
 
   const thisMonthDelta = thisMonthCerts.length - lastMonthCerts.length;
 
-  const appUrl = typeof window !== "undefined" ? window.location.origin : "";
-
   return (
     <div className="space-y-3 heatmap-root">
 
@@ -540,7 +538,7 @@ export default function ActivityPanel({ certificates, onEditCertificate, profile
         </div>
         <div className="truncate mb-2">
           <a
-            href={`${appUrl}/${slug}`}
+            href={`/${slug}`}
             target="_blank"
             rel="noopener noreferrer"
             className="text-[11px] font-mono text-violet-600 dark:text-violet-400 hover:underline truncate"

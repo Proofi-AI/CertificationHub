@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
 import { ensureUserRecord } from "@/lib/auth/ensureUserRecord";
 import { isAdmin } from "@/lib/is-admin";
+import { scoreCertificate } from "@/lib/certStrength";
 import DashboardShell from "@/components/dashboard/DashboardShell";
 
 export default async function DashboardPage() {
@@ -16,6 +17,35 @@ export default async function DashboardPage() {
     where: { userId: user.id },
     orderBy: { issuedAt: "desc" },
   });
+
+  // Apply the user's saved sortStrategy so initialCertificates arrive pre-sorted
+  const sortStrategy = profile.sortStrategy ?? "recent";
+  switch (sortStrategy) {
+    case "alphabetical":
+      certificates.sort((a, b) => a.name.localeCompare(b.name));
+      break;
+    case "custom":
+      certificates.sort((a, b) => (a.sortOrder ?? 9999) - (b.sortOrder ?? 9999));
+      break;
+    case "domain":
+      certificates.sort((a, b) => {
+        const dc = a.domain.localeCompare(b.domain);
+        return dc !== 0 ? dc : new Date(b.issuedAt).getTime() - new Date(a.issuedAt).getTime();
+      });
+      break;
+    case "strongest":
+      certificates.sort((a, b) => scoreCertificate(b).score - scoreCertificate(a).score);
+      break;
+    case "expiring":
+      certificates.sort((a, b) => {
+        if (!a.expiresAt && !b.expiresAt) return 0;
+        if (!a.expiresAt) return 1;
+        if (!b.expiresAt) return -1;
+        return new Date(a.expiresAt).getTime() - new Date(b.expiresAt).getTime();
+      });
+      break;
+    // "recent" is already handled by orderBy: { issuedAt: "desc" } above
+  }
 
   const initials = (profile.name || "U")
     .split(" ")

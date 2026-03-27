@@ -75,9 +75,11 @@ export default function CertificatesPanel({
   );
   const [sortDirty, setSortDirty] = useState(false);
   const [sortSaving, setSortSaving] = useState(false);
+  const [sortError, setSortError] = useState<string | null>(null);
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
   const dragCancelTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const certsRef = useRef<Certificate[]>(initialCertificates);
 
   // Open edit modal when parent requests editing a specific cert
   useEffect(() => {
@@ -96,11 +98,10 @@ export default function CertificatesPanel({
   };
 
   const update = (fn: (prev: Certificate[]) => Certificate[]) => {
-    setCertificates((prev) => {
-      const next = fn(prev);
-      onCertificatesChange?.(next);
-      return next;
-    });
+    const next = fn(certsRef.current);
+    certsRef.current = next;
+    setCertificates(next);
+    onCertificatesChange?.(next);
   };
 
   const handleSave = (cert: Certificate) => {
@@ -131,17 +132,26 @@ export default function CertificatesPanel({
   const handleSortChange = (s: SortStrategy) => {
     setSortStrategy(s);
     setSortDirty(true);
+    setSortError(null);
   };
 
   const handleSortSave = async () => {
     setSortSaving(true);
+    setSortError(null);
     try {
-      await fetch("/api/profile", {
+      const res = await fetch("/api/profile", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ sortStrategy }),
       });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error ?? `HTTP ${res.status}`);
+      }
       setSortDirty(false);
+    } catch (e) {
+      console.error("[Sort save error]", e);
+      setSortError(`Failed to save: ${e instanceof Error ? e.message : e}`);
     } finally {
       setSortSaving(false);
     }
@@ -199,11 +209,12 @@ export default function CertificatesPanel({
 
   const handleSortSaveWithOrder = async () => {
     setSortSaving(true);
+    setSortError(null);
     try {
       const sorted = sortCerts(certificates, "custom");
       const orderPayload = sorted.map((c, i) => ({ id: c.id, sortOrder: i }));
 
-      await Promise.all([
+      const [r1, r2] = await Promise.all([
         fetch("/api/profile", {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
@@ -215,8 +226,16 @@ export default function CertificatesPanel({
           body: JSON.stringify({ order: orderPayload }),
         }),
       ]);
+      if (!r1.ok || !r2.ok) {
+        const b1 = await r1.json().catch(() => ({}));
+        const b2 = await r2.json().catch(() => ({}));
+        throw new Error(`profile: ${b1.error ?? r1.status} / reorder: ${b2.error ?? r2.status}`);
+      }
 
       setSortDirty(false);
+    } catch (e) {
+      console.error("[Sort save error]", e);
+      setSortError(`Failed to save: ${e instanceof Error ? e.message : e}`);
     } finally {
       setSortSaving(false);
     }
@@ -363,6 +382,16 @@ export default function CertificatesPanel({
               saving={sortSaving}
             />
           </div>
+        </div>
+      )}
+
+      {/* Sort error */}
+      {sortError && (
+        <div className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium text-red-600 dark:text-red-400 bg-red-500/10 border border-red-500/20">
+          <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+          </svg>
+          {sortError}
         </div>
       )}
 

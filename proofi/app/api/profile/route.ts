@@ -15,44 +15,48 @@ export async function GET() {
 }
 
 export async function PUT(request: NextRequest) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
+  try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
-  const body = await request.json();
-  const { name, bio, slug, avatarUrl, defaultTheme, features, sortStrategy } = body;
+    const body = await request.json();
+    const { name, bio, slug, avatarUrl, defaultTheme, features, sortStrategy } = body;
 
-  if (bio && bio.length > 160) {
-    return Response.json({ error: "Bio must be 160 characters or less" }, { status: 400 });
-  }
-
-  if (slug !== undefined) {
-    if (!isValidSlug(slug)) {
-      return Response.json(
-        { error: "Slug must be 3–30 characters using only letters, numbers, and hyphens" },
-        { status: 400 }
-      );
+    if (bio && bio.length > 160) {
+      return Response.json({ error: "Bio must be 160 characters or less" }, { status: 400 });
     }
-    const taken = await prisma.user.findFirst({
-      where: { slug, NOT: { id: user.id } },
+
+    if (slug !== undefined) {
+      if (!isValidSlug(slug)) {
+        return Response.json(
+          { error: "Slug must be 3–30 characters using only letters, numbers, and hyphens" },
+          { status: 400 }
+        );
+      }
+      const taken = await prisma.user.findFirst({
+        where: { slug, NOT: { id: user.id } },
+      });
+      if (taken) {
+        return Response.json({ error: "This URL is already taken" }, { status: 409 });
+      }
+    }
+
+    const updated = await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        ...(name !== undefined && { name }),
+        ...(bio !== undefined && { bio }),
+        ...(slug !== undefined && { slug }),
+        ...(avatarUrl !== undefined && { avatarUrl }),
+        ...(defaultTheme !== undefined && { defaultTheme }),
+        ...(features !== undefined && { features }),
+        ...(sortStrategy !== undefined && { sortStrategy }),
+      },
     });
-    if (taken) {
-      return Response.json({ error: "This URL is already taken" }, { status: 409 });
-    }
+    return Response.json({ data: updated });
+  } catch (err) {
+    console.error("[PUT /api/profile] Error:", err);
+    return Response.json({ error: String(err) }, { status: 500 });
   }
-
-  const updated = await prisma.user.update({
-    where: { id: user.id },
-    data: {
-      ...(name !== undefined && { name }),
-      ...(bio !== undefined && { bio }),
-      ...(slug !== undefined && { slug }),
-      ...(avatarUrl !== undefined && { avatarUrl }),
-      ...(defaultTheme !== undefined && { defaultTheme }),
-      ...(features !== undefined && { features }),
-      ...(sortStrategy !== undefined && { sortStrategy }),
-    },
-  });
-
-  return Response.json({ data: updated });
 }
