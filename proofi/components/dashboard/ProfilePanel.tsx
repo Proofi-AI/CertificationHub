@@ -4,6 +4,7 @@ import { useRef, useState, useCallback, useEffect } from "react";
 import type { User } from "@prisma/client";
 import { uploadAvatar } from "@/lib/utils/storage";
 import { SLUG_REGEX } from "@/lib/constants";
+import { createClient } from "@/lib/supabase/client";
 
 /* ── Preset avatars (DiceBear fun-emoji, free CDN) ── */
 const PRESETS = [
@@ -74,6 +75,67 @@ export default function ProfilePanel({ initialProfile }: Props) {
   const [bannerBg, setBannerBg]           = useState<string | null>(() => extractPresetBg(initialProfile.avatarUrl));
   const [dragOver, setDragOver]           = useState(false);
   const [uploadError, setUploadError]     = useState<string | null>(null);
+
+  // Password change state
+  const [isGoogleOnly, setIsGoogleOnly]     = useState(false);
+  const [userEmail, setUserEmail]           = useState("");
+  const [pwModalOpen, setPwModalOpen]       = useState(false);
+  const [oldPw, setOldPw]                   = useState("");
+  const [newPw, setNewPw]                   = useState("");
+  const [confirmPw, setConfirmPw]           = useState("");
+  const [showOld, setShowOld]               = useState(false);
+  const [showNew, setShowNew]               = useState(false);
+  const [showConfirm, setShowConfirm]       = useState(false);
+  const [pwLoading, setPwLoading]           = useState(false);
+  const [pwMsg, setPwMsg]                   = useState<{ type: "success" | "error"; text: string } | null>(null);
+
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data }) => {
+      if (!data.user) return;
+      const hasEmailProvider = data.user.identities?.some((i) => i.provider === "email");
+      setIsGoogleOnly(!hasEmailProvider);
+      setUserEmail(data.user.email ?? "");
+    });
+  }, []);
+
+  const closePwModal = () => {
+    setPwModalOpen(false);
+    setOldPw(""); setNewPw(""); setConfirmPw("");
+    setShowOld(false); setShowNew(false); setShowConfirm(false);
+    setPwMsg(null);
+  };
+
+  const handlePasswordChange = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPwMsg(null);
+
+    if (newPw !== confirmPw) { setPwMsg({ type: "error", text: "New passwords don't match." }); return; }
+    if (newPw.length < 6)   { setPwMsg({ type: "error", text: "Password must be at least 6 characters." }); return; }
+
+    setPwLoading(true);
+    const supabase = createClient();
+
+    if (!isGoogleOnly) {
+      const { error: signInError } = await supabase.auth.signInWithPassword({ email: userEmail, password: oldPw });
+      if (signInError) {
+        setPwMsg({ type: "error", text: "Old password is incorrect." });
+        setPwLoading(false);
+        return;
+      }
+    }
+
+    const { error: updateError } = await supabase.auth.updateUser({ password: newPw });
+    if (updateError) {
+      setPwMsg({ type: "error", text: updateError.message });
+      setPwLoading(false);
+      return;
+    }
+
+    setPwMsg({ type: "success", text: "Password updated successfully!" });
+    setPwLoading(false);
+    setTimeout(() => { closePwModal(); setIsGoogleOnly(false); }, 1800);
+  };
 
   const fileRef   = useRef<HTMLInputElement>(null);
   const slugTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -608,6 +670,31 @@ export default function ProfilePanel({ initialProfile }: Props) {
         </div>
       </div>
 
+      {/* Password & Security */}
+      <div className="rounded-2xl p-6" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+        <p className="text-[11px] font-bold uppercase tracking-[0.12em] mb-4 text-slate-400 dark:text-white/50">Password &amp; Security</p>
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <p className="text-sm font-semibold text-slate-700 dark:text-white">
+              {isGoogleOnly ? "Set a password" : "Change password"}
+            </p>
+            <p className="text-xs mt-0.5 text-slate-400 dark:text-white/50">
+              {isGoogleOnly
+                ? "You signed in with Google. You can set a password to also log in with email."
+                : "Update your account password."}
+            </p>
+          </div>
+          <button
+            onClick={() => setPwModalOpen(true)}
+            className="shrink-0 px-4 py-2 rounded-xl text-xs font-semibold transition-all duration-200 border
+              text-violet-600 border-violet-500/30 bg-violet-500/8 hover:bg-violet-500/14
+              dark:text-violet-400 dark:border-violet-400/30 dark:bg-violet-400/8 dark:hover:bg-violet-400/14"
+          >
+            {isGoogleOnly ? "Set password" : "Change"}
+          </button>
+        </div>
+      </div>
+
       {/* Save message */}
       {saveMsg && (
         <div className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium ${
@@ -643,6 +730,161 @@ export default function ProfilePanel({ initialProfile }: Props) {
           </span>
         ) : "Save changes"}
       </button>
+
+      {/* ── Password change modal ── */}
+      {pwModalOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(6px)" }}
+          onClick={(e) => { if (e.target === e.currentTarget) closePwModal(); }}
+        >
+          <div
+            className="w-full max-w-md rounded-2xl p-6 shadow-2xl"
+            style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h2 className="text-base font-bold text-slate-900 dark:text-white">
+                  {isGoogleOnly ? "Set a password" : "Change password"}
+                </h2>
+                <p className="text-xs mt-0.5 text-slate-500 dark:text-white/50">
+                  {isGoogleOnly
+                    ? "You'll be able to sign in with Google or with email + password."
+                    : "Enter your current password to confirm your identity."}
+                </p>
+              </div>
+              <button
+                onClick={closePwModal}
+                className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-700 dark:text-white/40 dark:hover:text-white transition-colors hover:bg-black/[0.06] dark:hover:bg-white/[0.08]"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <form onSubmit={handlePasswordChange} className="space-y-4">
+              {/* Old password — only for email users */}
+              {!isGoogleOnly && (
+                <div>
+                  <label className="text-xs font-semibold mb-1.5 block text-slate-500 dark:text-white/60">Current password</label>
+                  <div className="relative">
+                    <input
+                      type={showOld ? "text" : "password"}
+                      value={oldPw}
+                      onChange={(e) => { setOldPw(e.target.value); setPwMsg(null); }}
+                      placeholder="Your current password"
+                      required
+                      autoFocus
+                      className={inputClass + " pr-11"}
+                    />
+                    <button type="button" onClick={() => setShowOld((v) => !v)}
+                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-white/30 hover:text-slate-600 dark:hover:text-white/60 transition-colors">
+                      {showOld
+                        ? <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" /></svg>
+                        : <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                      }
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* New password */}
+              <div>
+                <label className="text-xs font-semibold mb-1.5 block text-slate-500 dark:text-white/60">New password</label>
+                <div className="relative">
+                  <input
+                    type={showNew ? "text" : "password"}
+                    value={newPw}
+                    onChange={(e) => { setNewPw(e.target.value); setPwMsg(null); }}
+                    placeholder="At least 6 characters"
+                    required
+                    autoFocus={isGoogleOnly}
+                    className={inputClass + " pr-11"}
+                  />
+                  <button type="button" onClick={() => setShowNew((v) => !v)}
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-white/30 hover:text-slate-600 dark:hover:text-white/60 transition-colors">
+                    {showNew
+                      ? <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" /></svg>
+                      : <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                    }
+                  </button>
+                </div>
+              </div>
+
+              {/* Confirm password */}
+              <div>
+                <label className="text-xs font-semibold mb-1.5 block text-slate-500 dark:text-white/60">Confirm new password</label>
+                <div className="relative">
+                  <input
+                    type={showConfirm ? "text" : "password"}
+                    value={confirmPw}
+                    onChange={(e) => { setConfirmPw(e.target.value); setPwMsg(null); }}
+                    placeholder="Repeat new password"
+                    required
+                    className={inputClass + " pr-11"}
+                  />
+                  <button type="button" onClick={() => setShowConfirm((v) => !v)}
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-white/30 hover:text-slate-600 dark:hover:text-white/60 transition-colors">
+                    {showConfirm
+                      ? <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" /></svg>
+                      : <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                    }
+                  </button>
+                </div>
+              </div>
+
+              {/* Feedback */}
+              {pwMsg && (
+                <div className={`flex items-center gap-2.5 rounded-xl px-4 py-3 text-sm font-medium ${
+                  pwMsg.type === "success"
+                    ? "text-emerald-700 bg-emerald-50 border border-emerald-200 dark:text-emerald-300 dark:bg-emerald-500/10 dark:border-emerald-500/20"
+                    : "text-red-700 bg-red-50 border border-red-200 dark:text-red-300 dark:bg-red-500/10 dark:border-red-500/20"
+                }`}>
+                  {pwMsg.type === "success"
+                    ? <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                    : <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" /></svg>
+                  }
+                  {pwMsg.text}
+                </div>
+              )}
+
+              {/* Actions */}
+              <div className="flex gap-3 pt-1">
+                <button
+                  type="button"
+                  onClick={closePwModal}
+                  className="flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all border
+                    text-slate-600 border-black/[0.09] bg-black/[0.03] hover:bg-black/[0.06]
+                    dark:text-white/70 dark:border-white/[0.10] dark:bg-white/[0.04] dark:hover:bg-white/[0.08]"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={pwLoading}
+                  className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={{
+                    background: "linear-gradient(135deg,#7c3aed,#4f46e5)",
+                    boxShadow: pwLoading ? "none" : "0 4px 16px rgba(124,58,237,0.35)",
+                  }}
+                >
+                  {pwLoading ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                      </svg>
+                      Saving…
+                    </span>
+                  ) : (isGoogleOnly ? "Set password" : "Update password")}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
