@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 
-const DEFAULT_ADMIN_EMAIL = "proofi.ai26@gmail.com";
+const DEFAULT_ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "";
 
 /**
  * Checks if an email has admin privileges.
