@@ -29,6 +29,10 @@ export async function GET(request: NextRequest) {
 
     const { error } = await supabase.auth.verifyOtp({ type, token_hash })
     if (!error) {
+      // Recovery tokens should land on the reset-password page, not the dashboard
+      if (type === 'recovery') {
+        return NextResponse.redirect(`${origin}/reset-password`)
+      }
       return NextResponse.redirect(`${origin}/dashboard`)
     }
   }
