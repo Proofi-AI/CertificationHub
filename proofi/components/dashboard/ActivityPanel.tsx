@@ -525,7 +525,7 @@ export default function ActivityPanel({ certificates, onEditCertificate, profile
     <div className="space-y-3 heatmap-root">
 
       {/* ── Profile views card ── */}
-      <div
+      {/* <div
         className="rounded-xl p-3"
         style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
       >
@@ -559,7 +559,7 @@ export default function ActivityPanel({ certificates, onEditCertificate, profile
         ) : (
           <p className="text-[11px] text-slate-400 dark:text-white/35">No views yet — share your profile to get started.</p>
         )}
-      </div>
+      </div> */}
 
       {/* ── Calendar ── */}
       <div
