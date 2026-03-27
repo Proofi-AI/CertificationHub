@@ -1,9 +1,11 @@
 export interface UserFeatures {
   autoFillFromImage: boolean;
+  portfolioInsights: boolean;
 }
 
 export const DEFAULT_FEATURES: UserFeatures = {
   autoFillFromImage: false,
+  portfolioInsights: false,
 };
 
 /** Safely parse the raw JSON value from Prisma into a typed UserFeatures object. */
@@ -15,5 +17,7 @@ export function parseFeatures(raw: unknown): UserFeatures {
   return {
     autoFillFromImage:
       typeof obj.autoFillFromImage === "boolean" ? obj.autoFillFromImage : false,
+    portfolioInsights:
+      typeof obj.portfolioInsights === "boolean" ? obj.portfolioInsights : false,
   };
 }

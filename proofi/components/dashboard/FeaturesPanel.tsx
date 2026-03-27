@@ -22,6 +22,13 @@ const FEATURE_LIST: FeatureDef[] = [
       "When you upload a certificate image or PDF, Proofi uses AI to automatically read and fill in the certificate name, issuer, dates, and credential ID. Only fills empty fields — never overwrites what you've typed.",
     badge: "AI",
   },
+  {
+    key: "portfolioInsights",
+    label: "Portfolio insights",
+    description:
+      "Shows three smart widgets on your dashboard: Profile Completeness (tracks how complete your profile is), Portfolio Insights (highlights strengths, warnings, and milestones across your certificates), and Recommended Certifications (suggests what to earn next based on your current portfolio).",
+    badge: "AI",
+  },
 ];
 
 export default function FeaturesPanel({ initialFeatures }: Props) {

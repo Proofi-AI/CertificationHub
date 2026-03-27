@@ -332,19 +332,19 @@ export default function CertificatesPanel({
         ))}
       </div>
 
-      {/* Profile completeness — below stats */}
-      <ProfileCompletenessCard
-        certificates={certificates}
-        avatarUrl={profile.avatarUrl}
-        bio={profile.bio}
-        slug={profile.slug}
-      />
-
-      {/* Insights panel */}
-      <InsightsCard certificates={certificates} />
-
-      {/* Recommendations — below insights, above grid */}
-      <RecommendationsCard certificates={certificates} />
+      {/* Portfolio insights widgets — only visible when feature flag is on */}
+      {features.portfolioInsights && (
+        <>
+          <ProfileCompletenessCard
+            certificates={certificates}
+            avatarUrl={profile.avatarUrl}
+            bio={profile.bio}
+            slug={profile.slug}
+          />
+          <InsightsCard certificates={certificates} />
+          <RecommendationsCard certificates={certificates} />
+        </>
+      )}
 
       {/* Search + filter + sort control */}
       {totalCount > 0 && (
