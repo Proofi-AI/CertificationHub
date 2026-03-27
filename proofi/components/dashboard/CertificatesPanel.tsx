@@ -1,22 +1,66 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
-import type { Certificate } from "@prisma/client";
+import { useState, useMemo, useEffect, useRef } from "react";
+import type { Certificate, User } from "@prisma/client";
 import type { UserFeatures } from "@/lib/features";
+import { scoreCertificate } from "@/lib/certStrength";
 import CertificateCard from "./CertificateCard";
 import CertificateFormModal from "./CertificateFormModal";
+import ProfileCompletenessCard from "@/components/ProfileCompletenessCard";
+import InsightsCard from "@/components/InsightsCard";
+import RecommendationsCard from "@/components/RecommendationsCard";
+import SortControl, { type SortStrategy } from "@/components/SortControl";
 
 interface Props {
   initialCertificates: Certificate[];
   features: UserFeatures;
+  profile: Pick<User, "avatarUrl" | "bio" | "slug" | "sortStrategy">;
   onCertificatesChange?: (certs: Certificate[]) => void;
   externalEdit?: Certificate | null;
   onExternalEditDone?: () => void;
 }
 
+/* ── Sort helpers ──────────────────────────────────────────────────────── */
+
+function sortCerts(certs: Certificate[], strategy: SortStrategy): Certificate[] {
+  const arr = [...certs];
+  switch (strategy) {
+    case "recent":
+      return arr.sort((a, b) => new Date(b.issuedAt).getTime() - new Date(a.issuedAt).getTime());
+    case "strongest":
+      return arr.sort((a, b) => scoreCertificate(b).score - scoreCertificate(a).score);
+    case "domain":
+      return arr.sort((a, b) => {
+        const dc = a.domain.localeCompare(b.domain);
+        if (dc !== 0) return dc;
+        return new Date(b.issuedAt).getTime() - new Date(a.issuedAt).getTime();
+      });
+    case "expiring":
+      return arr.sort((a, b) => {
+        if (!a.expiresAt && !b.expiresAt) return 0;
+        if (!a.expiresAt) return 1;
+        if (!b.expiresAt) return -1;
+        return new Date(a.expiresAt).getTime() - new Date(b.expiresAt).getTime();
+      });
+    case "alphabetical":
+      return arr.sort((a, b) => a.name.localeCompare(b.name));
+    case "custom":
+      return arr.sort((a, b) => {
+        const ao = a.sortOrder ?? 9999;
+        const bo = b.sortOrder ?? 9999;
+        return ao - bo;
+      });
+    default:
+      return arr;
+  }
+}
+
+/* ── Main component ────────────────────────────────────────────────────── */
+
 export default function CertificatesPanel({
   initialCertificates,
   features,
+  profile,
   onCertificatesChange,
   externalEdit,
   onExternalEditDone,
@@ -26,6 +70,14 @@ export default function CertificatesPanel({
   const [editTarget, setEditTarget] = useState<Certificate | null>(null);
   const [search, setSearch] = useState("");
   const [domainFilter, setDomainFilter] = useState("All");
+  const [sortStrategy, setSortStrategy] = useState<SortStrategy>(
+    (profile.sortStrategy as SortStrategy) ?? "recent"
+  );
+  const [sortDirty, setSortDirty] = useState(false);
+  const [sortSaving, setSortSaving] = useState(false);
+  const [draggedId, setDraggedId] = useState<string | null>(null);
+  const [dragOverId, setDragOverId] = useState<string | null>(null);
+  const dragCancelTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Open edit modal when parent requests editing a specific cert
   useEffect(() => {
@@ -74,18 +126,119 @@ export default function CertificatesPanel({
     if (!res.ok) update((prev) => prev.map((c) => (c.id === id ? { ...c, isPublic: !isPublic } : c)));
   };
 
+  /* ── Sort ─────────────────────────────────────────────────────────────── */
+
+  const handleSortChange = (s: SortStrategy) => {
+    setSortStrategy(s);
+    setSortDirty(true);
+  };
+
+  const handleSortSave = async () => {
+    setSortSaving(true);
+    try {
+      await fetch("/api/profile", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sortStrategy }),
+      });
+      setSortDirty(false);
+    } finally {
+      setSortSaving(false);
+    }
+  };
+
+  /* ── Drag & drop (custom order) ──────────────────────────────────────── */
+
+  const handleDragStart = (e: React.DragEvent, id: string) => {
+    setDraggedId(id);
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", id);
+  };
+
+  const handleDragOver = (e: React.DragEvent, id: string) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    if (id !== dragOverId) setDragOverId(id);
+    if (dragCancelTimer.current) clearTimeout(dragCancelTimer.current);
+  };
+
+  const handleDrop = (e: React.DragEvent, targetId: string) => {
+    e.preventDefault();
+    if (!draggedId || draggedId === targetId) {
+      setDraggedId(null);
+      setDragOverId(null);
+      return;
+    }
+
+    update((prev) => {
+      const sorted = sortCerts(prev, "custom");
+      const fromIdx = sorted.findIndex((c) => c.id === draggedId);
+      const toIdx   = sorted.findIndex((c) => c.id === targetId);
+      if (fromIdx === -1 || toIdx === -1) return prev;
+
+      const reordered = [...sorted];
+      const [removed] = reordered.splice(fromIdx, 1);
+      reordered.splice(toIdx, 0, removed);
+
+      // Assign new sortOrder values
+      return prev.map((c) => {
+        const idx = reordered.findIndex((r) => r.id === c.id);
+        return { ...c, sortOrder: idx };
+      });
+    });
+
+    setDraggedId(null);
+    setDragOverId(null);
+    setSortDirty(true);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedId(null);
+    setDragOverId(null);
+  };
+
+  const handleSortSaveWithOrder = async () => {
+    setSortSaving(true);
+    try {
+      const sorted = sortCerts(certificates, "custom");
+      const orderPayload = sorted.map((c, i) => ({ id: c.id, sortOrder: i }));
+
+      await Promise.all([
+        fetch("/api/profile", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sortStrategy: "custom" }),
+        }),
+        fetch("/api/certificates/reorder", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ order: orderPayload }),
+        }),
+      ]);
+
+      setSortDirty(false);
+    } finally {
+      setSortSaving(false);
+    }
+  };
+
+  /* ── Derived state ────────────────────────────────────────────────────── */
+
   const totalCount = certificates.length;
   const publicCount = certificates.filter((c) => c.isPublic).length;
   const privateCount = totalCount - publicCount;
   const domainCount = useMemo(() => new Set(certificates.map((c) => c.domain)).size, [certificates]);
   const allDomains = useMemo(() => ["All", ...Array.from(new Set(certificates.map((c) => c.domain)))], [certificates]);
 
-  const filtered = useMemo(() => certificates.filter((c) => {
-    const q = search.toLowerCase();
-    const matchSearch = !q || c.name.toLowerCase().includes(q) || c.issuer.toLowerCase().includes(q);
-    const matchDomain = domainFilter === "All" || c.domain === domainFilter;
-    return matchSearch && matchDomain;
-  }), [certificates, search, domainFilter]);
+  const sortedAndFiltered = useMemo(() => {
+    const sorted = sortCerts(certificates, sortStrategy);
+    return sorted.filter((c) => {
+      const q = search.toLowerCase();
+      const matchSearch = !q || c.name.toLowerCase().includes(q) || c.issuer.toLowerCase().includes(q);
+      const matchDomain = domainFilter === "All" || c.domain === domainFilter;
+      return matchSearch && matchDomain;
+    });
+  }, [certificates, search, domainFilter, sortStrategy]);
 
   const stats = [
     {
@@ -109,6 +262,8 @@ export default function CertificatesPanel({
       bg: "rgba(14,165,233,0.1)", border: "rgba(14,165,233,0.18)", icon: "#0ea5e9",
     },
   ];
+
+  const isFiltered = search.length > 0 || domainFilter !== "All";
 
   return (
     <div className="space-y-8">
@@ -137,6 +292,14 @@ export default function CertificatesPanel({
         </button>
       </div>
 
+      {/* Profile completeness — above stats */}
+      <ProfileCompletenessCard
+        certificates={certificates}
+        avatarUrl={profile.avatarUrl}
+        bio={profile.bio}
+        slug={profile.slug}
+      />
+
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {stats.map((s) => (
@@ -158,7 +321,13 @@ export default function CertificatesPanel({
         ))}
       </div>
 
-      {/* Search + filter */}
+      {/* Insights panel — below stats, above grid */}
+      <InsightsCard certificates={certificates} />
+
+      {/* Recommendations — below insights, above grid */}
+      <RecommendationsCard certificates={certificates} />
+
+      {/* Search + filter + sort control */}
       {totalCount > 0 && (
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
           <div className="relative flex-1">
@@ -174,17 +343,41 @@ export default function CertificatesPanel({
                 dark:bg-white/[0.06] dark:border-white/[0.11] dark:text-white dark:placeholder-white/35"
             />
           </div>
-          {allDomains.length > 2 && (
-            <select
-              value={domainFilter}
-              onChange={(e) => setDomainFilter(e.target.value)}
-              className="w-full sm:w-auto rounded-xl px-3 py-3 sm:py-2.5 text-sm outline-none transition-all cursor-pointer
-                bg-white border border-black/[0.08] focus:border-violet-500/40 text-slate-700
-                dark:bg-[#111425] dark:border-white/[0.11] dark:text-white/75"
-            >
-              {allDomains.map((d) => <option key={d} value={d}>{d}</option>)}
-            </select>
-          )}
+          <div className="flex items-center gap-2">
+            {allDomains.length > 2 && (
+              <select
+                value={domainFilter}
+                onChange={(e) => setDomainFilter(e.target.value)}
+                className="flex-1 sm:flex-none rounded-xl px-3 py-3 sm:py-2.5 text-sm outline-none transition-all cursor-pointer
+                  bg-white border border-black/[0.08] focus:border-violet-500/40 text-slate-700
+                  dark:bg-[#111425] dark:border-white/[0.11] dark:text-white/75"
+              >
+                {allDomains.map((d) => <option key={d} value={d}>{d}</option>)}
+              </select>
+            )}
+            <SortControl
+              value={sortStrategy}
+              onChange={handleSortChange}
+              isDirty={sortDirty}
+              onSave={sortStrategy === "custom" ? handleSortSaveWithOrder : handleSortSave}
+              saving={sortSaving}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Custom order hint */}
+      {sortStrategy === "custom" && totalCount > 0 && isFiltered && (
+        <div className="text-xs text-slate-400 dark:text-white/40 text-center py-2">
+          Clear search and filters to drag reorder certificates.
+        </div>
+      )}
+      {sortStrategy === "custom" && totalCount > 0 && !isFiltered && (
+        <div className="flex items-center gap-2 text-xs text-slate-400 dark:text-white/40 py-1 px-1">
+          <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 9h16.5m-16.5 6.75h16.5" />
+          </svg>
+          Hover a card and drag to reorder. Click Save order when done.
         </div>
       )}
 
@@ -229,7 +422,7 @@ export default function CertificatesPanel({
       )}
 
       {/* No results */}
-      {totalCount > 0 && filtered.length === 0 && (
+      {totalCount > 0 && sortedAndFiltered.length === 0 && (
         <div className="text-center py-16">
           <p className="text-sm text-slate-400 dark:text-white/50">No certificates match your search.</p>
           <button onClick={() => { setSearch(""); setDomainFilter("All"); }} className="text-violet-600 dark:text-violet-400 hover:text-violet-700 dark:hover:text-violet-300 text-sm mt-2 transition-colors">
@@ -239,10 +432,28 @@ export default function CertificatesPanel({
       )}
 
       {/* Grid */}
-      {filtered.length > 0 && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
-          {filtered.map((cert) => (
-            <CertificateCard key={cert.id} certificate={cert} onEdit={openEdit} onDelete={handleDelete} onVisibilityToggle={handleVisibilityToggle} />
+      {sortedAndFiltered.length > 0 && (
+        <div
+          className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5"
+          onDragLeave={() => {
+            // Debounce dragLeave to avoid flicker
+            if (dragCancelTimer.current) clearTimeout(dragCancelTimer.current);
+            dragCancelTimer.current = setTimeout(() => setDragOverId(null), 80);
+          }}
+        >
+          {sortedAndFiltered.map((cert) => (
+            <CertificateCard
+              key={cert.id}
+              certificate={cert}
+              onEdit={openEdit}
+              onDelete={handleDelete}
+              onVisibilityToggle={handleVisibilityToggle}
+              isDraggable={sortStrategy === "custom" && !isFiltered}
+              onDragStart={handleDragStart}
+              onDragOver={handleDragOver}
+              onDrop={handleDrop}
+              dragOverId={dragOverId}
+            />
           ))}
         </div>
       )}

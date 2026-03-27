@@ -18,6 +18,8 @@ model User {
   defaultTheme String        @default("dark")
   features     Json          @default("{}")
   isAdmin      Boolean       @default(false)
+  profileViews Int           @default(0)
+  sortStrategy String        @default("recent")
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
   certificates Certificate[]
@@ -37,6 +39,7 @@ model Certificate {
   imageUrl     String?
   isPublic     Boolean   @default(true)
   verifyStatus String    @default("self_reported")
+  sortOrder    Int?
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 

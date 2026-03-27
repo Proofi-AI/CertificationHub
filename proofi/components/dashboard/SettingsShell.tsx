@@ -10,6 +10,7 @@ type Tab = "profile" | "features";
 
 interface Props {
   profile: User;
+  certificateDomains?: string[];
 }
 
 const TABS: { id: Tab; label: string; icon: string }[] = [
@@ -36,7 +37,7 @@ const HEADINGS: Record<Tab, { title: string; subtitle: string }> = {
   },
 };
 
-export default function SettingsShell({ profile }: Props) {
+export default function SettingsShell({ profile, certificateDomains = [] }: Props) {
   const [activeTab, setActiveTab] = useState<Tab>("profile");
   const features = parseFeatures(profile.features);
   const heading = HEADINGS[activeTab];
@@ -117,7 +118,7 @@ export default function SettingsShell({ profile }: Props) {
             <p className="text-sm mt-1 text-slate-500 dark:text-white/55">{heading.subtitle}</p>
           </div>
 
-          {activeTab === "profile" && <ProfilePanel initialProfile={profile} />}
+          {activeTab === "profile" && <ProfilePanel initialProfile={profile} certificateDomains={certificateDomains} />}
           {activeTab === "features" && <FeaturesPanel initialFeatures={features} />}
         </div>
       </div>

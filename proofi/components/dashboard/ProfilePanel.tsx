@@ -4,6 +4,7 @@ import { useRef, useState, useCallback, useEffect } from "react";
 import type { User } from "@prisma/client";
 import { uploadAvatar } from "@/lib/utils/storage";
 import { SLUG_REGEX } from "@/lib/constants";
+import SlugSuggestions from "@/components/SlugSuggestions";
 
 /* ── Preset avatars (DiceBear fun-emoji, free CDN) ── */
 const PRESETS = [
@@ -48,11 +49,12 @@ function extractPresetBg(url: string | null | undefined): string | null {
 
 interface Props {
   initialProfile: User;
+  certificateDomains?: string[];
 }
 
 type SlugStatus = "idle" | "checking" | "available" | "taken" | "invalid";
 
-export default function ProfilePanel({ initialProfile }: Props) {
+export default function ProfilePanel({ initialProfile, certificateDomains = [] }: Props) {
   const [profile, setProfile] = useState(initialProfile);
   const [name, setName] = useState(initialProfile.name ?? "");
   const [bio, setBio] = useState(initialProfile.bio ?? "");
@@ -214,7 +216,7 @@ export default function ProfilePanel({ initialProfile }: Props) {
             <div className="relative group cursor-pointer shrink-0" onClick={() => setPickerOpen(true)}>
               <div
                 className="w-20 h-20 rounded-2xl overflow-hidden ring-4"
-                style={{ ringColor: "var(--surface)", boxShadow: "0 0 0 4px var(--surface), 0 0 0 6px rgba(124,58,237,0.4)" }}
+                style={{ boxShadow: "0 0 0 4px var(--surface), 0 0 0 6px rgba(124,58,237,0.4)" }}
               >
                 {profile.avatarUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -544,6 +546,19 @@ export default function ProfilePanel({ initialProfile }: Props) {
               {slugStatus === "checking" && "Checking availability…"}
             </p>
           )}
+
+          {/* Slug suggestions */}
+          <SlugSuggestions
+            name={name}
+            domains={certificateDomains}
+            currentSlug={slug}
+            onApply={(suggested) => {
+              setSlug(suggested);
+              // Trigger availability check via the existing slug change handler
+              if (slugTimer.current) clearTimeout(slugTimer.current);
+              slugTimer.current = setTimeout(() => checkSlug(suggested), 0);
+            }}
+          />
         </div>
       </div>
 

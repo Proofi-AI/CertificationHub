@@ -6,6 +6,8 @@ import type { Certificate } from "@prisma/client";
 interface Props {
   certificates: Certificate[];
   onEditCertificate: (cert: Certificate) => void;
+  profileViews: number;
+  slug: string;
 }
 
 /* ─── helpers ─────────────────────────────────────────────────────────── */
@@ -411,7 +413,7 @@ function GoalRing({ certsThisYear }: { certsThisYear: number }) {
 
 /* ─── main component ──────────────────────────────────────────────────── */
 
-export default function ActivityPanel({ certificates, onEditCertificate }: Props) {
+export default function ActivityPanel({ certificates, onEditCertificate, profileViews, slug }: Props) {
   const today = new Date();
   const [calYear,  setCalYear]  = useState(today.getFullYear());
   const [calMonth, setCalMonth] = useState(today.getMonth());
@@ -519,8 +521,47 @@ export default function ActivityPanel({ certificates, onEditCertificate }: Props
 
   const thisMonthDelta = thisMonthCerts.length - lastMonthCerts.length;
 
+  const appUrl = typeof window !== "undefined" ? window.location.origin : "";
+
   return (
     <div className="space-y-3 heatmap-root">
+
+      {/* ── Profile views card ── */}
+      <div
+        className="rounded-xl p-3"
+        style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
+      >
+        <div className="flex items-center gap-2 mb-2">
+          <svg className="w-3.5 h-3.5 text-violet-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+          </svg>
+          <h3 className="text-xs font-bold text-slate-800 dark:text-white">Your profile</h3>
+        </div>
+        <div className="truncate mb-2">
+          <a
+            href={`${appUrl}/${slug}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[11px] font-mono text-violet-600 dark:text-violet-400 hover:underline truncate"
+          >
+            proofi.ai/{slug}
+          </a>
+        </div>
+        {profileViews > 0 ? (
+          <div className="flex items-center gap-1.5">
+            <svg className="w-3 h-3 text-slate-400 dark:text-white/30 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            <span className="text-[11px] font-semibold text-slate-700 dark:text-white/65">
+              {profileViews.toLocaleString()} profile {profileViews === 1 ? "view" : "views"}
+            </span>
+          </div>
+        ) : (
+          <p className="text-[11px] text-slate-400 dark:text-white/35">No views yet — share your profile to get started.</p>
+        )}
+      </div>
 
       {/* ── Calendar ── */}
       <div

@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { ensureUserRecord } from "@/lib/auth/ensureUserRecord";
+import { prisma } from "@/lib/prisma";
 import SettingsShell from "@/components/dashboard/SettingsShell";
 
 export default async function SettingsPage() {
@@ -10,6 +11,12 @@ export default async function SettingsPage() {
   if (!user) redirect("/login");
 
   const profile = await ensureUserRecord(user);
+
+  const certs = await prisma.certificate.findMany({
+    where: { userId: user.id },
+    select: { domain: true },
+  });
+  const certificateDomains = [...new Set(certs.map((c) => c.domain))];
 
   return (
     <div className="min-h-screen" style={{ background: "var(--bg)", color: "var(--foreground)" }}>
@@ -49,7 +56,7 @@ export default async function SettingsPage() {
 
       {/* Content */}
       <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
-        <SettingsShell profile={profile} />
+        <SettingsShell profile={profile} certificateDomains={certificateDomains} />
       </div>
     </div>
   );

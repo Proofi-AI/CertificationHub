@@ -4,12 +4,18 @@ import { useState } from "react";
 import type { Certificate } from "@prisma/client";
 import { DOMAIN_COLORS, DOMAIN_ACCENT } from "@/lib/constants";
 import CertificateLightbox from "@/components/CertificateLightbox";
+import CertificateStrengthBar from "@/components/CertificateStrengthBar";
 
 interface Props {
   certificate: Certificate;
   onEdit: (cert: Certificate) => void;
   onDelete: (id: string) => void;
   onVisibilityToggle: (id: string, isPublic: boolean) => void;
+  isDraggable?: boolean;
+  onDragStart?: (e: React.DragEvent, id: string) => void;
+  onDragOver?: (e: React.DragEvent, id: string) => void;
+  onDrop?: (e: React.DragEvent, id: string) => void;
+  dragOverId?: string | null;
 }
 
 function formatDate(date: Date | string | null): string {
@@ -17,10 +23,16 @@ function formatDate(date: Date | string | null): string {
   return new Date(date).toLocaleDateString("en-US", { month: "short", year: "numeric" });
 }
 
-export default function CertificateCard({ certificate, onEdit, onDelete, onVisibilityToggle }: Props) {
+export default function CertificateCard({
+  certificate, onEdit, onDelete, onVisibilityToggle,
+  isDraggable = false,
+  onDragStart, onDragOver, onDrop,
+  dragOverId,
+}: Props) {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [hovered, setHovered] = useState(false);
+  const isDragOver = dragOverId === certificate.id;
 
   const colors = DOMAIN_COLORS[certificate.domain] ?? DOMAIN_COLORS["Other"];
   const accent = DOMAIN_ACCENT[certificate.domain] ?? DOMAIN_ACCENT["Other"];
@@ -30,17 +42,40 @@ export default function CertificateCard({ certificate, onEdit, onDelete, onVisib
     <>
       <div
         className="group relative rounded-2xl overflow-hidden flex flex-col transition-all duration-300"
+        draggable={isDraggable}
+        onDragStart={isDraggable && onDragStart ? (e) => onDragStart(e, certificate.id) : undefined}
+        onDragOver={isDraggable && onDragOver ? (e) => onDragOver(e, certificate.id) : undefined}
+        onDrop={isDraggable && onDrop ? (e) => onDrop(e, certificate.id) : undefined}
         style={{
           background: "var(--surface)",
-          border: hovered ? "1px solid var(--border-hover)" : "1px solid var(--border)",
-          boxShadow: hovered
+          border: isDragOver
+            ? "2px dashed #7c3aed"
+            : hovered ? "1px solid var(--border-hover)" : "1px solid var(--border)",
+          boxShadow: isDragOver
+            ? "0 0 0 4px rgba(124,58,237,0.12)"
+            : hovered
             ? `0 12px 40px ${accent.glow}, var(--card-glow-mul)`
             : "var(--card-shadow)",
-          transform: hovered ? "translateY(-3px)" : "translateY(0)",
+          transform: hovered && !isDraggable ? "translateY(-3px)" : "translateY(0)",
+          cursor: isDraggable ? "grab" : undefined,
+          opacity: isDragOver ? 0.85 : 1,
         }}
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
       >
+        {/* Drag handle — only in custom sort mode */}
+        {isDraggable && (
+          <div className="absolute top-2 left-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 p-1.5 rounded-lg"
+            style={{ background: "rgba(0,0,0,0.4)", cursor: "grab" }}
+            title="Drag to reorder"
+          >
+            <svg className="w-3 h-3 text-white/80" viewBox="0 0 16 16" fill="currentColor">
+              <circle cx="5" cy="3" r="1.2"/><circle cx="11" cy="3" r="1.2"/>
+              <circle cx="5" cy="8" r="1.2"/><circle cx="11" cy="8" r="1.2"/>
+              <circle cx="5" cy="13" r="1.2"/><circle cx="11" cy="13" r="1.2"/>
+            </svg>
+          </div>
+        )}
         {/* Domain accent bar */}
         <div className="h-[3px] w-full shrink-0" style={{ background: `linear-gradient(90deg, ${accent.from}, ${accent.to})` }} />
 
@@ -131,6 +166,9 @@ export default function CertificateCard({ certificate, onEdit, onDelete, onVisib
             <span className="text-slate-200 dark:text-white/20">·</span>
             <span>{certificate.expiresAt ? `Exp. ${formatDate(certificate.expiresAt)}` : "No expiry"}</span>
           </div>
+
+          {/* Strength bar — sits above actions */}
+          <CertificateStrengthBar certificate={certificate} />
 
           {/* Actions */}
           <div className="pt-3 flex items-center gap-2" style={{ borderTop: "1px solid var(--border)" }}>

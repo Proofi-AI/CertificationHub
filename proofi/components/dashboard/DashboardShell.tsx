@@ -131,7 +131,18 @@ export default function DashboardShell({ profile, certificates, appUrl, initials
       </nav>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
-        <DashboardClient initialCertificates={certificates} features={features} />
+        <DashboardClient
+          initialCertificates={certificates}
+          features={features}
+          profile={{
+            avatarUrl: profile.avatarUrl,
+            bio: profile.bio,
+            slug: profile.slug,
+            sortStrategy: profile.sortStrategy,
+            profileViews: profile.profileViews,
+            name: profile.name,
+          }}
+        />
       </div>
 
       {/* Floating Feedback Widget */}
