@@ -292,14 +292,6 @@ export default function CertificatesPanel({
         </button>
       </div>
 
-      {/* Profile completeness — above stats */}
-      <ProfileCompletenessCard
-        certificates={certificates}
-        avatarUrl={profile.avatarUrl}
-        bio={profile.bio}
-        slug={profile.slug}
-      />
-
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {stats.map((s) => (
@@ -321,7 +313,15 @@ export default function CertificatesPanel({
         ))}
       </div>
 
-      {/* Insights panel — below stats, above grid */}
+      {/* Profile completeness — below stats */}
+      <ProfileCompletenessCard
+        certificates={certificates}
+        avatarUrl={profile.avatarUrl}
+        bio={profile.bio}
+        slug={profile.slug}
+      />
+
+      {/* Insights panel */}
       <InsightsCard certificates={certificates} />
 
       {/* Recommendations — below insights, above grid */}
