@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Certificate } from "@prisma/client";
 import { DOMAIN_COLORS, DOMAIN_ACCENT } from "@/lib/constants";
 import CertificateLightbox from "@/components/CertificateLightbox";
@@ -32,6 +32,19 @@ export default function CertificateCard({
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [hovered, setHovered] = useState(false);
+  const [descExpanded, setDescExpanded] = useState(false);
+  const descRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!descExpanded) return;
+    const handler = (e: MouseEvent) => {
+      if (descRef.current && !descRef.current.contains(e.target as Node)) {
+        setDescExpanded(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [descExpanded]);
   const isDragOver = dragOverId === certificate.id;
 
   const colors = DOMAIN_COLORS[certificate.domain] ?? DOMAIN_COLORS["Other"];
@@ -156,6 +169,42 @@ export default function CertificateCard({
             <h3 className="font-bold text-[15px] leading-snug line-clamp-2 text-slate-900 dark:text-white">{certificate.name}</h3>
             <p className="text-[13px] mt-1 truncate text-slate-500 dark:text-white/60">{certificate.issuer}</p>
           </div>
+
+          {/* Description — collapsed one-liner, expands as floating overlay */}
+          {certificate.description && (
+            <div className="relative" ref={descRef}>
+              <button
+                type="button"
+                onClick={() => setDescExpanded((v) => !v)}
+                className="flex items-center gap-1.5 w-full text-left"
+              >
+                <span className="text-[12px] text-slate-400 dark:text-white/35 truncate flex-1">
+                  {certificate.description}
+                </span>
+                <svg
+                  className={`w-3 h-3 shrink-0 text-slate-300 dark:text-white/25 transition-transform duration-200 ${descExpanded ? "rotate-180" : ""}`}
+                  fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+
+              {descExpanded && (
+                <div
+                  className="absolute left-0 right-0 top-full z-30 mt-1.5 rounded-xl p-3"
+                  style={{
+                    background: "var(--surface)",
+                    border: "1px solid var(--border-hover)",
+                    boxShadow: "0 8px 32px rgba(0,0,0,0.18)",
+                  }}
+                >
+                  <p className="text-[12px] leading-relaxed text-slate-500 dark:text-white/50 whitespace-pre-wrap break-words">
+                    {certificate.description}
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Date */}
           <div className="flex items-center gap-2 text-[12px] text-slate-400 dark:text-white/40">

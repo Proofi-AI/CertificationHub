@@ -36,6 +36,7 @@ model Certificate {
   expiresAt    DateTime?
   domain       String
   credentialId String?
+  description  String?
   imageUrl     String?
   isPublic     Boolean   @default(true)
   verifyStatus String    @default("self_reported")

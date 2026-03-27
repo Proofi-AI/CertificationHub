@@ -37,6 +37,7 @@ export default function CertificateFormModal({ initialData, onSave, onClose, aut
     domain: isCustomDomain ? "Other" : (initialData?.domain ?? DOMAINS[0].value),
     customDomain: isCustomDomain ? (initialData?.domain ?? "") : "",
     credentialId: initialData?.credentialId ?? "",
+    description: initialData?.description ?? "",
   });
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(
@@ -205,6 +206,7 @@ export default function CertificateFormModal({ initialData, onSave, onClose, aut
           expiresAt: form.noExpiry ? null : form.expiresAt || null,
           domain: effectiveDomain,
           credentialId: form.credentialId || null,
+          description: form.description || null,
           imageUrl,
         };
 
@@ -241,6 +243,7 @@ export default function CertificateFormModal({ initialData, onSave, onClose, aut
             expiresAt: form.noExpiry ? null : form.expiresAt || null,
             domain: effectiveDomain,
             credentialId: form.credentialId || null,
+            description: form.description || null,
             imageUrl: null,
           }),
         });
@@ -495,6 +498,23 @@ export default function CertificateFormModal({ initialData, onSave, onClose, aut
               disabled={isDisabled}
               className="w-full rounded-xl px-4 py-2.5 text-sm outline-none transition-all bg-black/[0.04] border border-black/[0.09] focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20 text-slate-800 placeholder-slate-400 dark:bg-white/[0.07] dark:border-white/[0.13] dark:text-white dark:placeholder-white/40 disabled:opacity-50 disabled:cursor-not-allowed"
             />
+          </div>
+
+          {/* Description */}
+          <div>
+            <label className="text-xs font-semibold mb-1.5 block text-slate-500 dark:text-white/65">
+              Description <span className="font-normal text-slate-400 dark:text-white/25">(optional)</span>
+            </label>
+            <textarea
+              value={form.description}
+              onChange={(e) => handleField("description", e.target.value)}
+              placeholder="A short note about this certificate…"
+              rows={2}
+              maxLength={200}
+              disabled={isDisabled}
+              className="w-full rounded-xl px-4 py-2.5 text-sm outline-none transition-all resize-none bg-black/[0.04] border border-black/[0.09] focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20 text-slate-800 placeholder-slate-400 dark:bg-white/[0.07] dark:border-white/[0.13] dark:text-white dark:placeholder-white/40 disabled:opacity-50 disabled:cursor-not-allowed"
+            />
+            <p className="mt-1 text-[11px] text-slate-300 dark:text-white/20 text-right">{form.description.length}/200</p>
           </div>
 
           {/* Error */}

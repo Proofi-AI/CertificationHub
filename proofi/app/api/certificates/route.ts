@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
   if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await request.json();
-  const { name, issuer, issuedAt, expiresAt, domain, credentialId, imageUrl } = body;
+  const { name, issuer, issuedAt, expiresAt, domain, credentialId, description, imageUrl } = body;
 
   if (!name || !issuer || !issuedAt || !domain) {
     return Response.json({ error: "Missing required fields" }, { status: 400 });
@@ -36,6 +36,7 @@ export async function POST(request: NextRequest) {
       expiresAt: expiresAt ? new Date(expiresAt) : null,
       domain,
       credentialId: credentialId || null,
+      description: description || null,
       imageUrl: imageUrl || null,
     },
   });
