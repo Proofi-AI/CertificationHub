@@ -628,11 +628,11 @@ export default function ProfilePanel({ initialProfile, certificateDomains = [] }
       <div className="rounded-2xl p-6 space-y-4" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
         <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-slate-400 dark:text-white/50">Public Profile Appearance</p>
         <p className="text-xs text-slate-500 dark:text-white/55">Choose the default theme visitors see when they open your public profile URL.</p>
-        <div className="flex items-center gap-3">
+        <div className="grid grid-cols-2 gap-3">
           <button
             type="button"
             onClick={() => setDefaultTheme("light")}
-            className={`flex-1 flex items-center gap-3 rounded-xl px-4 py-3 border transition-all ${
+            className={`flex items-center gap-2 sm:gap-3 rounded-xl px-3 sm:px-4 py-3 border transition-all min-w-0 ${
               defaultTheme === "light"
                 ? "border-violet-500/50 bg-violet-500/8"
                 : "border-black/[0.09] bg-black/[0.03] dark:border-white/[0.08] dark:bg-white/[0.03]"
@@ -645,9 +645,9 @@ export default function ProfilePanel({ initialProfile, certificateDomains = [] }
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" />
               </svg>
             </div>
-            <div className="text-left">
-              <p className={`text-sm font-semibold ${defaultTheme === "light" ? "text-violet-600 dark:text-violet-400" : "text-slate-600 dark:text-white/50"}`}>Light</p>
-              <p className="text-xs text-slate-400 dark:text-white/60">Clean white background</p>
+            <div className="text-left min-w-0 flex-1">
+              <p className={`text-sm font-semibold truncate ${defaultTheme === "light" ? "text-violet-600 dark:text-violet-400" : "text-slate-600 dark:text-white/50"}`}>Light</p>
+              <p className="text-xs text-slate-400 dark:text-white/60 truncate">Clean white</p>
             </div>
             {defaultTheme === "light" && (
               <svg className="w-4 h-4 text-violet-500 ml-auto shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
@@ -659,7 +659,7 @@ export default function ProfilePanel({ initialProfile, certificateDomains = [] }
           <button
             type="button"
             onClick={() => setDefaultTheme("dark")}
-            className={`flex-1 flex items-center gap-3 rounded-xl px-4 py-3 border transition-all ${
+            className={`flex items-center gap-2 sm:gap-3 rounded-xl px-3 sm:px-4 py-3 border transition-all min-w-0 ${
               defaultTheme === "dark"
                 ? "border-violet-500/50 bg-violet-500/8"
                 : "border-black/[0.09] bg-black/[0.03] dark:border-white/[0.08] dark:bg-white/[0.03]"
@@ -672,9 +672,9 @@ export default function ProfilePanel({ initialProfile, certificateDomains = [] }
                 <path strokeLinecap="round" strokeLinejoin="round" d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z" />
               </svg>
             </div>
-            <div className="text-left">
-              <p className={`text-sm font-semibold ${defaultTheme === "dark" ? "text-violet-600 dark:text-violet-400" : "text-slate-600 dark:text-white/50"}`}>Dark</p>
-              <p className="text-xs text-slate-400 dark:text-white/60">Sleek dark background</p>
+            <div className="text-left min-w-0 flex-1">
+              <p className={`text-sm font-semibold truncate ${defaultTheme === "dark" ? "text-violet-600 dark:text-violet-400" : "text-slate-600 dark:text-white/50"}`}>Dark</p>
+              <p className="text-xs text-slate-400 dark:text-white/60 truncate">Sleek dark</p>
             </div>
             {defaultTheme === "dark" && (
               <svg className="w-4 h-4 text-violet-500 ml-auto shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
