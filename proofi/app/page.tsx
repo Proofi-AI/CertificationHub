@@ -1,5 +1,6 @@
 import Link from "next/link";
 import LandingFeedbackForm from "@/components/feedback/LandingFeedbackForm";
+import DisclaimerModal from "@/components/DisclaimerModal";
 
 export default function LandingPage() {
   return (
@@ -10,7 +11,7 @@ export default function LandingPage() {
           <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-blue-500 flex items-center justify-center">
             <span className="text-white font-bold text-sm">P</span>
           </div>
-          <span className="font-semibold text-lg tracking-tight">Proofi AI</span>
+          <span className="font-semibold text-lg tracking-tight">Proofi Hub</span>
         </div>
         <div className="hidden md:flex items-center gap-8 text-sm text-white/60">
           <a href="#features" className="hover:text-white transition-colors">Features</a>
@@ -28,7 +29,7 @@ export default function LandingPage() {
             href="/signup"
             className="text-sm font-medium bg-gradient-to-r from-violet-600 to-blue-600 hover:from-violet-500 hover:to-blue-500 text-white px-5 py-2 rounded-full transition-all shadow-lg shadow-violet-500/20"
           >
-            Get started free
+            Create profile
           </Link>
         </div>
       </nav>
@@ -43,7 +44,7 @@ export default function LandingPage() {
         {/* Badge */}
         <div className="relative flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/5 border border-white/10 text-xs text-white/60 mb-8 backdrop-blur-sm">
           <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse" />
-          Free forever · No credit card required
+          Now live · proofihub.vercel.app
         </div>
 
         {/* Headline */}
@@ -54,8 +55,8 @@ export default function LandingPage() {
 
         {/* Subheadline */}
         <p className="relative text-center text-lg md:text-xl text-white/50 max-w-2xl mb-10 leading-relaxed">
-          Upload your professional certificates and share them with the world via a stunning,
-          shareable public profile. One link. All your credentials. Forever free.
+          Upload your professional certificates, organise them by domain, and share a
+          clean public profile with anyone — no login required to view.
         </p>
 
         {/* CTA Buttons */}
@@ -64,7 +65,7 @@ export default function LandingPage() {
             href="/signup"
             className="inline-flex items-center gap-2 bg-gradient-to-r from-violet-600 to-blue-600 hover:from-violet-500 hover:to-blue-500 text-white font-semibold px-8 py-4 rounded-full text-base transition-all shadow-xl shadow-violet-500/25 hover:shadow-violet-500/40 hover:-translate-y-0.5"
           >
-            Get started free
+            Create your profile
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
             </svg>
@@ -77,7 +78,7 @@ export default function LandingPage() {
               <path strokeLinecap="round" strokeLinejoin="round" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
               <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            See a live example
+            See an example
           </a>
         </div>
 
@@ -93,7 +94,7 @@ export default function LandingPage() {
               </div>
               <div className="flex-1 flex items-center justify-center">
                 <div className="bg-white/5 rounded-md px-4 py-1 text-xs text-white/40 font-mono">
-                  proofi.ai/sarahjohnson
+                  proofihub.vercel.app/sarahjohnson
                 </div>
               </div>
             </div>
@@ -105,7 +106,7 @@ export default function LandingPage() {
               </div>
               <div>
                 <h3 className="font-semibold text-lg">Sarah Johnson</h3>
-                <p className="text-white/50 text-sm">Full-Stack Engineer · AI Enthusiast</p>
+                <p className="text-white/50 text-sm">Full-Stack Engineer · Cloud Enthusiast</p>
               </div>
               <div className="ml-auto">
                 <span className="text-xs px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
@@ -116,7 +117,7 @@ export default function LandingPage() {
 
             {/* Domain tabs */}
             <div className="flex gap-2 mb-4 flex-wrap">
-              {["All", "Software Engineering", "Machine Learning", "Cloud"].map((tab, i) => (
+              {["All", "Software Engineering", "Cloud Computing", "Machine Learning"].map((tab, i) => (
                 <span
                   key={tab}
                   className={`text-xs px-3 py-1 rounded-full cursor-pointer transition-all ${
@@ -133,10 +134,10 @@ export default function LandingPage() {
             {/* Certificate cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {[
-                { name: "AWS Solutions Architect", issuer: "Amazon Web Services", domain: "Cloud Computing", date: "Jan 2024", color: "from-orange-500/20 to-yellow-500/20", badge: "Cloud" },
-                { name: "TensorFlow Developer", issuer: "Google", domain: "Machine Learning", date: "Mar 2024", color: "from-blue-500/20 to-cyan-500/20", badge: "ML" },
-                { name: "React Advanced Patterns", issuer: "Meta", domain: "Software Engineering", date: "Nov 2023", color: "from-violet-500/20 to-purple-500/20", badge: "SWE" },
-                { name: "Kubernetes Administrator", issuer: "CNCF", domain: "Cloud Computing", date: "Aug 2023", color: "from-sky-500/20 to-blue-500/20", badge: "Cloud" },
+                { name: "AWS Solutions Architect", issuer: "Amazon Web Services", badge: "Cloud", color: "from-orange-500/20 to-yellow-500/20" },
+                { name: "React Advanced Patterns", issuer: "Meta", badge: "SWE", color: "from-violet-500/20 to-purple-500/20" },
+                { name: "TensorFlow Developer", issuer: "Google", badge: "ML", color: "from-blue-500/20 to-cyan-500/20" },
+                { name: "Kubernetes Administrator", issuer: "CNCF", badge: "Cloud", color: "from-sky-500/20 to-blue-500/20" },
               ].map((cert) => (
                 <div
                   key={cert.name}
@@ -154,7 +155,6 @@ export default function LandingPage() {
                   </div>
                   <p className="font-medium text-sm leading-tight mb-1 group-hover:text-white transition-colors">{cert.name}</p>
                   <p className="text-white/40 text-xs">{cert.issuer}</p>
-                  <p className="text-white/30 text-xs mt-2">{cert.date}</p>
                 </div>
               ))}
             </div>
@@ -167,24 +167,8 @@ export default function LandingPage() {
           </div>
           <div className="absolute -bottom-4 -left-4 glass rounded-xl px-4 py-2 border border-white/10 hidden md:flex items-center gap-2 shadow-xl">
             <span className="text-violet-400">🔗</span>
-            <span className="text-xs text-white/70">proofi.ai/<strong>you</strong></span>
+            <span className="text-xs text-white/70">proofihub.vercel.app/<strong>you</strong></span>
           </div>
-        </div>
-      </section>
-
-      {/* Stats bar */}
-      <section className="py-12 border-y border-white/5 bg-white/2">
-        <div className="max-w-5xl mx-auto px-6 grid grid-cols-3 gap-8">
-          {[
-            { value: "100%", label: "Free forever" },
-            { value: "No code", label: "Setup required" },
-            { value: "1 link", label: "Share everything" },
-          ].map((stat) => (
-            <div key={stat.label} className="flex flex-col items-center text-center">
-              <span className="text-2xl md:text-3xl font-bold gradient-text">{stat.value}</span>
-              <span className="text-sm text-white/40 mt-1">{stat.label}</span>
-            </div>
-          ))}
         </div>
       </section>
 
@@ -212,8 +196,8 @@ export default function LandingPage() {
                 color: "from-violet-500/20 to-purple-500/20",
                 accent: "text-violet-400",
                 border: "border-violet-500/20",
-                title: "Your personal certificate URL",
-                desc: "Get a clean, memorable link like proofi.ai/yourname. Share it on LinkedIn, your CV, or anywhere online. Anyone can view it — no sign-in required.",
+                title: "Your personal profile URL",
+                desc: "Get a clean, memorable link at proofihub.vercel.app/yourname. Share it on LinkedIn, your CV, or anywhere. Anyone can view your profile — no account required.",
               },
               {
                 icon: (
@@ -224,13 +208,13 @@ export default function LandingPage() {
                 color: "from-blue-500/20 to-cyan-500/20",
                 accent: "text-blue-400",
                 border: "border-blue-500/20",
-                title: "Upload any certificate",
-                desc: "Upload certificate images in JPG, PNG, or WebP. Organize them by domain — Software Engineering, Machine Learning, Cloud Computing, and more.",
+                title: "Upload images and PDFs",
+                desc: "Upload certificate images (JPG, PNG, WebP) or PDF documents. Attach an issuer, date, domain, and an optional description. All stored securely.",
               },
               {
                 icon: (
                   <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.240-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
                     <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                   </svg>
                 ),
@@ -238,19 +222,43 @@ export default function LandingPage() {
                 accent: "text-emerald-400",
                 border: "border-emerald-500/20",
                 title: "Full control over visibility",
-                desc: "Toggle any certificate public or private instantly. Show recruiters exactly what you want them to see, nothing more, nothing less.",
+                desc: "Toggle any certificate public or private instantly with a single switch. Show recruiters exactly what you want — nothing more, nothing less.",
               },
               {
                 icon: (
                   <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 8.25h3m-3 3.75h3m-3 3.75h3" />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 5.25h16.5m-16.5 4.5h16.5m-16.5 4.5h16.5m-16.5 4.5h16.5" />
                   </svg>
                 ),
                 color: "from-rose-500/20 to-pink-500/20",
                 accent: "text-rose-400",
                 border: "border-rose-500/20",
-                title: "Smart domain filtering",
-                desc: "Visitors can filter your certificates by domain. Make it easy for a hiring manager to find exactly the credentials they care about.",
+                title: "Smart sorting & filtering",
+                desc: "Sort by date, domain, name, or strength. Drag to reorder manually. Visitors can filter by domain — making it easy to find the credentials they care about.",
+              },
+              {
+                icon: (
+                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
+                  </svg>
+                ),
+                color: "from-amber-500/20 to-orange-500/20",
+                accent: "text-amber-400",
+                border: "border-amber-500/20",
+                title: "Certificate completeness score",
+                desc: "A visual strength bar shows how complete each certificate entry is. Add a credential ID, upload a file, and fill in all dates to reach a full score.",
+              },
+              {
+                icon: (
+                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z" />
+                  </svg>
+                ),
+                color: "from-slate-500/20 to-slate-400/20",
+                accent: "text-slate-400",
+                border: "border-slate-500/20",
+                title: "Light & dark public profile",
+                desc: "Choose whether your public profile is displayed in light or dark mode by default. A clean, professional look in either theme.",
               },
             ].map((feature) => (
               <div
@@ -274,9 +282,9 @@ export default function LandingPage() {
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-5xl font-bold mb-4">
               Up and running in{" "}
-              <span className="gradient-text">60 seconds</span>
+              <span className="gradient-text">minutes</span>
             </h2>
-            <p className="text-white/50 text-base">No technical setup. No complexity.</p>
+            <p className="text-white/50 text-base">Three simple steps to your professional certificate profile.</p>
           </div>
 
           <div className="grid md:grid-cols-3 gap-6">
@@ -284,25 +292,25 @@ export default function LandingPage() {
               {
                 step: "01",
                 title: "Create your account",
-                desc: "Sign up with email or Google. Your profile URL is auto-generated from your name.",
+                desc: "Sign up with your email or Google account. Your personal profile URL is generated from your name automatically.",
                 icon: "👤",
               },
               {
                 step: "02",
                 title: "Upload your certificates",
-                desc: "Add certificate images, set the issuer, date, and domain. Takes 30 seconds per cert.",
+                desc: "Add certificate images or PDFs. Fill in the issuer, date, and domain. Add an optional description for context.",
                 icon: "📄",
               },
               {
                 step: "03",
-                title: "Share your link",
-                desc: "Copy your unique proofi.ai link and paste it anywhere. Your profile is live instantly.",
+                title: "Share your profile",
+                desc: "Copy your unique proofihub.vercel.app link and share it anywhere. Your profile is live and viewable by anyone instantly.",
                 icon: "🚀",
               },
             ].map((step, i) => (
               <div key={step.step} className="relative">
                 {i < 2 && (
-                  <div className="hidden md:block absolute top-8 left-full w-full h-px bg-gradient-to-r from-white/20 to-transparent z-10 translate-x-6 -translate-x-0" style={{ width: 'calc(100% - 24px)', left: 'calc(100% + 0px)' }} />
+                  <div className="hidden md:block absolute top-8 left-full w-full h-px bg-gradient-to-r from-white/20 to-transparent z-10" style={{ width: "calc(100% - 24px)", left: "calc(100% + 0px)" }} />
                 )}
                 <div className="glass rounded-2xl p-6 text-center border border-white/8 hover:border-white/15 transition-all">
                   <div className="text-4xl mb-4">{step.icon}</div>
@@ -316,57 +324,10 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Social proof */}
-      <section className="py-16 px-6">
-        <div className="max-w-4xl mx-auto">
-          <div className="grid md:grid-cols-3 gap-4">
-            {[
-              {
-                quote: "Finally a clean way to share all my AWS certs. My LinkedIn now just links to my Proofi profile.",
-                name: "Marcus T.",
-                role: "Cloud Engineer",
-                avatar: "M",
-                color: "from-orange-500 to-yellow-500",
-              },
-              {
-                quote: "I sent my proofi.ai link in a job application and the recruiter specifically mentioned it. Got the interview.",
-                name: "Anika P.",
-                role: "Data Scientist",
-                avatar: "A",
-                color: "from-violet-500 to-blue-500",
-              },
-              {
-                quote: "Love that anyone can see my certs without logging in. Exactly what I needed for my portfolio.",
-                name: "James R.",
-                role: "ML Engineer",
-                avatar: "J",
-                color: "from-emerald-500 to-teal-500",
-              },
-            ].map((testimonial) => (
-              <div key={testimonial.name} className="glass rounded-2xl p-5 border border-white/8 hover:border-white/15 transition-all">
-                <p className="text-white/60 text-sm leading-relaxed mb-4 italic">
-                  &ldquo;{testimonial.quote}&rdquo;
-                </p>
-                <div className="flex items-center gap-3">
-                  <div className={`w-8 h-8 rounded-full bg-gradient-to-br ${testimonial.color} flex items-center justify-center text-xs font-bold text-white`}>
-                    {testimonial.avatar}
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium">{testimonial.name}</p>
-                    <p className="text-xs text-white/40">{testimonial.role}</p>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* Final CTA */}
       <section className="py-24 px-6">
         <div className="max-w-3xl mx-auto text-center">
           <div className="glass rounded-3xl p-12 border border-white/10 relative overflow-hidden">
-            {/* Background blobs inside CTA */}
             <div className="absolute inset-0 bg-gradient-to-br from-violet-600/10 to-blue-600/10 pointer-events-none" />
             <div className="absolute -top-10 -right-10 w-40 h-40 bg-violet-600/20 rounded-full blur-3xl pointer-events-none" />
             <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-blue-600/15 rounded-full blur-3xl pointer-events-none" />
@@ -377,19 +338,17 @@ export default function LandingPage() {
                 <span className="gradient-text">credentials?</span>
               </h2>
               <p className="text-white/50 mb-8 text-base">
-                Join professionals who trust Proofi AI to represent their achievements.
-                Free to start. No credit card needed.
+                Create your profile in minutes and share a link that speaks for itself.
               </p>
               <Link
                 href="/signup"
                 className="inline-flex items-center gap-2 bg-gradient-to-r from-violet-600 to-blue-600 hover:from-violet-500 hover:to-blue-500 text-white font-semibold px-10 py-4 rounded-full text-base transition-all shadow-xl shadow-violet-500/25 hover:shadow-violet-500/40 hover:-translate-y-0.5"
               >
-                Get started free
+                Create your profile
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
                 </svg>
               </Link>
-              <p className="text-xs text-white/30 mt-4">No spam. Unsubscribe anytime.</p>
             </div>
           </div>
         </div>
@@ -405,14 +364,13 @@ export default function LandingPage() {
             <div className="w-6 h-6 rounded-md bg-gradient-to-br from-violet-500 to-blue-500 flex items-center justify-center">
               <span className="text-white font-bold text-xs">P</span>
             </div>
-            <span className="text-sm font-medium text-white/60">Proofi AI</span>
+            <span className="text-sm font-medium text-white/60">Proofi Hub</span>
           </div>
           <p className="text-xs text-white/30">
-            © {new Date().getFullYear()} Proofi AI. All rights reserved.
+            © {new Date().getFullYear()} Proofi Hub. All rights reserved.
           </p>
           <div className="flex gap-6 text-xs text-white/30">
-            <a href="#" className="hover:text-white/60 transition-colors">Privacy</a>
-            <a href="#" className="hover:text-white/60 transition-colors">Terms</a>
+            <DisclaimerModal />
           </div>
         </div>
       </footer>
