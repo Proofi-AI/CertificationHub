@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { ensureUserRecord } from "@/lib/auth/ensureUserRecord";
 import { isAdmin } from "@/lib/is-admin";
 import { scoreCertificate } from "@/lib/certStrength";
+import { parseFeatures } from "@/lib/features";
 import DashboardShell from "@/components/dashboard/DashboardShell";
 
 export default async function DashboardPage() {
@@ -12,6 +13,14 @@ export default async function DashboardPage() {
   if (!user) redirect("/login");
 
   const profile = await ensureUserRecord(user);
+
+  // Global features are stored on the admin user's record so every user
+  // sees the same feature state regardless of their own profile.
+  const adminUser = await prisma.user.findFirst({
+    where: { OR: [{ isAdmin: true }, { email: process.env.ADMIN_EMAIL ?? "" }] },
+    select: { features: true },
+  });
+  const globalFeatures = parseFeatures(adminUser?.features ?? null);
 
   const certificates = await prisma.certificate.findMany({
     where: { userId: user.id },
@@ -69,6 +78,7 @@ export default async function DashboardPage() {
         certificates={certificates}
         initials={initials}
         userIsAdmin={userIsAdmin}
+        globalFeatures={globalFeatures}
       />
     </div>
   );

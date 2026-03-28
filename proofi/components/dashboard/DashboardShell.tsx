@@ -1,10 +1,10 @@
 import Link from "next/link";
 import type { User } from "@prisma/client";
 import type { Certificate } from "@prisma/client";
+import type { UserFeatures } from "@/lib/features";
 import DashboardClient from "./DashboardClient";
 import LogoutButton from "@/components/LogoutButton";
 import ThemeToggle from "./ThemeToggle";
-import { parseFeatures } from "@/lib/features";
 import FeedbackFAB from "@/components/feedback/FeedbackFAB";
 
 interface Props {
@@ -13,10 +13,11 @@ interface Props {
   appUrl?: string;
   initials: string;
   userIsAdmin?: boolean;
+  globalFeatures: UserFeatures;
 }
 
-export default function DashboardShell({ profile, certificates, initials, userIsAdmin }: Props) {
-  const features = parseFeatures(profile.features);
+export default function DashboardShell({ profile, certificates, initials, userIsAdmin, globalFeatures }: Props) {
+  const features = globalFeatures;
 
   return (
     <>

@@ -2,7 +2,9 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { ensureUserRecord } from "@/lib/auth/ensureUserRecord";
+import { isAdmin } from "@/lib/is-admin";
 import { prisma } from "@/lib/prisma";
+import { parseFeatures } from "@/lib/features";
 import SettingsShell from "@/components/dashboard/SettingsShell";
 
 export default async function SettingsPage() {
@@ -11,6 +13,14 @@ export default async function SettingsPage() {
   if (!user) redirect("/login");
 
   const profile = await ensureUserRecord(user);
+  const userIsAdmin = await isAdmin(user.email ?? undefined);
+
+  // Read global feature state from the admin user's record
+  const adminUser = await prisma.user.findFirst({
+    where: { OR: [{ isAdmin: true }, { email: process.env.ADMIN_EMAIL ?? "" }] },
+    select: { features: true },
+  });
+  const globalFeatures = parseFeatures(adminUser?.features ?? null);
 
   const certs = await prisma.certificate.findMany({
     where: { userId: user.id },
@@ -56,7 +66,7 @@ export default async function SettingsPage() {
 
       {/* Content */}
       <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
-        <SettingsShell profile={profile} certificateDomains={certificateDomains} />
+        <SettingsShell profile={profile} certificateDomains={certificateDomains} isAdmin={userIsAdmin} globalFeatures={globalFeatures} />
       </div>
     </div>
   );

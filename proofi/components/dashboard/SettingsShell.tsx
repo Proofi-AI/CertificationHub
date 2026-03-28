@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type { User } from "@prisma/client";
-import { parseFeatures } from "@/lib/features";
+import type { UserFeatures } from "@/lib/features";
 import ProfilePanel from "./ProfilePanel";
 import FeaturesPanel from "./FeaturesPanel";
 
@@ -11,9 +11,11 @@ type Tab = "profile" | "features";
 interface Props {
   profile: User;
   certificateDomains?: string[];
+  isAdmin?: boolean;
+  globalFeatures: UserFeatures;
 }
 
-const TABS: { id: Tab; label: string; icon: string }[] = [
+const ALL_TABS: { id: Tab; label: string; icon: string }[] = [
   {
     id: "profile",
     label: "Profile",
@@ -33,13 +35,16 @@ const HEADINGS: Record<Tab, { title: string; subtitle: string }> = {
   },
   features: {
     title: "Features",
-    subtitle: "Enable or disable optional features for your account",
+    subtitle: "Enable or disable features for all users across the platform",
   },
 };
 
-export default function SettingsShell({ profile, certificateDomains = [] }: Props) {
+export default function SettingsShell({ profile, certificateDomains = [], isAdmin = false, globalFeatures }: Props) {
   const [activeTab, setActiveTab] = useState<Tab>("profile");
-  const features = parseFeatures(profile.features);
+
+  // Features tab is only visible to admins
+  const tabs = ALL_TABS.filter((t) => t.id !== "features" || isAdmin);
+
   const heading = HEADINGS[activeTab];
 
   return (
@@ -49,7 +54,7 @@ export default function SettingsShell({ profile, certificateDomains = [] }: Prop
         className="md:hidden flex mb-6 -mx-4 sm:-mx-6 border-b"
         style={{ borderColor: "var(--border)" }}
       >
-        {TABS.map((tab) => {
+        {tabs.map((tab) => {
           const isActive = activeTab === tab.id;
           return (
             <button
@@ -78,7 +83,7 @@ export default function SettingsShell({ profile, certificateDomains = [] }: Prop
             <p className="text-[10px] font-bold uppercase tracking-[0.14em] px-3 mb-3 text-slate-400 dark:text-white/40">
               Account
             </p>
-            {TABS.map((tab) => {
+            {tabs.map((tab) => {
               const isActive = activeTab === tab.id;
               return (
                 <button
@@ -119,7 +124,7 @@ export default function SettingsShell({ profile, certificateDomains = [] }: Prop
           </div>
 
           {activeTab === "profile" && <ProfilePanel initialProfile={profile} certificateDomains={certificateDomains} />}
-          {activeTab === "features" && <FeaturesPanel initialFeatures={features} />}
+          {activeTab === "features" && isAdmin && <FeaturesPanel initialFeatures={globalFeatures} />}
         </div>
       </div>
     </div>
