@@ -23,15 +23,20 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function PublicProfilePage({ params }: Props) {
   const { slug } = await params;
 
-  const user = await prisma.user.findUnique({
-    where: { slug },
-    include: {
-      certificates: {
-        where: { isPublic: true },
-        orderBy: { issuedAt: "desc" },
+  let user;
+  try {
+    user = await prisma.user.findUnique({
+      where: { slug },
+      include: {
+        certificates: {
+          where: { isPublic: true },
+          orderBy: { issuedAt: "desc" },
+        },
       },
-    },
-  });
+    });
+  } catch {
+    throw new Error("Failed to load profile — database unreachable");
+  }
 
   if (!user) notFound();
 

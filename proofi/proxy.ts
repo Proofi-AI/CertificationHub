@@ -29,11 +29,8 @@ export async function proxy(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
-  const isAuthPage =
-    request.nextUrl.pathname.startsWith('/login') ||
-    request.nextUrl.pathname.startsWith('/signup')
-
   const isDashboardPage = request.nextUrl.pathname.startsWith('/dashboard')
+  const isLoginPage = request.nextUrl.pathname.startsWith('/login')
 
   if (isDashboardPage && !user) {
     const url = request.nextUrl.clone()
@@ -41,7 +38,9 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  if (isAuthPage && user) {
+  // Only redirect /login → /dashboard if already signed in.
+  // /signup is intentionally left open so "Create profile" always lands there.
+  if (isLoginPage && user) {
     const url = request.nextUrl.clone()
     url.pathname = '/dashboard'
     return NextResponse.redirect(url)

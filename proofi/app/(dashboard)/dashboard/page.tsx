@@ -54,7 +54,6 @@ export default async function DashboardPage() {
     .toUpperCase()
     .slice(0, 2);
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
   const userIsAdmin = await isAdmin(user.email ?? undefined);
 
   return (
@@ -68,7 +67,6 @@ export default async function DashboardPage() {
       <DashboardShell
         profile={profile}
         certificates={certificates}
-        appUrl={appUrl}
         initials={initials}
         userIsAdmin={userIsAdmin}
       />

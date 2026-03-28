@@ -10,12 +10,12 @@ import FeedbackFAB from "@/components/feedback/FeedbackFAB";
 interface Props {
   profile: User;
   certificates: Certificate[];
-  appUrl: string;
+  appUrl?: string;
   initials: string;
   userIsAdmin?: boolean;
 }
 
-export default function DashboardShell({ profile, certificates, appUrl, initials, userIsAdmin }: Props) {
+export default function DashboardShell({ profile, certificates, initials, userIsAdmin }: Props) {
   const features = parseFeatures(profile.features);
 
   return (
@@ -55,7 +55,7 @@ export default function DashboardShell({ profile, certificates, appUrl, initials
 
             {/* View profile — hidden on mobile */}
             <Link
-              href={`${appUrl}/${profile.slug}`}
+              href={`/${profile.slug}`}
               target="_blank"
               className="hidden sm:flex items-center gap-1.5 text-xs font-medium transition-all duration-200 px-3 py-2 rounded-xl
                 text-slate-500 hover:text-slate-800 hover:bg-black/[0.06]
