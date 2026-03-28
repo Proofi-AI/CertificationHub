@@ -13,12 +13,26 @@ export async function ensureUserRecord(authUser: User) {
 
   const slug = await generateUniqueSlug(displayName, prisma);
 
-  return prisma.user.create({
-    data: {
-      id: authUser.id,
-      email: authUser.email!,
-      name: displayName,
-      slug,
-    },
-  });
+  try {
+    return await prisma.user.create({
+      data: {
+        id: authUser.id,
+        email: authUser.email!,
+        name: displayName,
+        slug,
+      },
+    });
+  } catch (err: unknown) {
+    // Layout and page both call ensureUserRecord concurrently on first login.
+    // If a parallel request won the race and already created the record,
+    // catch the unique constraint violation and return the existing record.
+    if (
+      err instanceof Error &&
+      err.message.includes("Unique constraint failed")
+    ) {
+      const record = await prisma.user.findUnique({ where: { id: authUser.id } });
+      if (record) return record;
+    }
+    throw err;
+  }
 }
