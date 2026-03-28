@@ -2,86 +2,108 @@
 
 import { useState, Suspense } from "react";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/client";
+import { useRouter } from "next/navigation";
 
 function ForgotPasswordForm() {
-  const [email, setEmail]   = useState("");
+  const router = useRouter();
+  const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
-  const [sent, setSent]     = useState(false);
-  const [error, setError]   = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [infoMessage, setInfoMessage] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
-    const supabase = createClient();
-    const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/auth/reset-password`,
-    });
-    if (resetError) {
-      const msg = resetError.message.toLowerCase();
-      if (msg.includes("rate limit") || msg.includes("too many") || msg.includes("over_email")) {
-        setError("Too many reset emails sent recently. Please wait a few minutes before trying again.");
-      } else {
-        setError(resetError.message);
-      }
-      setLoading(false);
-      return;
-    }
-    setSent(true);
-    setLoading(false);
-  };
+    setInfoMessage(null);
 
-  if (sent) {
-    return (
-      <div className="w-full max-w-md">
-        <div className="glass rounded-2xl p-8 border border-white/10 shadow-2xl text-center">
-          <div
-            className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-5"
-            style={{ background: "linear-gradient(135deg,rgba(124,58,237,0.2),rgba(79,70,229,0.1))", border: "1px solid rgba(124,58,237,0.3)" }}
-          >
-            <svg className="w-8 h-8 text-violet-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
-            </svg>
-          </div>
-          <h1 className="text-2xl font-bold text-white mb-2">Check your email</h1>
-          <p className="text-white/50 text-sm mb-6 leading-relaxed">
-            We sent a reset link to{" "}
-            <span className="text-white/80 font-medium">{email}</span>.
-            Click the link to set a new password.
-          </p>
-          <p className="text-xs text-white/30 mb-6">
-            Didn&apos;t receive it? Check your spam folder or{" "}
-            <button onClick={() => setSent(false)} className="text-violet-400 hover:text-violet-300 transition-colors">
-              try again
-            </button>.
-          </p>
-          <Link href="/login" className="inline-flex items-center gap-2 text-sm text-violet-400 hover:text-violet-300 transition-colors font-medium">
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
-            </svg>
-            Back to sign in
-          </Link>
-        </div>
-      </div>
-    );
-  }
+    try {
+      const res = await fetch("/api/forgot-password/lookup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim() }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || "Something went wrong. Please try again.");
+        setLoading(false);
+        return;
+      }
+
+      if (data.status === "not_found") {
+        // Security: don't reveal whether the email exists
+        setInfoMessage(
+          "If an account exists with that email, you will be able to continue."
+        );
+        setLoading(false);
+        return;
+      }
+
+      if (data.status === "no_security") {
+        setError(
+          "Your account does not have security questions set up. Please use the contact form to request a manual reset."
+        );
+        setLoading(false);
+        return;
+      }
+
+      if (data.status === "found" && data.questions) {
+        // Store email and questions in sessionStorage, proceed to verify step
+        sessionStorage.setItem("fp_email", email.trim());
+        sessionStorage.setItem("fp_questions", JSON.stringify(data.questions));
+        router.push("/forgot-password/verify");
+        return;
+      }
+
+      setError("Unexpected response. Please try again.");
+      setLoading(false);
+    } catch {
+      setError("Something went wrong. Please try again.");
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="w-full max-w-md">
       <div className="glass rounded-2xl p-8 border border-white/10 shadow-2xl">
         <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold text-white mb-2">Forgot password?</h1>
-          <p className="text-white/50 text-sm">Enter your email and we&apos;ll send you a reset link.</p>
+          <h1 className="text-2xl font-bold text-white mb-2">
+            Forgot password?
+          </h1>
+          <p className="text-white/50 text-sm">
+            Enter your email to verify your identity using your security
+            questions.
+          </p>
         </div>
+
+        {infoMessage && (
+          <div
+            className="rounded-xl px-4 py-3 mb-5 text-sm"
+            style={{
+              background: "rgba(59,130,246,0.12)",
+              border: "1px solid rgba(59,130,246,0.3)",
+              color: "rgba(147,197,253,1)",
+            }}
+          >
+            {infoMessage}
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-xs font-medium text-white/60 mb-1.5">Email address</label>
+            <label className="block text-xs font-medium text-white/60 mb-1.5">
+              Email address
+            </label>
             <input
               type="email"
               value={email}
-              onChange={(e) => { setEmail(e.target.value); setError(null); }}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                setError(null);
+                setInfoMessage(null);
+              }}
               placeholder="sarah@example.com"
               required
               autoFocus
@@ -91,10 +113,30 @@ function ForgotPasswordForm() {
 
           {error && (
             <div className="flex items-start gap-2 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
-              <svg className="w-4 h-4 text-red-400 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+              <svg
+                className="w-4 h-4 text-red-400 mt-0.5 shrink-0"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"
+                />
               </svg>
-              <p className="text-sm text-red-400">{error}</p>
+              <p className="text-sm text-red-400">
+                {error}{" "}
+                {error.includes("contact form") && (
+                  <Link
+                    href="/contact-reset"
+                    className="underline hover:text-red-300 transition-colors"
+                  >
+                    Go to contact form
+                  </Link>
+                )}
+              </p>
             </div>
           )}
 
@@ -105,19 +147,39 @@ function ForgotPasswordForm() {
           >
             {loading ? (
               <span className="flex items-center justify-center gap-2">
-                <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                <svg
+                  className="w-4 h-4 animate-spin"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  />
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  />
                 </svg>
-                Sending…
+                Checking…
               </span>
-            ) : "Send reset link"}
+            ) : (
+              "Continue"
+            )}
           </button>
         </form>
 
         <p className="text-center text-sm text-white/40 mt-6">
           Remember your password?{" "}
-          <Link href="/login" className="text-violet-400 hover:text-violet-300 font-medium transition-colors">
+          <Link
+            href="/login"
+            className="text-violet-400 hover:text-violet-300 font-medium transition-colors"
+          >
             Sign in
           </Link>
         </p>

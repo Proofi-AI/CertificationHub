@@ -184,6 +184,12 @@ function LoginForm() {
             Create one free
           </Link>
         </p>
+
+        <p className="text-center text-xs text-white/25 mt-3">
+          <Link href="/contact-reset" className="hover:text-white/40 transition-colors">
+            Request manual password reset
+          </Link>
+        </p>
       </div>
     </div>
   );
