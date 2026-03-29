@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import type { Certificate } from "@prisma/client";
 import { DOMAINS, MAX_FILE_SIZE_BYTES, ACCEPTED_FILE_TYPES, ACCEPTED_FILE_ACCEPT } from "@/lib/constants";
 import { uploadCertificateImage } from "@/lib/utils/storage";
+import { compressImage } from "@/lib/compressImage";
 
 interface Props {
   initialData: Certificate | null;
@@ -51,6 +52,7 @@ export default function CertificateFormModal({ initialData, onSave, onClose, aut
     initialData?.imageUrl?.endsWith(".pdf") ? initialData.imageUrl : null
   );
   const [loading, setLoading] = useState(false);
+  const [compressing, setCompressing] = useState(false);
   const [extracting, setExtracting] = useState(false);
   const [extractNotice, setExtractNotice] = useState<ExtractNotice>(null);
   const [error, setError] = useState<string | null>(null);
@@ -197,6 +199,14 @@ export default function CertificateFormModal({ initialData, onSave, onClose, aut
     try {
       let imageUrl = existingFileUrl ?? "";
 
+      // Compress image file if present (PDFs are skipped automatically)
+      let fileToUpload: File | null = imageFile;
+      if (imageFile) {
+        setCompressing(true);
+        fileToUpload = await compressImage(imageFile);
+        setCompressing(false);
+      }
+
       if (isEdit) {
         // For edits: update the record first, then upload new file if selected
         const payload = {
@@ -220,7 +230,7 @@ export default function CertificateFormModal({ initialData, onSave, onClose, aut
 
         // Upload new file if selected
         if (imageFile) {
-          imageUrl = await uploadCertificateImage(imageFile, json.data.userId, json.data.id);
+          imageUrl = await uploadCertificateImage(fileToUpload!, json.data.userId, json.data.id);
           const patchRes = await fetch(`/api/certificates/${initialData!.id}`, {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
@@ -251,7 +261,7 @@ export default function CertificateFormModal({ initialData, onSave, onClose, aut
         if (!res.ok) { setError(json.error || "Failed to create certificate."); setLoading(false); return; }
 
         // Upload the file using the real certId
-        imageUrl = await uploadCertificateImage(imageFile!, json.data.userId, json.data.id);
+        imageUrl = await uploadCertificateImage(fileToUpload!, json.data.userId, json.data.id);
 
         // Update the certificate with the imageUrl
         const patchRes = await fetch(`/api/certificates/${json.data.id}`, {
@@ -265,6 +275,7 @@ export default function CertificateFormModal({ initialData, onSave, onClose, aut
 
       onClose();
     } catch (err) {
+      setCompressing(false);
       setError(err instanceof Error ? err.message : "Something went wrong.");
     } finally {
       setLoading(false);
@@ -545,7 +556,7 @@ export default function CertificateFormModal({ initialData, onSave, onClose, aut
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                   </svg>
-                  {imageFile && !isEdit ? "Uploading & saving…" : "Saving…"}
+                  {compressing ? "Optimising image…" : (imageFile && !isEdit ? "Uploading & saving…" : "Saving…")}
                 </span>
               ) : (
                 isEdit ? "Save changes" : "Add certificate"

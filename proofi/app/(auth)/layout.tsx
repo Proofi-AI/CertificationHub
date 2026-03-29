@@ -7,7 +7,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
       {/* Minimal nav */}
       <nav className="flex items-center justify-between px-6 py-4 border-b border-white/5">
         <Link href="/" className="flex items-center gap-2">
-          <Image src="/ProofiLogo.png" alt="Proofi AI" width={28} height={28} className="rounded-lg" />
+          <Image src="/ProofiLogo.png" alt="Proofi AI" width={42} height={42} className="rounded-lg" />
         </Link>
       </nav>
 

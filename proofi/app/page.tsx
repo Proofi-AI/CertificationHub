@@ -8,8 +8,11 @@ export default function LandingPage() {
     <div className="min-h-screen bg-[#0a0a0f] text-[#f0f0f5] overflow-x-hidden">
       {/* Navigation */}
       <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 py-4 backdrop-blur-md bg-[#0a0a0f]/80 border-b border-white/5">
-        <div className="flex items-center">
-          <Image src="/ProofiLogo.png" alt="Proofi AI" width={36} height={36} className="rounded-lg" />
+        <div className="flex items-center gap-2">
+          <Image src="/ProofiLogo.png" alt="Proofi AI" width={42} height={42} className="rounded-lg" />
+          <span className="text-[10px] font-bold tracking-wider px-1.5 py-0.5 rounded-md text-violet-400 bg-violet-500/10 border border-violet-500/20">
+            beta
+          </span>
         </div>
         <div className="hidden md:flex items-center gap-8 text-sm text-white/60">
           <a href="#features" className="hover:text-white transition-colors">Features</a>
@@ -118,11 +121,10 @@ export default function LandingPage() {
               {["All", "Software Engineering", "Cloud Computing", "Machine Learning"].map((tab, i) => (
                 <span
                   key={tab}
-                  className={`text-xs px-3 py-1 rounded-full cursor-pointer transition-all ${
-                    i === 0
+                  className={`text-xs px-3 py-1 rounded-full cursor-pointer transition-all ${i === 0
                       ? "bg-violet-600/30 text-violet-300 border border-violet-500/30"
                       : "bg-white/5 text-white/40 border border-white/10 hover:border-white/20"
-                  }`}
+                    }`}
                 >
                   {tab}
                 </span>

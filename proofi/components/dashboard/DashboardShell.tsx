@@ -33,10 +33,17 @@ export default function DashboardShell({ profile, certificates, initials, userIs
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between gap-2">
 
-          {/* Logo */}
-          <Link href="/" className="flex items-center group shrink-0 transition-all duration-300 group-hover:scale-105">
-            <Image src="/ProofiLogo.png" alt="Proofi AI" width={32} height={32} className="rounded-xl" />
-          </Link>
+          {/* Logo + Beta */}
+          <div className="flex items-center gap-2 shrink-0">
+            <Link href="/" className="flex items-center group transition-all duration-300 group-hover:scale-105">
+              <Image src="/ProofiLogo.png" alt="Proofi AI" width={42} height={42} className="rounded-xl" />
+            </Link>
+            <span className="text-[10px] font-bold tracking-wider px-1.5 py-0.5 rounded-md
+              text-violet-600 bg-violet-500/10 border border-violet-500/20
+              dark:text-violet-400 dark:bg-violet-500/10 dark:border-violet-500/20">
+              beta
+            </span>
+          </div>
 
           {/* Right side */}
           <div className="flex items-center gap-0.5 sm:gap-1">

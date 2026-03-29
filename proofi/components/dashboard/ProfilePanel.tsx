@@ -3,6 +3,7 @@
 import { useRef, useState, useCallback, useEffect } from "react";
 import type { User } from "@prisma/client";
 import { uploadAvatar } from "@/lib/utils/storage";
+import { compressImage } from "@/lib/compressImage";
 import { SLUG_REGEX } from "@/lib/constants";
 import { createClient } from "@/lib/supabase/client";
 import SlugSuggestions from "@/components/SlugSuggestions";
@@ -66,6 +67,7 @@ export default function ProfilePanel({ initialProfile, certificateDomains = [] }
   const [slugStatus, setSlugStatus] = useState<SlugStatus>("idle");
   const [saving, setSaving] = useState(false);
   const [avatarUploading, setAvatarUploading] = useState(false);
+  const [compressing, setCompressing] = useState(false);
   const [saveMsg, setSaveMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [copied, setCopied] = useState(false);
 
@@ -155,10 +157,14 @@ export default function ProfilePanel({ initialProfile, certificateDomains = [] }
     if (!file) return;
     setAvatarUploading(true);
     try {
-      const url = await uploadAvatar(file, profile.id);
+      setCompressing(true);
+      const fileToUpload = await compressImage(file);
+      setCompressing(false);
+      const url = await uploadAvatar(fileToUpload, profile.id);
       await fetch("/api/profile", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ avatarUrl: url }) });
       setProfile((p) => ({ ...p, avatarUrl: url }));
     } catch {
+      setCompressing(false);
       setSaveMsg({ type: "error", text: "Avatar upload failed. Try again." });
     } finally {
       setAvatarUploading(false);
@@ -233,12 +239,16 @@ export default function ProfilePanel({ initialProfile, certificateDomains = [] }
     setUploadError(null);
     setAvatarUploading(true);
     try {
-      const url = await uploadAvatar(file, profile.id);
+      setCompressing(true);
+      const fileToUpload = await compressImage(file);
+      setCompressing(false);
+      const url = await uploadAvatar(fileToUpload, profile.id);
       await fetch("/api/profile", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ avatarUrl: url }) });
       setProfile((p) => ({ ...p, avatarUrl: url }));
       setBannerBg(null);
       setPickerOpen(false);
     } catch {
+      setCompressing(false);
       setUploadError("Upload failed. Try again.");
     } finally {
       setAvatarUploading(false);
@@ -485,7 +495,7 @@ export default function ProfilePanel({ initialProfile, certificateDomains = [] }
                           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                         </svg>
-                        <p className="text-sm font-semibold text-violet-600 dark:text-violet-400">Uploading…</p>
+                        <p className="text-sm font-semibold text-violet-600 dark:text-violet-400">{compressing ? "Optimising image…" : "Uploading…"}</p>
                       </div>
                     ) : (
                       <div className="flex flex-col items-center gap-3">
