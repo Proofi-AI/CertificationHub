@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import type { Certificate, User } from "@prisma/client";
 import { DOMAIN_COLORS, DOMAIN_ACCENT } from "@/lib/constants";
 import Link from "next/link";
+import Image from "next/image";
 import CertificateLightbox from "@/components/CertificateLightbox";
 
 type PublicUser = Omit<User, "email"> & { certificates: Certificate[] };
@@ -228,13 +229,12 @@ export default function PublicProfile({ profile }: Props) {
         >
           <div className="max-w-4xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
             <Link href="/" className="flex items-center gap-2">
-              <div
-                className="w-6 h-6 rounded-md flex items-center justify-center"
-                style={{ background: "linear-gradient(135deg, #7c3aed, #4f46e5)", boxShadow: "0 2px 8px rgba(124,58,237,0.4)" }}
-              >
-                <span className="text-white font-black text-xs">P</span>
-              </div>
-              <span className="text-sm font-semibold text-slate-600 dark:text-white/70">Proofi AI</span>
+              <Image src="/ProofiLogo.png" alt="Proofi AI" width={42} height={42} className="rounded-lg" />
+              <span className="text-[10px] font-bold tracking-wider px-1.5 py-0.5 rounded-md
+                text-violet-600 bg-violet-500/10 border border-violet-500/20
+                dark:text-violet-400 dark:bg-violet-500/10 dark:border-violet-500/20">
+                beta
+              </span>
             </Link>
 
             <div className="flex items-center gap-2">
@@ -309,11 +309,10 @@ export default function PublicProfile({ profile }: Props) {
                 <button
                   key={domain}
                   onClick={() => setActiveTab(domain)}
-                  className={`text-xs px-3.5 py-1.5 rounded-full border transition-all font-medium ${
-                    activeTab === domain
+                  className={`text-xs px-3.5 py-1.5 rounded-full border transition-all font-medium ${activeTab === domain
                       ? "bg-violet-500/10 text-violet-600 border-violet-500/30 dark:bg-violet-600/25 dark:text-violet-300 dark:border-violet-500/40"
                       : "bg-black/[0.04] text-slate-500 border-black/[0.08] hover:border-black/[0.16] hover:text-slate-700 dark:bg-white/5 dark:text-white/40 dark:border-white/10 dark:hover:border-white/20 dark:hover:text-white/60"
-                  }`}
+                    }`}
                 >
                   {domain}
                 </button>
