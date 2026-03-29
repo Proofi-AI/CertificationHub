@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import LandingFeedbackForm from "@/components/feedback/LandingFeedbackForm";
 import DisclaimerModal from "@/components/DisclaimerModal";
 
@@ -7,11 +8,8 @@ export default function LandingPage() {
     <div className="min-h-screen bg-[#0a0a0f] text-[#f0f0f5] overflow-x-hidden">
       {/* Navigation */}
       <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 py-4 backdrop-blur-md bg-[#0a0a0f]/80 border-b border-white/5">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-blue-500 flex items-center justify-center">
-            <span className="text-white font-bold text-sm">P</span>
-          </div>
-          <span className="font-semibold text-lg tracking-tight">Proofi Hub</span>
+        <div className="flex items-center">
+          <Image src="/ProofiLogo.png" alt="Proofi AI" width={36} height={36} className="rounded-lg" />
         </div>
         <div className="hidden md:flex items-center gap-8 text-sm text-white/60">
           <a href="#features" className="hover:text-white transition-colors">Features</a>

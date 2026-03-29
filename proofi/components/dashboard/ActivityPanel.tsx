@@ -25,8 +25,8 @@ function isSameDay(a: Date, b: Date) {
 function startOfMonth(y: number, m: number) { return new Date(y, m, 1); }
 function daysInMonth(y: number, m: number) { return new Date(y, m + 1, 0).getDate(); }
 
-const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-const DAYS   = ["Su","Mo","Tu","We","Th","Fr","Sa"];
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const DAYS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
 
 /* ─── sub-component: Calendar ─────────────────────────────────────────── */
 
@@ -40,12 +40,12 @@ function MiniCalendar({
   const [popup, setPopup] = useState<{ day: number; certs: Certificate[] } | null>(null);
   const today = new Date();
 
-  const days   = daysInMonth(year, month);
+  const days = daysInMonth(year, month);
   const offset = startOfMonth(year, month).getDay(); // 0=Sun
-  const now    = new Date();
+  const now = new Date();
 
   // Map day → certs
-  const issuedMap  = useMemo<Map<number, Certificate[]>>(() => {
+  const issuedMap = useMemo<Map<number, Certificate[]>>(() => {
     const m = new Map<number, Certificate[]>();
     certificates.forEach((c) => {
       const d = toDate(c.issuedAt);
@@ -99,7 +99,7 @@ function MiniCalendar({
         {cells.map((day, i) => {
           if (!day) return <div key={`empty-${i}`} />;
 
-          const issued  = issuedMap.get(day);
+          const issued = issuedMap.get(day);
           const expiring = expiryMap.get(day);
           const isToday = isSameDay(new Date(year, month, day), today);
 
@@ -241,10 +241,10 @@ function MonthlyBarChart({
                       ? "transparent"
                       : "var(--border)"
                     : isCurrentMonth
-                    ? "linear-gradient(to top, #6d28d9, #a78bfa)"
-                    : isHovered
-                    ? "linear-gradient(to top, rgba(124,58,237,0.7), rgba(167,139,250,0.7))"
-                    : "linear-gradient(to top, rgba(124,58,237,0.3), rgba(167,139,250,0.3))",
+                      ? "linear-gradient(to top, #6d28d9, #a78bfa)"
+                      : isHovered
+                        ? "linear-gradient(to top, rgba(124,58,237,0.7), rgba(167,139,250,0.7))"
+                        : "linear-gradient(to top, rgba(124,58,237,0.3), rgba(167,139,250,0.3))",
                   borderRadius: bar.count === 0 ? "2px" : undefined,
                   opacity: bar.isFuture ? 0 : bar.count === 0 ? 0.35 : 1,
                 }}
@@ -341,10 +341,10 @@ function GoalRing({ certsThisYear }: { certsThisYear: number }) {
   }, []);
 
   const pct = Math.min(certsThisYear / goal, 1);
-  const r   = 22;
+  const r = 22;
   const circ = 2 * Math.PI * r;
   const dash = circ * pct;
-  const met  = certsThisYear >= goal;
+  const met = certsThisYear >= goal;
 
   const commitGoal = () => {
     const n = parseInt(draft, 10);
@@ -415,7 +415,7 @@ function GoalRing({ certsThisYear }: { certsThisYear: number }) {
 
 export default function ActivityPanel({ certificates, onEditCertificate, profileViews, slug }: Props) {
   const today = new Date();
-  const [calYear,  setCalYear]  = useState(today.getFullYear());
+  const [calYear, setCalYear] = useState(today.getFullYear());
   const [calMonth, setCalMonth] = useState(today.getMonth());
 
   /* ── Stats ── */
@@ -543,7 +543,7 @@ export default function ActivityPanel({ certificates, onEditCertificate, profile
             rel="noopener noreferrer"
             className="text-[11px] font-mono text-violet-600 dark:text-violet-400 hover:underline truncate"
           >
-            proofi.ai/{slug}
+            proofihub.vercel.app/{slug}
           </a>
         </div>
         {profileViews > 0 ? (
@@ -695,13 +695,13 @@ export default function ActivityPanel({ certificates, onEditCertificate, profile
           </h3>
           <div className="space-y-1.5">
             {expiryAlerts.map(({ cert, diff }) => {
-              const isExpired  = diff < 0;
+              const isExpired = diff < 0;
               const isCritical = diff >= 0 && diff <= 14;
               const color = isExpired
                 ? { bg: "rgba(239,68,68,0.08)", border: "rgba(239,68,68,0.18)", text: "text-red-600 dark:text-red-400" }
                 : isCritical
-                ? { bg: "rgba(239,68,68,0.06)", border: "rgba(239,68,68,0.14)", text: "text-red-500 dark:text-red-400" }
-                : { bg: "rgba(245,158,11,0.08)", border: "rgba(245,158,11,0.18)", text: "text-amber-600 dark:text-amber-400" };
+                  ? { bg: "rgba(239,68,68,0.06)", border: "rgba(239,68,68,0.14)", text: "text-red-500 dark:text-red-400" }
+                  : { bg: "rgba(245,158,11,0.08)", border: "rgba(245,158,11,0.18)", text: "text-amber-600 dark:text-amber-400" };
 
               return (
                 <button
@@ -715,8 +715,8 @@ export default function ActivityPanel({ certificates, onEditCertificate, profile
                     {isExpired
                       ? `Expired ${Math.abs(diff)}d ago`
                       : diff === 0
-                      ? "Expires today"
-                      : `Expires in ${diff}d`}
+                        ? "Expires today"
+                        : `Expires in ${diff}d`}
                   </p>
                 </button>
               );

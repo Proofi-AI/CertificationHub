@@ -9,16 +9,16 @@ import SlugSuggestions from "@/components/SlugSuggestions";
 
 /* ── Preset avatars (DiceBear fun-emoji, free CDN) ── */
 const PRESETS = [
-  { seed: "Zara",    bg: "b6e3f4" },
-  { seed: "Felix",   bg: "c0aede" },
-  { seed: "Luna",    bg: "ffd5dc" },
-  { seed: "Max",     bg: "d1fae5" },
-  { seed: "Nova",    bg: "ffdfbf" },
-  { seed: "Kai",     bg: "dbeafe" },
-  { seed: "Aria",    bg: "fce7f3" },
-  { seed: "Leo",     bg: "ede9fe" },
-  { seed: "Sam",     bg: "dcfce7" },
-  { seed: "Alex",    bg: "fef3c7" },
+  { seed: "Zara", bg: "b6e3f4" },
+  { seed: "Felix", bg: "c0aede" },
+  { seed: "Luna", bg: "ffd5dc" },
+  { seed: "Max", bg: "d1fae5" },
+  { seed: "Nova", bg: "ffdfbf" },
+  { seed: "Kai", bg: "dbeafe" },
+  { seed: "Aria", bg: "fce7f3" },
+  { seed: "Leo", bg: "ede9fe" },
+  { seed: "Sam", bg: "dcfce7" },
+  { seed: "Alex", bg: "fef3c7" },
 ];
 const dicebearUrl = (seed: string, bg: string) =>
   `https://api.dicebear.com/9.x/fun-emoji/svg?seed=${seed}&backgroundColor=${bg}`;
@@ -70,26 +70,26 @@ export default function ProfilePanel({ initialProfile, certificateDomains = [] }
   const [copied, setCopied] = useState(false);
 
   // Avatar picker modal
-  const [pickerOpen, setPickerOpen]       = useState(false);
-  const [pickerTab, setPickerTab]         = useState<"presets" | "upload">("presets");
-  const [pendingUrl, setPendingUrl]       = useState<string | null>(null);
-  const [pendingBg, setPendingBg]         = useState<string | null>(null);
-  const [bannerBg, setBannerBg]           = useState<string | null>(() => extractPresetBg(initialProfile.avatarUrl));
-  const [dragOver, setDragOver]           = useState(false);
-  const [uploadError, setUploadError]     = useState<string | null>(null);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickerTab, setPickerTab] = useState<"presets" | "upload">("presets");
+  const [pendingUrl, setPendingUrl] = useState<string | null>(null);
+  const [pendingBg, setPendingBg] = useState<string | null>(null);
+  const [bannerBg, setBannerBg] = useState<string | null>(() => extractPresetBg(initialProfile.avatarUrl));
+  const [dragOver, setDragOver] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   // Password change state
-  const [isGoogleOnly, setIsGoogleOnly]     = useState(false);
-  const [userEmail, setUserEmail]           = useState("");
-  const [pwModalOpen, setPwModalOpen]       = useState(false);
-  const [oldPw, setOldPw]                   = useState("");
-  const [newPw, setNewPw]                   = useState("");
-  const [confirmPw, setConfirmPw]           = useState("");
-  const [showOld, setShowOld]               = useState(false);
-  const [showNew, setShowNew]               = useState(false);
-  const [showConfirm, setShowConfirm]       = useState(false);
-  const [pwLoading, setPwLoading]           = useState(false);
-  const [pwMsg, setPwMsg]                   = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [isGoogleOnly, setIsGoogleOnly] = useState(false);
+  const [userEmail, setUserEmail] = useState("");
+  const [pwModalOpen, setPwModalOpen] = useState(false);
+  const [oldPw, setOldPw] = useState("");
+  const [newPw, setNewPw] = useState("");
+  const [confirmPw, setConfirmPw] = useState("");
+  const [showOld, setShowOld] = useState(false);
+  const [showNew, setShowNew] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [pwLoading, setPwLoading] = useState(false);
+  const [pwMsg, setPwMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   useEffect(() => {
     const supabase = createClient();
@@ -113,7 +113,7 @@ export default function ProfilePanel({ initialProfile, certificateDomains = [] }
     setPwMsg(null);
 
     if (newPw !== confirmPw) { setPwMsg({ type: "error", text: "New passwords don't match." }); return; }
-    if (newPw.length < 6)   { setPwMsg({ type: "error", text: "Password must be at least 6 characters." }); return; }
+    if (newPw.length < 6) { setPwMsg({ type: "error", text: "Password must be at least 6 characters." }); return; }
 
     setPwLoading(true);
     const supabase = createClient();
@@ -139,7 +139,7 @@ export default function ProfilePanel({ initialProfile, certificateDomains = [] }
     setTimeout(() => { closePwModal(); setIsGoogleOnly(false); }, 1800);
   };
 
-  const fileRef   = useRef<HTMLInputElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
   const slugTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Reset picker state when opened
@@ -325,7 +325,7 @@ export default function ProfilePanel({ initialProfile, certificateDomains = [] }
             <p className="text-base font-bold text-slate-900 dark:text-white leading-tight">
               {profile.name || "Your name"}
             </p>
-            <p className="text-xs text-slate-400 dark:text-white/40 mt-0.5">proofi.ai/{profile.slug}</p>
+            <p className="text-xs text-slate-400 dark:text-white/40 mt-0.5">proofihub.vercel.app/{profile.slug}</p>
           </div>
         </div>
       </div>
@@ -372,11 +372,10 @@ export default function ProfilePanel({ initialProfile, certificateDomains = [] }
                 <button
                   key={tab}
                   onClick={() => { setPickerTab(tab); setUploadError(null); }}
-                  className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all capitalize ${
-                    pickerTab === tab
+                  className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all capitalize ${pickerTab === tab
                       ? "bg-violet-600 text-white"
                       : "text-slate-500 dark:text-white/50 hover:bg-black/[0.06] dark:hover:bg-white/[0.07]"
-                  }`}
+                    }`}
                 >
                   {tab === "presets" ? "Preset avatars" : "Upload photo"}
                 </button>
@@ -475,11 +474,10 @@ export default function ProfilePanel({ initialProfile, certificateDomains = [] }
                       const f = e.dataTransfer.files?.[0];
                       if (f) handleFileUpload(f);
                     }}
-                    className={`cursor-pointer rounded-2xl border-2 border-dashed p-10 text-center transition-all duration-200 ${
-                      dragOver
+                    className={`cursor-pointer rounded-2xl border-2 border-dashed p-10 text-center transition-all duration-200 ${dragOver
                         ? "border-violet-500 bg-violet-500/8"
                         : "border-black/[0.12] bg-black/[0.02] hover:border-violet-500/50 hover:bg-violet-500/4 dark:border-white/[0.12] dark:bg-white/[0.02] dark:hover:border-violet-400/50"
-                    }`}
+                      }`}
                   >
                     {avatarUploading ? (
                       <div className="flex flex-col items-center gap-3">
@@ -585,7 +583,7 @@ export default function ProfilePanel({ initialProfile, certificateDomains = [] }
               className="px-4 py-3 text-xs font-mono rounded-l-xl shrink-0 text-slate-400 dark:text-white/60"
               style={{ background: "var(--input-bg)", border: "1px solid var(--border-input)", borderRight: "none" }}
             >
-              proofi.ai/
+              proofihub.vercel.app/
             </span>
             <input
               value={slug}
@@ -596,11 +594,10 @@ export default function ProfilePanel({ initialProfile, certificateDomains = [] }
             />
           </div>
           {slugStatus !== "idle" && (
-            <p className={`text-xs mt-2 flex items-center gap-1.5 font-medium ${
-              slugStatus === "available" ? "text-emerald-600 dark:text-emerald-400" :
-              slugStatus === "taken" || slugStatus === "invalid" ? "text-red-600 dark:text-red-400" :
-              "text-slate-400 dark:text-white/55"
-            }`}>
+            <p className={`text-xs mt-2 flex items-center gap-1.5 font-medium ${slugStatus === "available" ? "text-emerald-600 dark:text-emerald-400" :
+                slugStatus === "taken" || slugStatus === "invalid" ? "text-red-600 dark:text-red-400" :
+                  "text-slate-400 dark:text-white/55"
+              }`}>
               {slugStatus === "checking" && <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>}
               {slugStatus === "available" && "✓ Available"}
               {slugStatus === "taken" && "✗ Already taken"}
@@ -632,15 +629,13 @@ export default function ProfilePanel({ initialProfile, certificateDomains = [] }
           <button
             type="button"
             onClick={() => setDefaultTheme("light")}
-            className={`flex items-center gap-2 sm:gap-3 rounded-xl px-3 sm:px-4 py-3 border transition-all min-w-0 ${
-              defaultTheme === "light"
+            className={`flex items-center gap-2 sm:gap-3 rounded-xl px-3 sm:px-4 py-3 border transition-all min-w-0 ${defaultTheme === "light"
                 ? "border-violet-500/50 bg-violet-500/8"
                 : "border-black/[0.09] bg-black/[0.03] dark:border-white/[0.08] dark:bg-white/[0.03]"
-            }`}
+              }`}
           >
-            <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
-              defaultTheme === "light" ? "bg-amber-100" : "bg-black/[0.06] dark:bg-white/[0.06]"
-            }`}>
+            <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${defaultTheme === "light" ? "bg-amber-100" : "bg-black/[0.06] dark:bg-white/[0.06]"
+              }`}>
               <svg className={`w-4 h-4 ${defaultTheme === "light" ? "text-amber-500" : "text-slate-400 dark:text-white/50"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" />
               </svg>
@@ -659,15 +654,13 @@ export default function ProfilePanel({ initialProfile, certificateDomains = [] }
           <button
             type="button"
             onClick={() => setDefaultTheme("dark")}
-            className={`flex items-center gap-2 sm:gap-3 rounded-xl px-3 sm:px-4 py-3 border transition-all min-w-0 ${
-              defaultTheme === "dark"
+            className={`flex items-center gap-2 sm:gap-3 rounded-xl px-3 sm:px-4 py-3 border transition-all min-w-0 ${defaultTheme === "dark"
                 ? "border-violet-500/50 bg-violet-500/8"
                 : "border-black/[0.09] bg-black/[0.03] dark:border-white/[0.08] dark:bg-white/[0.03]"
-            }`}
+              }`}
           >
-            <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
-              defaultTheme === "dark" ? "bg-slate-800" : "bg-black/[0.06] dark:bg-white/[0.06]"
-            }`}>
+            <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${defaultTheme === "dark" ? "bg-slate-800" : "bg-black/[0.06] dark:bg-white/[0.06]"
+              }`}>
               <svg className={`w-4 h-4 ${defaultTheme === "dark" ? "text-slate-300" : "text-slate-400 dark:text-white/50"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z" />
               </svg>
@@ -712,11 +705,10 @@ export default function ProfilePanel({ initialProfile, certificateDomains = [] }
 
       {/* Save message */}
       {saveMsg && (
-        <div className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium ${
-          saveMsg.type === "success"
+        <div className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium ${saveMsg.type === "success"
             ? "text-emerald-700 bg-emerald-50 border border-emerald-200 dark:text-emerald-300 dark:bg-emerald-500/10 dark:border-emerald-500/20"
             : "text-red-700 bg-red-50 border border-red-200 dark:text-red-300 dark:bg-red-500/10 dark:border-red-500/20"
-        }`}>
+          }`}>
           {saveMsg.type === "success"
             ? <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
             : <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" /></svg>
@@ -852,11 +844,10 @@ export default function ProfilePanel({ initialProfile, certificateDomains = [] }
 
               {/* Feedback */}
               {pwMsg && (
-                <div className={`flex items-center gap-2.5 rounded-xl px-4 py-3 text-sm font-medium ${
-                  pwMsg.type === "success"
+                <div className={`flex items-center gap-2.5 rounded-xl px-4 py-3 text-sm font-medium ${pwMsg.type === "success"
                     ? "text-emerald-700 bg-emerald-50 border border-emerald-200 dark:text-emerald-300 dark:bg-emerald-500/10 dark:border-emerald-500/20"
                     : "text-red-700 bg-red-50 border border-red-200 dark:text-red-300 dark:bg-red-500/10 dark:border-red-500/20"
-                }`}>
+                  }`}>
                   {pwMsg.type === "success"
                     ? <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
                     : <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" /></svg>

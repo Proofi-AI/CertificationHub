@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import type { User } from "@prisma/client";
 import type { Certificate } from "@prisma/client";
 import type { UserFeatures } from "@/lib/features";
@@ -33,22 +34,8 @@ export default function DashboardShell({ profile, certificates, initials, userIs
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between gap-2">
 
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-2 group shrink-0">
-            <div
-              className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl flex items-center justify-center transition-all duration-300 group-hover:scale-105"
-              style={{
-                background: "linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%)",
-                boxShadow: "0 2px 12px rgba(124,58,237,0.45)",
-              }}
-            >
-              <span className="text-white font-black text-xs sm:text-sm tracking-tight">P</span>
-            </div>
-            <div className="flex items-baseline gap-0.5">
-              <span className="font-bold text-[14px] sm:text-[15px] tracking-tight transition-colors text-slate-800 group-hover:text-slate-900 dark:text-white/85 dark:group-hover:text-white">
-                Proofi
-              </span>
-              <span className="font-black text-[14px] sm:text-[15px] tracking-tight" style={{ color: "#7c3aed" }}>AI</span>
-            </div>
+          <Link href="/" className="flex items-center group shrink-0 transition-all duration-300 group-hover:scale-105">
+            <Image src="/ProofiLogo.png" alt="Proofi AI" width={32} height={32} className="rounded-xl" />
           </Link>
 
           {/* Right side */}

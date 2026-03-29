@@ -142,7 +142,7 @@ For image certificates, a button in the lightbox opens the original file in a ne
 ## Public Profile
 
 ### Public Profile Page
-Every user gets a public profile page at a custom URL (e.g., `proofi.ai/username`) that is accessible to anyone without logging in.
+Every user gets a public profile page at a custom URL (e.g., `proofihub.vercel.app/username`) that is accessible to anyone without logging in.
 
 ### Profile Header
 The public profile shows the user's avatar (or initials), full name, bio, certificate count, and last-updated date.

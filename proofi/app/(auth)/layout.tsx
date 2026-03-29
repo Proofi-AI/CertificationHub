@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -6,10 +7,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
       {/* Minimal nav */}
       <nav className="flex items-center justify-between px-6 py-4 border-b border-white/5">
         <Link href="/" className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-violet-500 to-blue-500 flex items-center justify-center">
-            <span className="text-white font-bold text-xs">P</span>
-          </div>
-          <span className="font-semibold text-base tracking-tight text-white/90">Proofi AI</span>
+          <Image src="/ProofiLogo.png" alt="Proofi AI" width={28} height={28} className="rounded-lg" />
         </Link>
       </nav>
 

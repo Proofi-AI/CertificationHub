@@ -102,7 +102,7 @@ model Certificate {
 ```
 
 Notes:
-- `slug` is the user's custom public URL identifier (e.g. proofi.ai/johndoe)
+- `slug` is the user's custom public URL identifier (e.g. proofihub.vercel.app/johndoe)
 - `expiresAt` is optional
 - `credentialId` is optional — used for future verification feature
 - `isPublic` controls visibility on the public profile
