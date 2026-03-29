@@ -5,11 +5,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
-// NOTE: For this signup flow to work without email confirmation,
-// you must disable "Confirm email" in your Supabase project:
-// Dashboard → Authentication → Providers → Email → toggle off "Confirm email"
-// Without disabling this, the signInWithPassword call will fail with "Email not confirmed".
-
 export default function SignUpPage() {
   const router = useRouter();
   const [form, setForm] = useState({ name: "", email: "", password: "" });
@@ -33,54 +28,29 @@ export default function SignUpPage() {
       return;
     }
 
-    const supabase = createClient();
-
-    const { data, error: signUpError } = await supabase.auth.signUp({
-      email: form.email,
-      password: form.password,
-      options: {
-        data: { full_name: form.name },
-      },
+    // Create account server-side (no confirmation email sent).
+    const res = await fetch("/api/auth/signup", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: form.email, password: form.password, full_name: form.name }),
     });
 
-    if (signUpError) {
-      const msg = signUpError.message.toLowerCase();
-      if (
-        msg.includes("already registered") ||
-        msg.includes("already exists") ||
-        msg.includes("user already")
-      ) {
-        setError(
-          "An account with this email already exists. Try signing in instead."
-        );
-      } else {
-        setError(signUpError.message);
-      }
+    if (!res.ok) {
+      const { error: msg } = await res.json();
+      setError(msg ?? "Failed to create account.");
       setLoading(false);
       return;
     }
 
-    // Supabase returns no error but empty identities when the email is already registered.
-    if (data.user && data.user.identities && data.user.identities.length === 0) {
-      setError(
-        "An account with this email already exists. Try signing in instead."
-      );
-      setLoading(false);
-      return;
-    }
+    const supabase = createClient();
 
-    // Force an active session immediately — no email confirmation step.
     const { error: signInError } = await supabase.auth.signInWithPassword({
       email: form.email,
       password: form.password,
     });
 
     if (signInError) {
-      // Likely means email confirmation is still enabled in Supabase project settings.
-      // Disable it at: Dashboard → Authentication → Providers → Email → "Confirm email"
-      setError(
-        "Account created but could not sign in automatically. Please check your inbox or try signing in manually."
-      );
+      setError("Account created but could not sign in. Please try signing in manually.");
       setLoading(false);
       return;
     }
