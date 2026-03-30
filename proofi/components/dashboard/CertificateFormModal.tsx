@@ -11,7 +11,10 @@ interface Props {
   onSave: (cert: Certificate) => void;
   onClose: () => void;
   autoFillEnabled?: boolean;
+  aiVerificationEnabled?: boolean;
 }
+
+type VerifyResult = { verified: boolean; confidence: string; reason: string };
 
 const toInputDate = (date: Date | string | null | undefined): string => {
   if (!date) return "";
@@ -23,7 +26,7 @@ type ExtractNotice =
   | { type: "warn"; message: string }
   | null;
 
-export default function CertificateFormModal({ initialData, onSave, onClose, autoFillEnabled = false }: Props) {
+export default function CertificateFormModal({ initialData, onSave, onClose, autoFillEnabled = false, aiVerificationEnabled = false }: Props) {
   const isEdit = !!initialData;
 
   const domainValues = DOMAINS.map((d) => d.value as string);
@@ -55,6 +58,9 @@ export default function CertificateFormModal({ initialData, onSave, onClose, aut
   const [compressing, setCompressing] = useState(false);
   const [extracting, setExtracting] = useState(false);
   const [extractNotice, setExtractNotice] = useState<ExtractNotice>(null);
+  const [verifying, setVerifying] = useState(false);
+  const [verifyResult, setVerifyResult] = useState<VerifyResult | null>(null);
+  const [generatingDescription, setGeneratingDescription] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -116,6 +122,7 @@ export default function CertificateFormModal({ initialData, onSave, onClose, aut
         // If we got an expiresAt value, uncheck "no expiry"
         noExpiry: !prev.expiresAt && data.expiresAt ? false : prev.noExpiry,
         credentialId: !prev.credentialId && data.credentialId ? data.credentialId : prev.credentialId,
+        description: !prev.description && data.description ? data.description : prev.description,
       }));
 
       setExtractNotice({
@@ -130,6 +137,44 @@ export default function CertificateFormModal({ initialData, onSave, onClose, aut
       });
     } finally {
       setExtracting(false);
+    }
+  };
+
+  const runVerification = async (file: File) => {
+    setVerifying(true);
+    setVerifyResult(null);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch("/api/certificates/verify-image", { method: "POST", body: formData });
+      const json = await res.json();
+      if (res.ok && json.data) {
+        setVerifyResult(json.data as VerifyResult);
+      }
+    } catch (err) {
+      console.error("[verify] Unexpected error:", err);
+    } finally {
+      setVerifying(false);
+    }
+  };
+
+  const runDescribe = async () => {
+    if (!form.name || !form.issuer) return;
+    setGeneratingDescription(true);
+    try {
+      const res = await fetch("/api/certificates/describe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: form.name, issuer: form.issuer, domain: form.domain, issuedAt: form.issuedAt }),
+      });
+      const json = await res.json();
+      if (res.ok && json.data?.description) {
+        setForm((prev) => ({ ...prev, description: json.data.description }));
+      }
+    } catch (err) {
+      console.error("[describe] Unexpected error:", err);
+    } finally {
+      setGeneratingDescription(false);
     }
   };
 
@@ -155,9 +200,13 @@ export default function CertificateFormModal({ initialData, onSave, onClose, aut
       setImagePreview(URL.createObjectURL(file));
       setIsPdf(false);
     }
+    setVerifyResult(null);
     // Trigger extraction only when the feature is enabled
     if (autoFillEnabled) {
       runExtraction(file);
+    }
+    if (aiVerificationEnabled) {
+      runVerification(file);
     }
   };
 
@@ -168,6 +217,7 @@ export default function CertificateFormModal({ initialData, onSave, onClose, aut
     setIsPdf(false);
     setExistingFileUrl(null);
     setExtractNotice(null);
+    setVerifyResult(null);
     if (fileRef.current) fileRef.current.value = "";
   };
 
@@ -207,6 +257,8 @@ export default function CertificateFormModal({ initialData, onSave, onClose, aut
         setCompressing(false);
       }
 
+      const aiVerified = aiVerificationEnabled && verifyResult?.verified === true;
+
       if (isEdit) {
         // For edits: update the record first, then upload new file if selected
         const payload = {
@@ -218,6 +270,7 @@ export default function CertificateFormModal({ initialData, onSave, onClose, aut
           credentialId: form.credentialId || null,
           description: form.description || null,
           imageUrl,
+          ...(imageFile && aiVerified && { verifyStatus: "ai_verified" }),
         };
 
         const res = await fetch(`/api/certificates/${initialData!.id}`, {
@@ -255,6 +308,7 @@ export default function CertificateFormModal({ initialData, onSave, onClose, aut
             credentialId: form.credentialId || null,
             description: form.description || null,
             imageUrl: null,
+            ...(aiVerified && { verifyStatus: "ai_verified" }),
           }),
         });
         const json = await res.json();
@@ -407,6 +461,40 @@ export default function CertificateFormModal({ initialData, onSave, onClose, aut
             )
           )}
 
+          {/* Verification badge */}
+          {aiVerificationEnabled && verifying && (
+            <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-blue-500/10 border border-blue-500/20">
+              <svg className="w-4 h-4 animate-spin text-blue-400 shrink-0" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+              </svg>
+              <p className="text-sm text-blue-300">Verifying certificate…</p>
+            </div>
+          )}
+          {aiVerificationEnabled && !verifying && verifyResult && (
+            verifyResult.verified ? (
+              <div className="flex items-start gap-2 bg-emerald-50 border border-emerald-200 dark:bg-emerald-500/10 dark:border-emerald-500/20 rounded-xl px-4 py-3">
+                <svg className="w-4 h-4 text-emerald-500 dark:text-emerald-400 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <div>
+                  <p className="text-sm font-medium text-emerald-600 dark:text-emerald-400">Looks authentic</p>
+                  <p className="text-xs text-emerald-500/80 dark:text-emerald-500/70 mt-0.5">{verifyResult.reason}</p>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 dark:bg-amber-500/10 dark:border-amber-500/20 rounded-xl px-4 py-3">
+                <svg className="w-4 h-4 text-amber-500 dark:text-amber-400 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+                </svg>
+                <div>
+                  <p className="text-sm font-medium text-amber-600 dark:text-amber-400">Could not verify</p>
+                  <p className="text-xs text-amber-500/80 dark:text-amber-500/70 mt-0.5">{verifyResult.reason}</p>
+                </div>
+              </div>
+            )
+          )}
+
           {/* Certificate name */}
           <div>
             <label className="text-xs font-semibold mb-1.5 block text-slate-500 dark:text-white/65">
@@ -515,9 +603,31 @@ export default function CertificateFormModal({ initialData, onSave, onClose, aut
 
           {/* Description */}
           <div>
-            <label className="text-xs font-semibold mb-1.5 block text-slate-500 dark:text-white/65">
-              Description <span className="font-normal text-slate-400 dark:text-white/25">(optional)</span>
-            </label>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="text-xs font-semibold text-slate-500 dark:text-white/65">
+                Description <span className="font-normal text-slate-400 dark:text-white/25">(optional)</span>
+              </label>
+              {autoFillEnabled && (
+                <button
+                  type="button"
+                  onClick={runDescribe}
+                  disabled={isDisabled || generatingDescription || !form.name || !form.issuer}
+                  className="flex items-center gap-1 text-[11px] font-medium text-violet-500 hover:text-violet-400 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                >
+                  {generatingDescription ? (
+                    <>
+                      <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                      Generating…
+                    </>
+                  ) : (
+                    <>✦ Generate</>
+                  )}
+                </button>
+              )}
+            </div>
             <textarea
               value={form.description}
               onChange={(e) => handleField("description", e.target.value)}

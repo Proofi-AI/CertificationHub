@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
 import { isValidSlug } from "@/lib/utils/slug";
+import { ensureUserRecord } from "@/lib/auth/ensureUserRecord";
 
 export async function GET() {
   const supabase = await createClient();
@@ -41,6 +42,8 @@ export async function PUT(request: NextRequest) {
         return Response.json({ error: "This URL is already taken" }, { status: 409 });
       }
     }
+
+    await ensureUserRecord(user);
 
     const updated = await prisma.user.update({
       where: { id: user.id },
