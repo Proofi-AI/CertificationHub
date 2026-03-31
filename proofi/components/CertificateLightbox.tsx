@@ -19,6 +19,12 @@ export default function CertificateLightbox({ src, alt, isPdf = false, onClose }
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const dragStart = useRef<{ x: number; y: number; ox: number; oy: number } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const touchStartRef = useRef<{
+    touch1: { x: number; y: number };
+    touch2?: { x: number; y: number };
+    initialZoom: number;
+    initialOffset: { x: number; y: number };
+  } | null>(null);
 
   // Close on Escape
   useEffect(() => {
@@ -86,6 +92,56 @@ export default function CertificateLightbox({ src, alt, isPdf = false, onClose }
     setZoom((z) => Math.min(Math.max(+(z + delta).toFixed(2), MIN_ZOOM), MAX_ZOOM));
   };
 
+  // Touch support (pinch-to-zoom + single-finger pan)
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length === 1) {
+      touchStartRef.current = {
+        touch1: { x: e.touches[0].clientX, y: e.touches[0].clientY },
+        initialZoom: zoom,
+        initialOffset: { ...offset },
+      };
+    } else if (e.touches.length === 2) {
+      touchStartRef.current = {
+        touch1: { x: e.touches[0].clientX, y: e.touches[0].clientY },
+        touch2: { x: e.touches[1].clientX, y: e.touches[1].clientY },
+        initialZoom: zoom,
+        initialOffset: { ...offset },
+      };
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!touchStartRef.current) return;
+    e.preventDefault();
+
+    if (e.touches.length === 2 && touchStartRef.current.touch2) {
+      const startDist = Math.hypot(
+        touchStartRef.current.touch1.x - touchStartRef.current.touch2.x,
+        touchStartRef.current.touch1.y - touchStartRef.current.touch2.y
+      );
+      const currentDist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      const newZoom = Math.min(Math.max(
+        parseFloat((touchStartRef.current.initialZoom * (currentDist / startDist)).toFixed(2)),
+        MIN_ZOOM
+      ), MAX_ZOOM);
+      setZoom(newZoom);
+    } else if (e.touches.length === 1 && !touchStartRef.current.touch2 && touchStartRef.current.initialZoom > 1) {
+      const dx = e.touches[0].clientX - touchStartRef.current.touch1.x;
+      const dy = e.touches[0].clientY - touchStartRef.current.touch1.y;
+      setOffset({
+        x: touchStartRef.current.initialOffset.x + dx,
+        y: touchStartRef.current.initialOffset.y + dy,
+      });
+    }
+  };
+
+  const handleTouchEnd = () => {
+    touchStartRef.current = null;
+  };
+
   const zoomPct = Math.round(zoom * 100);
 
   return (
@@ -94,10 +150,10 @@ export default function CertificateLightbox({ src, alt, isPdf = false, onClose }
       <div className="absolute inset-0 bg-black/90 backdrop-blur-md" onClick={onClose} />
 
       {/* Top bar */}
-      <div className="relative z-10 flex items-center justify-between px-5 py-3 shrink-0" style={{ borderBottom: "1px solid var(--border)", background: "var(--nav-bg)", backdropFilter: "blur(16px)" }}>
-        <p className="text-sm font-medium truncate max-w-xs text-slate-700 dark:text-white/80">{alt}</p>
+      <div className="relative z-10 flex items-center justify-between px-3 sm:px-5 py-2.5 sm:py-3 shrink-0 gap-2" style={{ borderBottom: "1px solid var(--border)", background: "var(--nav-bg)", backdropFilter: "blur(16px)" }}>
+        <p className="text-sm font-medium truncate max-w-[120px] sm:max-w-xs text-slate-700 dark:text-white/80 hidden sm:block">{alt}</p>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2 ml-auto">
           {/* Zoom controls */}
           <button
             onClick={zoomOut}
@@ -113,7 +169,7 @@ export default function CertificateLightbox({ src, alt, isPdf = false, onClose }
           <button
             onClick={resetZoom}
             title="Reset zoom (0)"
-            className="min-w-[3.5rem] h-8 flex items-center justify-center rounded-lg transition-all text-xs font-mono bg-black/[0.05] hover:bg-black/[0.10] border border-black/[0.09] text-slate-500 hover:text-slate-900 dark:bg-white/5 dark:hover:bg-white/10 dark:border-white/10 dark:text-white/60 dark:hover:text-white"
+            className="flex min-w-[3rem] sm:min-w-[3.5rem] h-8 items-center justify-center rounded-lg transition-all text-xs font-mono bg-black/[0.05] hover:bg-black/[0.10] border border-black/[0.09] text-slate-500 hover:text-slate-900 dark:bg-white/5 dark:hover:bg-white/10 dark:border-white/10 dark:text-white/60 dark:hover:text-white"
           >
             {zoomPct}%
           </button>
@@ -129,7 +185,7 @@ export default function CertificateLightbox({ src, alt, isPdf = false, onClose }
             </svg>
           </button>
 
-          <div className="w-px h-5 mx-1" style={{ background: "var(--border)" }} />
+          <div className="hidden sm:block w-px h-5 mx-1" style={{ background: "var(--border)" }} />
 
           {/* Open original */}
           {!isPdf && (
@@ -138,7 +194,7 @@ export default function CertificateLightbox({ src, alt, isPdf = false, onClose }
               target="_blank"
               rel="noopener noreferrer"
               title="Open original"
-              className="w-8 h-8 flex items-center justify-center rounded-lg transition-all bg-black/[0.05] hover:bg-black/[0.10] border border-black/[0.09] text-slate-500 hover:text-slate-900 dark:bg-white/5 dark:hover:bg-white/10 dark:border-white/10 dark:text-white/60 dark:hover:text-white"
+              className="hidden sm:flex w-8 h-8 items-center justify-center rounded-lg transition-all bg-black/[0.05] hover:bg-black/[0.10] border border-black/[0.09] text-slate-500 hover:text-slate-900 dark:bg-white/5 dark:hover:bg-white/10 dark:border-white/10 dark:text-white/60 dark:hover:text-white"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
@@ -159,12 +215,16 @@ export default function CertificateLightbox({ src, alt, isPdf = false, onClose }
         </div>
       </div>
 
-      {/* Image / PDF area */}
+      {/* Image / PDF area — min-h-0 is critical: without it, flex-1 on mobile Safari
+           doesn't constrain the height, causing the image to overflow and appear cropped */}
       <div
         ref={containerRef}
-        className="relative flex-1 overflow-hidden flex items-center justify-center"
+        className="relative flex-1 min-h-0 overflow-hidden flex items-center justify-center w-full"
         onWheel={handleWheel}
-        style={{ cursor: zoom > 1 ? (dragging ? "grabbing" : "grab") : "default" }}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        style={{ cursor: zoom > 1 ? (dragging ? "grabbing" : "grab") : "default", touchAction: "none" }}
       >
         {isPdf ? (
           <iframe
@@ -194,8 +254,13 @@ export default function CertificateLightbox({ src, alt, isPdf = false, onClose }
         )}
       </div>
 
-      {/* Bottom hint bar */}
-      <div className="relative z-10 flex items-center justify-center gap-6 py-2.5 shrink-0" style={{ borderTop: "1px solid var(--border)", background: "var(--nav-bg)", backdropFilter: "blur(16px)" }}>
+      {/* Mobile hint bar */}
+      <div className="relative z-10 flex sm:hidden items-center justify-center py-2 shrink-0" style={{ borderTop: "1px solid var(--border)", background: "var(--nav-bg)" }}>
+        <span className="text-xs text-slate-400 dark:text-white/30">Pinch to zoom · tap outside to close</span>
+      </div>
+
+      {/* Bottom hint bar — desktop only */}
+      <div className="relative z-10 hidden sm:flex items-center justify-center gap-6 py-2.5 shrink-0" style={{ borderTop: "1px solid var(--border)", background: "var(--nav-bg)", backdropFilter: "blur(16px)" }}>
         <span className="text-xs flex items-center gap-1.5 text-slate-400 dark:text-white/25">
           <kbd className="px-1.5 py-0.5 rounded font-mono text-[10px] bg-black/[0.06] border border-black/[0.09] text-slate-500 dark:bg-white/8 dark:border-white/10 dark:text-white/40">scroll</kbd>
           Zoom

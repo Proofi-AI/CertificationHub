@@ -89,13 +89,13 @@ export default function AdminFeedbackClient() {
   // Add back-to-dashboard header button
   return (
     <div className="min-h-screen" style={{ background: "linear-gradient(135deg, #0d1117 0%, #0f1225 100%)" }}>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6 sm:space-y-8">
 
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-3">
             <a href="/dashboard"
-              className="flex items-center gap-2 text-sm text-white/50 hover:text-white transition-colors group">
+              className="flex items-center gap-2 text-sm text-white/50 hover:text-white transition-colors group shrink-0">
               <svg className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
               </svg>
@@ -103,18 +103,18 @@ export default function AdminFeedbackClient() {
             </a>
             <span className="text-white/10">/</span>
             <div>
-              <h1 className="text-3xl font-black text-white">Feedback Inbox</h1>
-              <p className="text-white/40 text-sm mt-0.5">Review and manage all customer feedback</p>
+              <h1 className="text-2xl sm:text-3xl font-black text-white">Feedback Inbox</h1>
+              <p className="text-white/40 text-sm mt-0.5 hidden sm:block">Review and manage all customer feedback</p>
             </div>
           </div>
-          <div className="flex gap-2 bg-white/5 p-1 rounded-2xl border border-white/10">
+          <div className="flex gap-2 bg-white/5 p-1 rounded-2xl border border-white/10 self-start sm:self-auto">
             <button onClick={() => setTab("inbox")}
-              className={`px-5 py-2 rounded-xl text-sm font-bold transition-all ${tab === "inbox" ? "bg-white/10 text-white" : "text-white/40 hover:text-white"}`}>
+              className={`px-4 sm:px-5 py-2 rounded-xl text-sm font-bold transition-all ${tab === "inbox" ? "bg-white/10 text-white" : "text-white/40 hover:text-white"}`}>
               📥 Inbox
               {feedbacks.length > 0 && <span className="ml-2 bg-violet-500/30 text-violet-300 text-xs px-2 py-0.5 rounded-full">{feedbacks.length}</span>}
             </button>
             <button onClick={() => setTab("admins")}
-              className={`px-5 py-2 rounded-xl text-sm font-bold transition-all ${tab === "admins" ? "bg-white/10 text-white" : "text-white/40 hover:text-white"}`}>
+              className={`px-4 sm:px-5 py-2 rounded-xl text-sm font-bold transition-all ${tab === "admins" ? "bg-white/10 text-white" : "text-white/40 hover:text-white"}`}>
               👥 Admins
             </button>
           </div>
@@ -145,7 +145,7 @@ export default function AdminFeedbackClient() {
               </button>
             </div>
 
-            {/* Table */}
+            {/* Mobile Cards / Desktop Table */}
             <div className="rounded-3xl border border-white/10 overflow-hidden" style={{ background: "rgba(19,22,39,0.8)" }}>
               {loading ? (
                 <div className="py-20 text-center text-white/30 text-sm">Loading…</div>
@@ -155,64 +155,107 @@ export default function AdminFeedbackClient() {
                   <p className="text-white/40 text-sm">No feedback found</p>
                 </div>
               ) : (
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="text-xs text-white/30 uppercase tracking-wider border-b border-white/5">
-                      <th className="px-6 py-4 text-left font-semibold">Type</th>
-                      <th className="px-6 py-4 text-left font-semibold">From</th>
-                      <th className="px-6 py-4 text-left font-semibold">Summary</th>
-                      <th className="px-6 py-4 text-left font-semibold">Priority</th>
-                      <th className="px-6 py-4 text-left font-semibold">Status</th>
-                      <th className="px-6 py-4 text-left font-semibold">Date</th>
-                      <th className="px-6 py-4 text-left font-semibold">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-white/[0.04]">
+                <>
+                  {/* Mobile card list */}
+                  <div className="divide-y divide-white/[0.04] md:hidden">
                     {feedbacks.map((item) => (
-                      <tr key={item.id} className="hover:bg-white/[0.03] transition-colors cursor-pointer" onClick={() => setPreview(item)}>
-                        <td className="px-6 py-4">
-                          <span className={`px-2.5 py-1 text-xs rounded-lg font-bold uppercase ${TYPE_STYLES[item.type] ?? "bg-white/10 text-white/60"}`}>
-                            {item.type}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="font-medium text-white/90 text-sm">{item.name ?? "Anonymous"}</div>
-                          <div className="text-xs text-white/30 mt-0.5">{item.email ?? "No email"}</div>
-                        </td>
-                        <td className="px-6 py-4 max-w-xs">
-                          <p className="font-medium text-white/80 truncate">{item.name ?? item.message}</p>
-                          <p className="text-xs text-white/30 mt-0.5 truncate">{item.message}</p>
-                        </td>
-                        <td className="px-6 py-4">
-                          {item.priority ? (
-                            <span className={`font-semibold capitalize text-xs ${PRIORITY_STYLES[item.priority] ?? "text-white/40"}`}>
-                              {item.priority}
+                      <div key={item.id} className="p-4 cursor-pointer hover:bg-white/[0.03] transition-colors" onClick={() => setPreview(item)}>
+                        <div className="flex items-start justify-between gap-3 mb-2">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className={`px-2.5 py-1 text-xs rounded-lg font-bold uppercase ${TYPE_STYLES[item.type] ?? "bg-white/10 text-white/60"}`}>
+                              {item.type}
                             </span>
-                          ) : <span className="text-white/20 text-xs">–</span>}
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className={`px-2.5 py-1 text-xs rounded-lg font-medium capitalize ${STATUS_STYLES[item.status] ?? "bg-white/10 text-white/50"}`}>
-                            {item.status}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 text-xs text-white/40">
-                          {new Date(item.createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
-                          <div className="text-white/20 mt-0.5">
-                            {new Date(item.createdAt).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })}
+                            <span className={`px-2.5 py-1 text-xs rounded-lg font-medium capitalize ${STATUS_STYLES[item.status] ?? "bg-white/10 text-white/50"}`}>
+                              {item.status}
+                            </span>
+                            {item.priority && (
+                              <span className={`text-xs font-semibold capitalize ${PRIORITY_STYLES[item.priority] ?? "text-white/40"}`}>
+                                {item.priority}
+                              </span>
+                            )}
                           </div>
-                        </td>
-                        <td className="px-6 py-4">
+                          <span className="text-xs text-white/30 shrink-0">
+                            {new Date(item.createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+                          </span>
+                        </div>
+                        <p className="text-sm font-medium text-white/80 truncate">{item.name ?? item.message}</p>
+                        <p className="text-xs text-white/30 mt-0.5 truncate">{item.message}</p>
+                        <div className="flex items-center justify-between mt-2">
+                          <div>
+                            <span className="text-xs text-white/50">{item.name ?? "Anonymous"}</span>
+                            {item.email && <span className="text-xs text-white/25 ml-1">· {item.email}</span>}
+                          </div>
                           {item.imageUrl && (
                             <a href={item.imageUrl} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()}
-                              className="text-xs text-violet-400 hover:text-violet-300 underline font-medium block mb-1">
+                              className="text-xs text-violet-400 hover:text-violet-300 font-medium">
                               📷 Screenshot
                             </a>
                           )}
-                        </td>
-                      </tr>
+                        </div>
+                      </div>
                     ))}
-                  </tbody>
-                </table>
+                  </div>
+
+                  {/* Desktop table */}
+                  <table className="w-full text-sm hidden md:table">
+                    <thead>
+                      <tr className="text-xs text-white/30 uppercase tracking-wider border-b border-white/5">
+                        <th className="px-6 py-4 text-left font-semibold">Type</th>
+                        <th className="px-6 py-4 text-left font-semibold">From</th>
+                        <th className="px-6 py-4 text-left font-semibold">Summary</th>
+                        <th className="px-6 py-4 text-left font-semibold">Priority</th>
+                        <th className="px-6 py-4 text-left font-semibold">Status</th>
+                        <th className="px-6 py-4 text-left font-semibold">Date</th>
+                        <th className="px-6 py-4 text-left font-semibold">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-white/[0.04]">
+                      {feedbacks.map((item) => (
+                        <tr key={item.id} className="hover:bg-white/[0.03] transition-colors cursor-pointer" onClick={() => setPreview(item)}>
+                          <td className="px-6 py-4">
+                            <span className={`px-2.5 py-1 text-xs rounded-lg font-bold uppercase ${TYPE_STYLES[item.type] ?? "bg-white/10 text-white/60"}`}>
+                              {item.type}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="font-medium text-white/90 text-sm">{item.name ?? "Anonymous"}</div>
+                            <div className="text-xs text-white/30 mt-0.5">{item.email ?? "No email"}</div>
+                          </td>
+                          <td className="px-6 py-4 max-w-xs">
+                            <p className="font-medium text-white/80 truncate">{item.name ?? item.message}</p>
+                            <p className="text-xs text-white/30 mt-0.5 truncate">{item.message}</p>
+                          </td>
+                          <td className="px-6 py-4">
+                            {item.priority ? (
+                              <span className={`font-semibold capitalize text-xs ${PRIORITY_STYLES[item.priority] ?? "text-white/40"}`}>
+                                {item.priority}
+                              </span>
+                            ) : <span className="text-white/20 text-xs">–</span>}
+                          </td>
+                          <td className="px-6 py-4">
+                            <span className={`px-2.5 py-1 text-xs rounded-lg font-medium capitalize ${STATUS_STYLES[item.status] ?? "bg-white/10 text-white/50"}`}>
+                              {item.status}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-xs text-white/40">
+                            {new Date(item.createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
+                            <div className="text-white/20 mt-0.5">
+                              {new Date(item.createdAt).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            {item.imageUrl && (
+                              <a href={item.imageUrl} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()}
+                                className="text-xs text-violet-400 hover:text-violet-300 underline font-medium block mb-1">
+                                📷 Screenshot
+                              </a>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </>
               )}
             </div>
           </>
@@ -269,23 +312,23 @@ export default function AdminFeedbackClient() {
 
       {/* Detail Preview Modal */}
       {preview && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/70 backdrop-blur-md" onClick={() => setPreview(null)}>
-          <div className="w-full max-w-2xl rounded-3xl border border-white/10 shadow-2xl overflow-y-auto max-h-[90vh]"
+        <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center sm:p-4 bg-black/70 backdrop-blur-md" onClick={() => setPreview(null)}>
+          <div className="w-full max-w-2xl rounded-t-3xl sm:rounded-3xl border border-white/10 shadow-2xl overflow-y-auto max-h-[92vh] sm:max-h-[90vh]"
             style={{ background: "linear-gradient(135deg, #1a1f35 0%, #131627 100%)" }}
             onClick={e => e.stopPropagation()}>
 
-            <div className="relative p-6 border-b border-white/5">
-              <button onClick={() => setPreview(null)} className="absolute top-5 right-5 w-8 h-8 rounded-full bg-white/5 text-white/50 hover:text-white hover:bg-white/10 transition-all flex items-center justify-center">✕</button>
-              <div className="flex items-center gap-3">
+            <div className="relative p-5 sm:p-6 border-b border-white/5">
+              <button onClick={() => setPreview(null)} className="absolute top-4 right-4 sm:top-5 sm:right-5 w-8 h-8 rounded-full bg-white/5 text-white/50 hover:text-white hover:bg-white/10 transition-all flex items-center justify-center">✕</button>
+              <div className="flex items-center gap-3 flex-wrap">
                 <span className={`px-3 py-1.5 text-xs rounded-xl font-bold uppercase ${TYPE_STYLES[preview.type] ?? ""}`}>{preview.type}</span>
                 <span className={`px-3 py-1.5 text-xs rounded-xl font-medium capitalize ${STATUS_STYLES[preview.status] ?? ""}`}>{preview.status}</span>
               </div>
-              <h3 className="text-xl font-bold text-white mt-3">{preview.name ?? "No subject"}</h3>
+              <h3 className="text-lg sm:text-xl font-bold text-white mt-3 pr-8">{preview.name ?? "No subject"}</h3>
             </div>
 
-            <div className="p-6 space-y-5">
+            <div className="p-5 sm:p-6 space-y-4 sm:space-y-5">
               {/* From */}
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div className="bg-white/[0.04] rounded-2xl p-4">
                   <p className="text-xs text-white/30 mb-1 font-semibold uppercase tracking-wider">From</p>
                   <p className="text-sm text-white font-medium">{preview.name ?? "Anonymous"}</p>
@@ -336,11 +379,11 @@ export default function AdminFeedbackClient() {
               {/* Status Actions */}
               <div>
                 <p className="text-xs text-white/30 mb-3 font-semibold uppercase tracking-wider">Update Status</p>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   {["open", "in-progress", "resolved"].map((s) => (
                     <button key={s} onClick={() => updateStatus(preview.id, s)}
                       disabled={preview.status === s}
-                      className={`px-4 py-2 rounded-xl text-xs font-bold transition-all capitalize ${
+                      className={`flex-1 min-w-[80px] px-4 py-2.5 rounded-xl text-xs font-bold transition-all capitalize ${
                         preview.status === s
                           ? "bg-violet-600 text-white"
                           : "bg-white/5 text-white/50 hover:bg-white/10 hover:text-white"

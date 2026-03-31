@@ -412,7 +412,7 @@ export default function CertificatesPanel({
 
       {/* Empty state */}
       {totalCount === 0 && (
-        <div className="relative rounded-3xl overflow-hidden p-16 text-center" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+        <div className="relative rounded-3xl overflow-hidden p-8 sm:p-16 text-center" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
             <div className="w-[400px] h-[400px] rounded-full blur-[100px]" style={{ background: "radial-gradient(circle, rgba(124,58,237,0.07), transparent 70%)" }} />
           </div>

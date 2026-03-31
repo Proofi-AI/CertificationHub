@@ -30,8 +30,8 @@ export default function DashboardClient({ initialCertificates, features, profile
         />
       </div>
 
-      {/* Right: activity (22%) */}
-      <div className="w-full lg:flex-[0_0_22%] lg:min-w-0 lg:sticky lg:top-20">
+      {/* Right: activity (22%) — shown above certs on mobile, sidebar on lg+ */}
+      <div className="w-full lg:flex-[0_0_22%] lg:min-w-0 lg:sticky lg:top-20 order-first lg:order-none">
         <ActivityPanel
           certificates={certificates}
           profileViews={profile.profileViews}

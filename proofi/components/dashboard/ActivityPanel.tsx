@@ -666,7 +666,7 @@ export default function ActivityPanel({ certificates, onEditCertificate, profile
 
       {/* ── Velocity + Goal ring in one card ── */}
       <div
-        className="rounded-xl p-3 flex items-center justify-between gap-3"
+        className="rounded-xl p-3 flex items-center justify-between gap-3 flex-wrap"
         style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
       >
         <div>

@@ -289,7 +289,7 @@ export default function CertificateFormModal({ initialData, onSave, onClose, aut
 
       {/* Panel — full-screen sheet on mobile, centered modal on sm+ */}
       <div
-        className="relative w-full sm:max-w-lg sm:rounded-2xl shadow-2xl max-h-[95vh] sm:max-h-[90vh] overflow-y-auto rounded-t-2xl"
+        className="relative w-full sm:max-w-lg sm:rounded-2xl shadow-2xl max-h-[92svh] sm:max-h-[90vh] overflow-y-auto rounded-t-2xl"
         style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
       >
         {/* Drag handle (mobile only) */}
@@ -317,13 +317,13 @@ export default function CertificateFormModal({ initialData, onSave, onClose, aut
             {hasFile ? (
               <div className="relative rounded-xl overflow-hidden" style={{ border: "1px solid var(--border)" }}>
                 {imagePreview && (
-                  <div className="h-40">
+                  <div className="h-32 sm:h-40">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
                   </div>
                 )}
                 {isPdf && pdfPreviewUrl && (
-                  <div className="h-40 overflow-hidden bg-white">
+                  <div className="h-32 sm:h-40 overflow-hidden bg-white">
                     <iframe src={`${pdfPreviewUrl}#toolbar=0&navpanes=0&scrollbar=0`} className="w-full h-full pointer-events-none" style={{ border: "none" }} title="PDF preview" />
                   </div>
                 )}
@@ -438,7 +438,7 @@ export default function CertificateFormModal({ initialData, onSave, onClose, aut
           </div>
 
           {/* Dates */}
-          <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="text-xs font-semibold mb-1.5 block text-slate-500 dark:text-white/65">
                 Date issued <span className="text-red-500 dark:text-red-400">*</span>
@@ -538,8 +538,9 @@ export default function CertificateFormModal({ initialData, onSave, onClose, aut
             </div>
           )}
 
-          {/* Buttons */}
-          <div className="flex gap-3 pt-2">
+          {/* Buttons — sticky at the bottom of the scroll container on mobile */}
+          <div className="flex gap-3 pt-2 pb-2 sticky bottom-0 -mx-4 sm:-mx-6 px-4 sm:px-6"
+            style={{ background: "var(--surface)", borderTop: "1px solid var(--border)", paddingTop: "12px" }}>
             <button type="button" onClick={onClose}
               className="flex-1 py-2.5 rounded-xl text-sm font-medium transition-all text-slate-600 hover:text-slate-900 border dark:text-white/65 dark:hover:text-white dark:hover:bg-white/5"
               style={{ borderColor: "var(--border)" }}>

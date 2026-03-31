@@ -50,7 +50,7 @@ export default function FeedbackFAB() {
         <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
       )}
 
-      <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3">
+      <div className="fixed bottom-6 left-6 z-50 flex flex-col items-start gap-3">
         {/* Dropdown menu */}
         {open && (
           <div className="mb-1 w-72 rounded-3xl overflow-hidden border border-white/10 shadow-2xl"
@@ -86,21 +86,20 @@ export default function FeedbackFAB() {
 
         {/* FAB button */}
         <button onClick={() => setOpen(!open)}
-          className={`w-14 h-14 rounded-full flex items-center justify-center shadow-2xl transition-all duration-300 group relative ${
-            open
-              ? "bg-[#1e2340] border-2 border-white/20 scale-95"
-              : "bg-gradient-to-br from-violet-600 via-indigo-600 to-blue-600 hover:scale-110 active:scale-95 shadow-violet-500/40"
-          }`}
+          className={`w-10 h-10 rounded-full flex items-center justify-center shadow-lg transition-all duration-300 group relative ${open
+            ? "bg-[#1e2340] border border-white/20 scale-95"
+            : "bg-gradient-to-br from-violet-600 via-indigo-600 to-blue-600 hover:scale-110 active:scale-95 shadow-violet-500/40"
+            }`}
           aria-label="Feedback">
           {!open && (
-            <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-emerald-400 border-2 border-[#131627] animate-pulse" />
+            <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-emerald-400 border border-[#131627] animate-pulse" />
           )}
           {open ? (
-            <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+            <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
           ) : (
-            <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
             </svg>
           )}
