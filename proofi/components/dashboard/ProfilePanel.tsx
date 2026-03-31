@@ -572,15 +572,15 @@ export default function ProfilePanel({ initialProfile, certificateDomains = [] }
             <svg className="w-4 h-4 text-violet-500/60 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244" />
             </svg>
-            <span className="text-sm font-mono flex-1 truncate text-slate-500 dark:text-white/50">{publicUrl}</span>
+            <span className="text-xs sm:text-sm font-mono flex-1 min-w-0 truncate text-slate-500 dark:text-white/50">{publicUrl}</span>
             <button
               onClick={handleCopy}
               className={`shrink-0 text-xs font-semibold flex items-center gap-1 transition-colors ${copied ? "text-emerald-600 dark:text-emerald-400" : "text-violet-600 dark:text-violet-400 hover:text-violet-700 dark:hover:text-violet-300"}`}
             >
               {copied ? (
-                <><svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>Copied!</>
+                <><svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg><span className="hidden sm:inline">Copied!</span></>
               ) : (
-                <><svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>Copy</>
+                <><svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg><span className="hidden sm:inline">Copy</span></>
               )}
             </button>
           </div>
@@ -588,10 +588,15 @@ export default function ProfilePanel({ initialProfile, certificateDomains = [] }
 
         <div>
           <label className="text-xs font-semibold mb-2 block text-slate-500 dark:text-white/60">Profile URL slug</label>
-          <div className="flex items-center">
+          {/* Mobile: stacked, Desktop: inline */}
+          <div className="flex flex-col sm:flex-row sm:items-center w-full">
             <span
-              className="px-4 py-3 text-xs font-mono rounded-l-xl shrink-0 text-slate-400 dark:text-white/60"
-              style={{ background: "var(--input-bg)", border: "1px solid var(--border-input)", borderRight: "none" }}
+              className="px-3 py-2.5 sm:py-3 text-xs font-mono
+                rounded-t-xl sm:rounded-l-xl sm:rounded-tr-none
+                shrink-0 text-slate-400 dark:text-white/60 whitespace-nowrap
+                border border-b-0 sm:border-b sm:border-r-0
+                border-black/[0.09] dark:border-white/[0.08]
+                bg-black/[0.04] dark:bg-white/[0.04]"
             >
               proofihub.vercel.app/
             </span>
@@ -600,7 +605,13 @@ export default function ProfilePanel({ initialProfile, certificateDomains = [] }
               onChange={handleSlugChange}
               placeholder="your-slug"
               maxLength={30}
-              className="flex-1 rounded-r-xl px-4 py-3 text-sm outline-none transition-all bg-black/[0.04] border border-black/[0.09] focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/15 text-slate-800 placeholder-slate-400 dark:bg-white/[0.04] dark:border-white/[0.08] dark:text-white dark:placeholder-white/20"
+              className="flex-1 min-w-0
+                rounded-b-xl sm:rounded-r-xl sm:rounded-bl-none
+                px-3 py-3 text-sm outline-none transition-all
+                bg-black/[0.04] border border-black/[0.09]
+                focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/15
+                text-slate-800 placeholder-slate-400
+                dark:bg-white/[0.04] dark:border-white/[0.08] dark:text-white dark:placeholder-white/20"
             />
           </div>
           {slugStatus !== "idle" && (
