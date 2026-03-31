@@ -29,6 +29,13 @@ const FEATURE_LIST: FeatureDef[] = [
       "Shows three smart widgets on your dashboard: Profile Completeness (tracks how complete your profile is), Portfolio Insights (highlights strengths, warnings, and milestones across your certificates), and Recommended Certifications (suggests what to earn next based on your current portfolio).",
     badge: "AI",
   },
+  {
+    key: "aiVerification",
+    label: "AI certificate verification",
+    description:
+      "When you upload a certificate, AI analyzes the image to check if it looks like a genuine professional certificate. Verified certificates display an 'AI Verified' badge on your profile and dashboard.",
+    badge: "AI",
+  },
 ];
 
 export default function FeaturesPanel({ initialFeatures }: Props) {
@@ -70,7 +77,7 @@ export default function FeaturesPanel({ initialFeatures }: Props) {
         <div className="px-6 pt-6 pb-4">
           <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-slate-400 dark:text-white/50">Smart Features</p>
           <p className="text-xs mt-1 text-slate-400 dark:text-white/35">
-            All features are off by default. Enable the ones you want.
+            Manage your AI-powered features. Auto-fill is on by default.
           </p>
         </div>
 

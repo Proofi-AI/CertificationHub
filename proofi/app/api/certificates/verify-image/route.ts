@@ -1,25 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-const EXTRACTION_PROMPT = `You are reading a professional certificate or certification document. Extract the following information from it and return ONLY a valid JSON object with no extra text, no markdown, no code blocks.
+const VERIFICATION_PROMPT = `You are reviewing an uploaded image to determine if it looks like a genuine professional certificate, diploma, or certification document.
 
-Return this exact JSON structure:
+Analyze the image and return ONLY a valid JSON object with no extra text, no markdown, no code blocks:
 {
-  "name": "full certificate or course name",
-  "issuer": "the company or organization that issued it",
-  "issuedAt": "YYYY-MM-DD format if found, otherwise null",
-  "expiresAt": "YYYY-MM-DD format if found, null if no expiry or not found",
-  "credentialId": "credential ID, license number, or certificate number if found, otherwise null",
-  "description": "a 1-2 sentence professional summary of what this certification demonstrates or qualifies the holder for, otherwise null"
+  "verified": true or false,
+  "confidence": "high", "medium", or "low",
+  "reason": "one short sentence explaining the verdict"
 }
 
 Rules:
-- Return only the JSON object. No explanation, no markdown, no extra text.
-- If you cannot find a value, set it to null.
-- For issuedAt and expiresAt, always convert to YYYY-MM-DD format.
-- For the name field, use the full official name of the certification, not abbreviations.
-- For the issuer field, use the full organization name.
-- For description, write in third person (e.g. "Demonstrates proficiency in..."). Keep it under 200 characters.`;
+- Return only the JSON object.
+- verified: true if the image appears to be a legitimate certificate/diploma/certification document.
+- verified: false if it looks edited, fake, is a blank template, is not a certificate at all, or you cannot tell.
+- confidence: how certain you are of your verdict.
+- reason: keep it under 100 characters.`;
 
 export async function POST(request: NextRequest) {
   const apiKey = process.env.GEMINI_API_KEY;
@@ -51,7 +47,7 @@ export async function POST(request: NextRequest) {
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
     const result = await model.generateContent([
-      EXTRACTION_PROMPT,
+      VERIFICATION_PROMPT,
       {
         inlineData: {
           mimeType,
@@ -62,25 +58,24 @@ export async function POST(request: NextRequest) {
 
     const text = result.response.text().trim();
 
-    // Strip markdown code fences if Gemini wraps the JSON
     const cleaned = text
       .replace(/^```(?:json)?\s*/i, "")
       .replace(/\s*```$/i, "")
       .trim();
 
-    let parsed: Record<string, string | null>;
+    let parsed: { verified: boolean; confidence: string; reason: string };
     try {
       parsed = JSON.parse(cleaned);
     } catch {
       return NextResponse.json(
-        { error: "Could not parse extraction response." },
+        { error: "Could not parse verification response." },
         { status: 422 }
       );
     }
 
     return NextResponse.json({ data: parsed });
   } catch (err) {
-    console.error("[extract] Gemini error:", err);
+    console.error("[verify-image] Gemini error:", err);
 
     const message = err instanceof Error ? err.message : "";
     if (message.includes("429") || message.includes("quota") || message.includes("Too Many Requests")) {
@@ -91,7 +86,7 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json(
-      { error: "Extraction failed. Please fill in the details manually." },
+      { error: "Verification failed." },
       { status: 500 }
     );
   }

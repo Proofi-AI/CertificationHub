@@ -19,7 +19,7 @@ export async function PUT(
   if (!cert) return Response.json({ error: "Not found" }, { status: 404 });
 
   const body = await request.json();
-  const { name, issuer, issuedAt, expiresAt, domain, credentialId, description, imageUrl } = body;
+  const { name, issuer, issuedAt, expiresAt, domain, credentialId, description, imageUrl, verifyStatus } = body;
 
   const updated = await prisma.certificate.update({
     where: { id },
@@ -32,6 +32,7 @@ export async function PUT(
       ...(credentialId !== undefined && { credentialId: credentialId || null }),
       ...(description !== undefined && { description: description || null }),
       ...(imageUrl !== undefined && { imageUrl: imageUrl || null }),
+      ...(verifyStatus === "ai_verified" && { verifyStatus: "ai_verified" }),
     },
   });
 

@@ -143,10 +143,27 @@ export default function CertificateCard({
 
           {/* Domain badge + visibility toggle */}
           <div className="flex items-center justify-between gap-2">
-            <span className={`inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full border ${colors.bg} ${colors.text} ${colors.border} tracking-wide`}>
-              <span className="w-1.5 h-1.5 rounded-full" style={{ background: accent.from }} />
-              {certificate.domain}
-            </span>
+            <div className="flex items-center gap-1.5 min-w-0">
+              <span className={`inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full border ${colors.bg} ${colors.text} ${colors.border} tracking-wide shrink-0`}>
+                <span className="w-1.5 h-1.5 rounded-full" style={{ background: accent.from }} />
+                {certificate.domain}
+              </span>
+              {certificate.verifyStatus === "ai_verified" && (
+                <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0"
+                  style={{
+                    background: "rgba(16,185,129,0.12)",
+                    color: "#10b981",
+                    border: "1px solid rgba(16,185,129,0.25)",
+                  }}
+                  title="This certificate was analyzed and looks authentic"
+                >
+                  <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  AI Verified
+                </span>
+              )}
+            </div>
 
             {/* Toggle switch */}
             <button

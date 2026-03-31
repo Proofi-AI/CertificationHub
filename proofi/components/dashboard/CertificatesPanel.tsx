@@ -488,7 +488,7 @@ export default function CertificatesPanel({
       )}
 
       {modalOpen && (
-        <CertificateFormModal initialData={editTarget} onSave={handleSave} onClose={closeModal} autoFillEnabled={features.autoFillFromImage} />
+        <CertificateFormModal initialData={editTarget} onSave={handleSave} onClose={closeModal} autoFillEnabled={features.autoFillFromImage} aiVerificationEnabled={features.aiVerification} />
       )}
     </div>
   );
