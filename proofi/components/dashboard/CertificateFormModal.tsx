@@ -5,6 +5,7 @@ import type { Certificate } from "@prisma/client";
 import { DOMAINS, MAX_FILE_SIZE_BYTES, ACCEPTED_FILE_TYPES, ACCEPTED_FILE_ACCEPT } from "@/lib/constants";
 import { uploadCertificateImage } from "@/lib/utils/storage";
 import { compressImage } from "@/lib/compressImage";
+import { pdfToJpeg } from "@/lib/utils/pdfToImage";
 
 interface Props {
   initialData: Certificate | null;
@@ -56,6 +57,7 @@ export default function CertificateFormModal({ initialData, onSave, onClose, aut
   );
   const [loading, setLoading] = useState(false);
   const [compressing, setCompressing] = useState(false);
+  const [converting, setConverting] = useState(false);
   const [extracting, setExtracting] = useState(false);
   const [extractNotice, setExtractNotice] = useState<ExtractNotice>(null);
   const [verifying, setVerifying] = useState(false);
@@ -178,7 +180,7 @@ export default function CertificateFormModal({ initialData, onSave, onClose, aut
     }
   };
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     if (!ACCEPTED_FILE_TYPES.includes(file.type)) {
@@ -189,24 +191,39 @@ export default function CertificateFormModal({ initialData, onSave, onClose, aut
       setError("File must be 5MB or smaller.");
       return;
     }
-    setImageFile(file);
+
     setError(null);
     setExtractNotice(null);
+    setVerifyResult(null);
+
     if (file.type === "application/pdf") {
+      // Convert PDF page 1 → JPEG so the preview and upload are always an image
+      setConverting(true);
       setImagePreview(null);
-      setPdfPreviewUrl(URL.createObjectURL(file));
-      setIsPdf(true);
+      setIsPdf(false);
+      try {
+        const jpeg = await pdfToJpeg(file);
+        setImageFile(jpeg);
+        setImagePreview(URL.createObjectURL(jpeg));
+        if (autoFillEnabled) runExtraction(jpeg);
+        if (aiVerificationEnabled) runVerification(jpeg);
+      } catch (err) {
+        console.error("[pdf-convert]", err);
+        // Fallback: keep the original PDF if conversion fails
+        setImageFile(file);
+        setIsPdf(true);
+        setPdfPreviewUrl(URL.createObjectURL(file));
+        if (autoFillEnabled) runExtraction(file);
+        if (aiVerificationEnabled) runVerification(file);
+      } finally {
+        setConverting(false);
+      }
     } else {
+      setImageFile(file);
       setImagePreview(URL.createObjectURL(file));
       setIsPdf(false);
-    }
-    setVerifyResult(null);
-    // Trigger extraction only when the feature is enabled
-    if (autoFillEnabled) {
-      runExtraction(file);
-    }
-    if (aiVerificationEnabled) {
-      runVerification(file);
+      if (autoFillEnabled) runExtraction(file);
+      if (aiVerificationEnabled) runVerification(file);
     }
   };
 
@@ -222,7 +239,7 @@ export default function CertificateFormModal({ initialData, onSave, onClose, aut
   };
 
   const hasFile = !!imageFile || !!existingFileUrl;
-  const isDisabled = loading || extracting;
+  const isDisabled = loading || extracting || converting;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -368,7 +385,16 @@ export default function CertificateFormModal({ initialData, onSave, onClose, aut
               <span className="ml-1 font-normal text-slate-400 dark:text-white/25">(Image or PDF, max 5MB)</span>
             </label>
 
-            {hasFile ? (
+            {converting && (
+              <div className="h-32 sm:h-40 rounded-xl flex flex-col items-center justify-center gap-2 text-slate-400 dark:text-white/40" style={{ border: "1px solid var(--border)", background: "var(--surface-alt)" }}>
+                <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                </svg>
+                <p className="text-xs font-medium">Converting PDF…</p>
+              </div>
+            )}
+            {!converting && hasFile ? (
               <div className="relative rounded-xl overflow-hidden" style={{ border: "1px solid var(--border)" }}>
                 {imagePreview && (
                   <div className="h-32 sm:h-40">
@@ -410,16 +436,18 @@ export default function CertificateFormModal({ initialData, onSave, onClose, aut
                 </div>
               </div>
             ) : (
-              <button type="button" onClick={() => fileRef.current?.click()} disabled={isDisabled}
-                className="w-full h-28 border-2 border-dashed rounded-xl flex flex-col items-center justify-center gap-2 transition-all border-black/[0.12] hover:border-violet-500/50 text-slate-400 hover:text-slate-600 dark:border-white/15 dark:hover:border-violet-500/50 dark:text-white/30 dark:hover:text-white/60 disabled:opacity-40 disabled:cursor-not-allowed">
-                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
-                </svg>
-                <div className="text-center">
-                  <p className="text-xs font-semibold">Click to upload</p>
-                  <p className="text-xs mt-0.5 text-slate-300 dark:text-white/20">JPG, PNG, WebP, or PDF</p>
-                </div>
-              </button>
+              !converting && (
+                <button type="button" onClick={() => fileRef.current?.click()} disabled={isDisabled}
+                  className="w-full h-28 border-2 border-dashed rounded-xl flex flex-col items-center justify-center gap-2 transition-all border-black/[0.12] hover:border-violet-500/50 text-slate-400 hover:text-slate-600 dark:border-white/15 dark:hover:border-violet-500/50 dark:text-white/30 dark:hover:text-white/60 disabled:opacity-40 disabled:cursor-not-allowed">
+                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+                  </svg>
+                  <div className="text-center">
+                    <p className="text-xs font-semibold">Click to upload</p>
+                    <p className="text-xs mt-0.5 text-slate-300 dark:text-white/20">JPG, PNG, WebP, or PDF</p>
+                  </div>
+                </button>
+              )
             )}
             <input ref={fileRef} type="file" accept={ACCEPTED_FILE_ACCEPT} className="hidden" onChange={handleFileSelect} />
 
