@@ -63,6 +63,15 @@ html { scroll-behavior: smooth; }
 ::-webkit-scrollbar-track { background: var(--scrollbar-bg); }
 ::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 3px; }
 
+/* ─── Date inputs: prevent overflow on mobile browsers ─────── */
+input[type="date"],
+input[type="time"],
+input[type="datetime-local"] {
+  box-sizing: border-box;
+  max-width: 100%;
+  min-width: 0;
+}
+
 /* ─── Autofill ──────────────────────────────────────────────── */
 input:-webkit-autofill,
 input:-webkit-autofill:hover,

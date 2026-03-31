@@ -289,7 +289,7 @@ export default function CertificateFormModal({ initialData, onSave, onClose, aut
 
       {/* Panel — full-screen sheet on mobile, centered modal on sm+ */}
       <div
-        className="relative w-full sm:max-w-lg sm:rounded-2xl shadow-2xl max-h-[92svh] sm:max-h-[90vh] overflow-y-auto rounded-t-2xl"
+        className="relative w-full sm:max-w-lg sm:rounded-2xl shadow-2xl max-h-[92svh] sm:max-h-[90vh] overflow-x-hidden overflow-y-auto rounded-t-2xl"
         style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
       >
         {/* Drag handle (mobile only) */}
@@ -306,7 +306,7 @@ export default function CertificateFormModal({ initialData, onSave, onClose, aut
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4 w-full min-w-0">
           {/* File upload — moved to top */}
           <div>
             <label className="text-xs font-semibold mb-1.5 block text-slate-500 dark:text-white/65">
@@ -438,8 +438,8 @@ export default function CertificateFormModal({ initialData, onSave, onClose, aut
           </div>
 
           {/* Dates */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 min-w-0 w-full">
+            <div className="min-w-0 w-full overflow-hidden">
               <label className="text-xs font-semibold mb-1.5 block text-slate-500 dark:text-white/65">
                 Date issued <span className="text-red-500 dark:text-red-400">*</span>
               </label>
@@ -449,10 +449,11 @@ export default function CertificateFormModal({ initialData, onSave, onClose, aut
                 onChange={(e) => handleField("issuedAt", e.target.value)}
                 required
                 disabled={isDisabled}
-                className="w-full rounded-xl px-4 py-2.5 text-sm outline-none transition-all bg-black/[0.04] border border-black/[0.09] focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20 text-slate-800 dark:bg-white/5 dark:border-white/10 dark:text-white [color-scheme:light] dark:[color-scheme:dark] disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full max-w-full min-w-0 rounded-xl px-3 py-2.5 text-sm outline-none transition-all bg-black/[0.04] border border-black/[0.09] focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20 text-slate-800 dark:bg-white/5 dark:border-white/10 dark:text-white [color-scheme:light] dark:[color-scheme:dark] disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{ boxSizing: "border-box" }}
               />
             </div>
-            <div>
+            <div className="min-w-0 w-full overflow-hidden">
               <div className="flex items-center justify-between mb-1.5">
                 <label className="text-xs font-semibold text-slate-500 dark:text-white/65">Expiry date</label>
                 <label className="flex items-center gap-1 cursor-pointer">
@@ -465,7 +466,8 @@ export default function CertificateFormModal({ initialData, onSave, onClose, aut
                 value={form.expiresAt}
                 onChange={(e) => handleField("expiresAt", e.target.value)}
                 disabled={isDisabled || form.noExpiry}
-                className="w-full rounded-xl px-4 py-2.5 text-sm outline-none transition-all bg-black/[0.04] border border-black/[0.09] focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20 text-slate-800 dark:bg-white/5 dark:border-white/10 dark:text-white [color-scheme:light] dark:[color-scheme:dark] disabled:opacity-40 disabled:cursor-not-allowed"
+                className="w-full max-w-full min-w-0 rounded-xl px-3 py-2.5 text-sm outline-none transition-all bg-black/[0.04] border border-black/[0.09] focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20 text-slate-800 dark:bg-white/5 dark:border-white/10 dark:text-white [color-scheme:light] dark:[color-scheme:dark] disabled:opacity-40 disabled:cursor-not-allowed"
+                style={{ boxSizing: "border-box" }}
               />
             </div>
           </div>
