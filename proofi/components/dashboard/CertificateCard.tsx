@@ -103,20 +103,41 @@ export default function CertificateCard({
           >
             {isPdf ? (
               <div className="absolute inset-0 overflow-hidden bg-[#f8f8fa]">
+                {/* Desktop: render PDF inline */}
                 <iframe
                   src={`${certificate.imageUrl}#toolbar=0&navpanes=0&scrollbar=0`}
-                  className="w-full h-full pointer-events-none"
+                  className="hidden sm:block w-full h-full pointer-events-none"
                   style={{ border: "none" }}
                   title={certificate.name}
                 />
+                {/* Mobile: PDF iframes render at native zoom and look broken — show placeholder instead */}
+                <div className="flex sm:hidden flex-col items-center justify-center h-full gap-2 text-slate-400 dark:text-white/30">
+                  <svg className="w-9 h-9" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+                  </svg>
+                  <span className="text-[11px] font-medium">PDF Certificate</span>
+                </div>
               </div>
             ) : (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={certificate.imageUrl}
-                alt={certificate.name}
-                className="absolute inset-0 w-full h-full object-contain transition-transform duration-500 group-hover:scale-[1.04]"
-              />
+              <>
+                {/* Blurred image fills the letterbox areas with the certificate's own colours */}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={certificate.imageUrl}
+                  alt=""
+                  aria-hidden
+                  className="absolute inset-0 w-full h-full object-cover scale-110 blur-2xl opacity-40 pointer-events-none"
+                />
+                {/* Frosted glass overlay so the blur doesn't look too vivid */}
+                <div className="absolute inset-0 bg-white/30 dark:bg-black/30 backdrop-blur-none pointer-events-none" />
+                {/* Main certificate image */}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={certificate.imageUrl}
+                  alt={certificate.name}
+                  className="absolute inset-0 w-full h-full object-contain transition-transform duration-500 group-hover:scale-[1.04]"
+                />
+              </>
             )}
             {/* Hover zoom overlay */}
             <div className="absolute inset-0 bg-black/0 group-hover:bg-black/25 transition-all duration-300 flex items-center justify-center">
@@ -142,8 +163,8 @@ export default function CertificateCard({
         <div className="p-5 flex-1 flex flex-col gap-4">
 
           {/* Domain badge + visibility toggle */}
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-1.5 min-w-0">
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex flex-wrap items-center gap-1.5 min-w-0 flex-1">
               <span className={`inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full border ${colors.bg} ${colors.text} ${colors.border} tracking-wide shrink-0`}>
                 <span className="w-1.5 h-1.5 rounded-full" style={{ background: accent.from }} />
                 {certificate.domain}
@@ -169,7 +190,7 @@ export default function CertificateCard({
             <button
               onClick={() => onVisibilityToggle(certificate.id, !certificate.isPublic)}
               title={certificate.isPublic ? "Public — click to hide" : "Hidden — click to make public"}
-              className={`relative w-10 h-[22px] rounded-full transition-colors duration-200 shrink-0 ${
+              className={`relative w-10 h-[22px] rounded-full transition-colors duration-200 shrink-0 self-start mt-0.5 ${
                 certificate.isPublic ? "bg-emerald-500" : "bg-slate-300 dark:bg-white/15"
               }`}
             >
