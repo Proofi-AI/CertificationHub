@@ -97,12 +97,12 @@ export default function CertificateCard({
           <button
             type="button"
             onClick={() => setLightboxOpen(true)}
-            className="w-full relative h-44 overflow-hidden block"
-            style={{ background: "var(--surface-alt)", borderBottom: "1px solid var(--border)" }}
+            className="w-full relative overflow-hidden block"
+            style={{ aspectRatio: "3/2", background: "var(--surface-alt)", borderBottom: "1px solid var(--border)" }}
             title="View full size"
           >
             {isPdf ? (
-              <div className="h-full w-full overflow-hidden bg-[#f8f8fa]">
+              <div className="absolute inset-0 overflow-hidden bg-[#f8f8fa]">
                 <iframe
                   src={`${certificate.imageUrl}#toolbar=0&navpanes=0&scrollbar=0`}
                   className="w-full h-full pointer-events-none"
@@ -115,7 +115,7 @@ export default function CertificateCard({
               <img
                 src={certificate.imageUrl}
                 alt={certificate.name}
-                className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-[1.04]"
+                className="absolute inset-0 w-full h-full object-contain transition-transform duration-500 group-hover:scale-[1.04]"
               />
             )}
             {/* Hover zoom overlay */}

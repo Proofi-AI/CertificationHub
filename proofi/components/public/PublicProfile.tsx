@@ -65,12 +65,12 @@ function PublicCertCard({
         <button
           type="button"
           onClick={() => onImageClick(cert)}
-          className="w-full relative h-44 overflow-hidden block group"
-          style={{ background: "var(--surface-alt)", borderBottom: "1px solid var(--border)" }}
+          className="w-full relative overflow-hidden block group"
+          style={{ aspectRatio: "3/2", background: "var(--surface-alt)", borderBottom: "1px solid var(--border)" }}
           title="View full size"
         >
           {isPdf ? (
-            <div className="h-full w-full overflow-hidden bg-[#f8f8fa] dark:bg-[#111]">
+            <div className="absolute inset-0 overflow-hidden bg-[#f8f8fa] dark:bg-[#111]">
               <iframe
                 src={`${cert.imageUrl}#toolbar=0&navpanes=0&scrollbar=0`}
                 className="w-full h-full pointer-events-none"
@@ -83,7 +83,7 @@ function PublicCertCard({
             <img
               src={cert.imageUrl}
               alt={cert.name}
-              className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-[1.04]"
+              className="absolute inset-0 w-full h-full object-contain transition-transform duration-500 group-hover:scale-[1.04]"
             />
           )}
           <div className="absolute inset-0 bg-black/0 group-hover:bg-black/25 transition-all duration-300 flex items-center justify-center">
