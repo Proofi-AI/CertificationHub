@@ -1,4 +1,5 @@
 import type { User } from "@supabase/supabase-js";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { generateUniqueSlug } from "@/lib/utils/slug";
 
@@ -60,7 +61,7 @@ export async function ensureUserRecord(authUser: User) {
             avatarUrl: byEmail.avatarUrl ?? undefined,
             slug: byEmail.slug,
             defaultTheme: byEmail.defaultTheme,
-            features: byEmail.features,
+            features: byEmail.features ?? Prisma.JsonNull,
             isAdmin: byEmail.isAdmin,
             profileViews: byEmail.profileViews,
             sortStrategy: byEmail.sortStrategy,
