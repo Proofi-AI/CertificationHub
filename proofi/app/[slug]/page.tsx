@@ -32,6 +32,10 @@ export default async function PublicProfilePage({ params }: Props) {
           where: { isPublic: true },
           orderBy: { issuedAt: "desc" },
         },
+        badges: {
+          where: { isPublic: true },
+          orderBy: [{ isFeatured: "desc" }, { issuedAt: "desc" }],
+        },
       },
     });
   } catch {

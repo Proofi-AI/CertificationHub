@@ -14,6 +14,10 @@ export async function GET(
         where: { isPublic: true },
         orderBy: { issuedAt: "desc" },
       },
+      badges: {
+        where: { isPublic: true },
+        orderBy: [{ isFeatured: "desc" }, { issuedAt: "desc" }],
+      },
     },
   });
 

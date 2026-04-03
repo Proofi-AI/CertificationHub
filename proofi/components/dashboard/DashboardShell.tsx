@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
-import type { User } from "@prisma/client";
+import { Suspense } from "react";
+import type { Badge, User } from "@prisma/client";
 import type { Certificate } from "@prisma/client";
 import type { UserFeatures } from "@/lib/features";
 import DashboardClient from "./DashboardClient";
@@ -11,13 +12,14 @@ import FeedbackFAB from "@/components/feedback/FeedbackFAB";
 interface Props {
   profile: User;
   certificates: Certificate[];
+  badges: Badge[];
   appUrl?: string;
   initials: string;
   userIsAdmin?: boolean;
   globalFeatures: UserFeatures;
 }
 
-export default function DashboardShell({ profile, certificates, initials, userIsAdmin, globalFeatures }: Props) {
+export default function DashboardShell({ profile, certificates, badges, initials, userIsAdmin, globalFeatures }: Props) {
   const features = globalFeatures;
 
   return (
@@ -127,18 +129,21 @@ export default function DashboardShell({ profile, certificates, initials, userIs
       </nav>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
-        <DashboardClient
-          initialCertificates={certificates}
-          features={features}
-          profile={{
-            avatarUrl: profile.avatarUrl,
-            bio: profile.bio,
-            slug: profile.slug,
-            sortStrategy: profile.sortStrategy,
-            profileViews: profile.profileViews,
-            name: profile.name,
-          }}
-        />
+        <Suspense fallback={null}>
+          <DashboardClient
+            initialCertificates={certificates}
+            initialBadges={badges}
+            features={features}
+            profile={{
+              avatarUrl: profile.avatarUrl,
+              bio: profile.bio,
+              slug: profile.slug,
+              sortStrategy: profile.sortStrategy,
+              profileViews: profile.profileViews,
+              name: profile.name,
+            }}
+          />
+        </Suspense>
       </div>
 
       {/* Floating Feedback Widget */}

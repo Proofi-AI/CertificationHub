@@ -1,13 +1,16 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { Certificate, User } from "@prisma/client";
+import type { Badge, Certificate, User } from "@prisma/client";
 import { DOMAIN_COLORS, DOMAIN_ACCENT } from "@/lib/constants";
 import Link from "next/link";
 import Image from "next/image";
 import CertificateLightbox from "@/components/CertificateLightbox";
+import BadgeWall from "@/components/BadgeWall";
+import BadgeTrophyShelf from "@/components/BadgeTrophyShelf";
+import BadgeLightbox from "@/components/BadgeLightbox";
 
-type PublicUser = Omit<User, "email"> & { certificates: Certificate[] };
+type PublicUser = Omit<User, "email"> & { certificates: Certificate[]; badges: Badge[] };
 
 interface Props {
   profile: PublicUser;
@@ -119,7 +122,7 @@ function PublicCertCard({
           <p className="text-[13px] mt-1 truncate text-slate-500 dark:text-white/40">{cert.issuer}</p>
         </div>
 
-        {/* Description — collapsed one-liner, expands as floating overlay */}
+        {/* Description */}
         {cert.description && (
           <div className="relative" ref={descRef}>
             <button
@@ -141,11 +144,7 @@ function PublicCertCard({
             {descExpanded && (
               <div
                 className="absolute left-0 right-0 top-full z-30 mt-1.5 rounded-xl p-3"
-                style={{
-                  background: "var(--surface)",
-                  border: "1px solid var(--border-hover)",
-                  boxShadow: "0 8px 32px rgba(0,0,0,0.18)",
-                }}
+                style={{ background: "var(--surface)", border: "1px solid var(--border-hover)", boxShadow: "0 8px 32px rgba(0,0,0,0.18)" }}
               >
                 <p className="text-[12px] leading-relaxed text-slate-500 dark:text-white/50 whitespace-pre-wrap break-words">
                   {cert.description}
@@ -194,11 +193,27 @@ export default function PublicProfile({ profile }: Props) {
     (profile.defaultTheme as "dark" | "light") ?? "dark"
   );
   const [lightboxCert, setLightboxCert] = useState<Certificate | null>(null);
+  const [lightboxBadge, setLightboxBadge] = useState<Badge | null>(null);
   const [activeTab, setActiveTab] = useState("All");
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    setIsMobile(window.innerWidth < 768);
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   const publicCerts = profile.certificates.filter((c) => c.isPublic);
-  const domains = ["All", ...Array.from(new Set(publicCerts.map((c) => c.domain)))];
-  const filtered = activeTab === "All" ? publicCerts : publicCerts.filter((c) => c.domain === activeTab);
+  const publicBadges = profile.badges?.filter((b) => b.isPublic) ?? [];
+
+  // Domains from both certificates and badges
+  const certDomains = new Set(publicCerts.map((c) => c.domain));
+  const badgeDomains = new Set(publicBadges.map((b) => b.domain).filter(Boolean) as string[]);
+  const allDomains = ["All", ...Array.from(new Set([...certDomains, ...badgeDomains]))];
+
+  const filteredCerts = activeTab === "All" ? publicCerts : publicCerts.filter((c) => c.domain === activeTab);
+  const filteredBadges = activeTab === "All" ? publicBadges : publicBadges.filter((b) => b.domain === activeTab);
 
   const initials = (profile.name || "U")
     .split(" ")
@@ -272,7 +287,10 @@ export default function PublicProfile({ profile }: Props) {
         <main className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-12">
 
           {/* Profile header */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-5 mb-7 sm:mb-10">
+          <div
+            className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-5 mb-7 sm:mb-10"
+            style={{ animation: "fadeInUp 0.4s ease forwards" }}
+          >
             <div
               className="w-20 h-20 rounded-2xl overflow-hidden shrink-0"
               style={{ boxShadow: "0 0 0 2px rgba(124,58,237,0.45), 0 0 0 5px rgba(124,58,237,0.08), 0 8px 24px rgba(0,0,0,0.15)" }}
@@ -295,17 +313,22 @@ export default function PublicProfile({ profile }: Props) {
               <div className="flex items-center gap-3 flex-wrap">
                 <span className="text-xs text-slate-400 dark:text-white/30">Updated {updatedAt}</span>
                 <span className="text-slate-300 dark:text-white/15">·</span>
-                <span className="text-xs px-2.5 py-1 rounded-full font-medium bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 dark:text-emerald-400">
+                <span className="text-xs px-2.5 py-1 rounded-full font-medium bg-violet-500/10 text-violet-600 border border-violet-500/20 dark:text-violet-400">
                   {publicCerts.length} certificate{publicCerts.length !== 1 ? "s" : ""}
                 </span>
+                {publicBadges.length > 0 && (
+                  <span className="text-xs px-2.5 py-1 rounded-full font-medium bg-cyan-500/10 text-cyan-600 border border-cyan-500/20 dark:text-cyan-400">
+                    {publicBadges.length} badge{publicBadges.length !== 1 ? "s" : ""}
+                  </span>
+                )}
               </div>
             </div>
           </div>
 
           {/* Domain filter tabs */}
-          {domains.length > 1 && (
+          {allDomains.length > 1 && (
             <div className="flex gap-2 flex-wrap mb-6">
-              {domains.map((domain) => (
+              {allDomains.map((domain) => (
                 <button
                   key={domain}
                   onClick={() => setActiveTab(domain)}
@@ -320,20 +343,48 @@ export default function PublicProfile({ profile }: Props) {
             </div>
           )}
 
-          {/* Empty state */}
-          {filtered.length === 0 && (
-            <div className="rounded-2xl p-12 text-center" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
-              <p className="text-sm text-slate-400 dark:text-white/40">No public certificates in this category.</p>
+          {/* Badges section */}
+          {filteredBadges.length > 0 && (
+            <div className="mb-10">
+              <div className="flex items-center gap-2 mb-5">
+                <h2 className="text-lg font-bold text-slate-900 dark:text-white">Badges &amp; Credentials</h2>
+                <svg className="w-4 h-4 text-teal-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 01-1.043 3.296 3.745 3.745 0 01-3.296 1.043A3.745 3.745 0 0112 21c-1.268 0-2.39-.63-3.068-1.593a3.745 3.745 0 01-3.296-1.043 3.745 3.745 0 01-1.043-3.296A3.745 3.745 0 013 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 011.043-3.296 3.745 3.745 0 013.296-1.043A3.745 3.745 0 0112 3c1.268 0 2.39.63 3.068 1.593a3.745 3.745 0 013.296 1.043 3.745 3.745 0 011.043 3.296A3.745 3.745 0 0121 12z" />
+                </svg>
+              </div>
+
+              {/* Trophy shelf — featured badges */}
+              <BadgeTrophyShelf
+                badges={filteredBadges}
+                onBadgeClick={setLightboxBadge}
+              />
+
+              {/* Hex badge wall */}
+              <BadgeWall
+                badges={filteredBadges.filter((b) => !b.isFeatured)}
+                onBadgeClick={setLightboxBadge}
+              />
             </div>
           )}
 
           {/* Certificate grid */}
-          {filtered.length > 0 && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-              {filtered.map((cert) => (
-                <PublicCertCard key={cert.id} cert={cert} onImageClick={setLightboxCert} />
-              ))}
+          {filteredCerts.length === 0 && filteredBadges.length === 0 && (
+            <div className="rounded-2xl p-12 text-center" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+              <p className="text-sm text-slate-400 dark:text-white/40">No public content in this category.</p>
             </div>
+          )}
+
+          {filteredCerts.length > 0 && (
+            <>
+              {filteredBadges.length > 0 && (
+                <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-5">Certificates</h2>
+              )}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                {filteredCerts.map((cert) => (
+                  <PublicCertCard key={cert.id} cert={cert} onImageClick={setLightboxCert} />
+                ))}
+              </div>
+            </>
           )}
 
           {/* Footer CTA */}
@@ -349,7 +400,7 @@ export default function PublicProfile({ profile }: Props) {
           </div>
         </main>
 
-        {/* Lightbox */}
+        {/* Certificate Lightbox */}
         {lightboxCert?.imageUrl && (
           <CertificateLightbox
             src={lightboxCert.imageUrl}
@@ -358,7 +409,32 @@ export default function PublicProfile({ profile }: Props) {
             onClose={() => setLightboxCert(null)}
           />
         )}
+
+        {/* Badge Lightbox */}
+        {lightboxBadge && (
+          <BadgeLightbox
+            badge={lightboxBadge}
+            onClose={() => setLightboxBadge(null)}
+            isMobile={isMobile}
+          />
+        )}
       </div>
+
+      <style dangerouslySetInnerHTML={{ __html: `
+        @keyframes fadeInUp {
+          from { opacity: 0; transform: translateY(12px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        @media (prefers-reduced-motion: no-preference) {
+          .hex-animate {
+            animation: hexPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+          }
+          @keyframes hexPop {
+            from { opacity: 0; transform: scale(0); }
+            to { opacity: 1; transform: scale(1); }
+          }
+        }
+      ` }} />
     </div>
   );
 }

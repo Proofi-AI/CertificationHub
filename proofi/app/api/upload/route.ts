@@ -9,12 +9,12 @@ const ACCEPTED_MIME = [
   "application/pdf",
 ];
 const MAX_SIZE = 5 * 1024 * 1024; // 5MB
+const ALLOWED_BUCKETS = ["certificates", "avatars", "badges"];
 
 async function ensureBucket(bucket: string) {
   const { error } = await supabaseAdmin.storage.createBucket(bucket, {
     public: true,
     fileSizeLimit: MAX_SIZE,
-    allowedMimeTypes: ACCEPTED_MIME,
   });
   // "already exists" is fine — ignore it
   if (error && !error.message.toLowerCase().includes("already exist")) {
@@ -37,10 +37,11 @@ export async function POST(request: NextRequest) {
 
   if (!file) return Response.json({ error: "No file provided" }, { status: 400 });
   if (!path) return Response.json({ error: "No path provided" }, { status: 400 });
-  if (!["certificates", "avatars"].includes(bucket)) {
+  if (!ALLOWED_BUCKETS.includes(bucket)) {
     return Response.json({ error: "Invalid bucket" }, { status: 400 });
   }
-  if (!ACCEPTED_MIME.includes(file.type)) {
+  // For non-badge buckets, enforce strict MIME types
+  if (bucket !== "badges" && !ACCEPTED_MIME.includes(file.type)) {
     return Response.json(
       { error: "Only JPG, PNG, WebP, or PDF files are accepted." },
       { status: 400 }

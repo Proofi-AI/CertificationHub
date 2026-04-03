@@ -29,3 +29,14 @@ export async function uploadAvatar(file: File, userId: string): Promise<string> 
   const path = `${userId}/avatar.${ext}`;
   return uploadViaApi(file, "avatars", path);
 }
+
+export async function uploadBadgeImage(
+  file: File,
+  userId: string,
+  badgeId: string
+): Promise<string> {
+  const ext = file.name.split(".").pop() || "png";
+  const path = `${userId}/${badgeId}.${ext}`;
+  return uploadViaApi(file, "badges", path);
+}
+

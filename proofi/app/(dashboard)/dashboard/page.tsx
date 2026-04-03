@@ -22,10 +22,16 @@ export default async function DashboardPage() {
   });
   const globalFeatures = parseFeatures(adminUser?.features ?? null);
 
-  const certificates = await prisma.certificate.findMany({
-    where: { userId: user.id },
-    orderBy: { issuedAt: "desc" },
-  });
+  const [certificates, badges] = await Promise.all([
+    prisma.certificate.findMany({
+      where: { userId: user.id },
+      orderBy: { issuedAt: "desc" },
+    }),
+    prisma.badge.findMany({
+      where: { userId: user.id },
+      orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }],
+    }),
+  ]);
 
   // Apply the user's saved sortStrategy so initialCertificates arrive pre-sorted
   const sortStrategy = profile.sortStrategy ?? "recent";
@@ -76,6 +82,7 @@ export default async function DashboardPage() {
       <DashboardShell
         profile={profile}
         certificates={certificates}
+        badges={badges}
         initials={initials}
         userIsAdmin={userIsAdmin}
         globalFeatures={globalFeatures}

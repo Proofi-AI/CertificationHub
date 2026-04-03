@@ -9,28 +9,30 @@ datasource db {
 }
 
 model User {
-  id              String        @id
-  email           String        @unique
-  name            String?
-  bio             String?
-  avatarUrl       String?
-  slug            String        @unique
-  defaultTheme    String        @default("dark")
-  features        Json          @default("{}")
-  isAdmin         Boolean       @default(false)
-  profileViews    Int           @default(0)
-  sortStrategy    String        @default("recent")
-  securityQ1      String?
-  securityA1      String?
-  securityQ2      String?
-  securityA2      String?
-  securityQ3      String?
-  securityA3      String?
-  hasSetSecurity  Boolean       @default(false)
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-  certificates    Certificate[]
-  feedbacks       Feedback[]
+  id                  String               @id
+  email               String               @unique
+  name                String?
+  bio                 String?
+  avatarUrl           String?
+  slug                String               @unique
+  defaultTheme        String               @default("dark")
+  features            Json                 @default("{}")
+  isAdmin             Boolean              @default(false)
+  profileViews        Int                  @default(0)
+  sortStrategy        String               @default("recent")
+  securityQ1          String?
+  securityA1          String?
+  securityQ2          String?
+  securityA2          String?
+  securityQ3          String?
+  securityA3          String?
+  hasSetSecurity      Boolean              @default(false)
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  certificates        Certificate[]
+  feedbacks           Feedback[]
+  badges              Badge[]
+  customOrganizations CustomOrganization[]
 }
 
 model Certificate {
@@ -50,6 +52,38 @@ model Certificate {
   sortOrder    Int?
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
+
+  @@index([userId])
+}
+
+model Badge {
+  id                  String    @id @default(cuid())
+  userId              String
+  user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title               String
+  issuingOrganization String
+  description         String?
+  issuedAt            DateTime
+  expiresAt           DateTime?
+  credentialId        String?
+  credentialUrl       String?
+  imageUrl            String?
+  domain              String?
+  isPublic            Boolean   @default(true)
+  isFeatured          Boolean   @default(false)
+  sortOrder           Int?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  @@index([userId])
+}
+
+model CustomOrganization {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  createdAt DateTime @default(now())
 
   @@index([userId])
 }
