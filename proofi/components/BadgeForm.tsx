@@ -64,7 +64,13 @@ export default function BadgeForm({ initialData, onSave, onClose, initialCustomO
   const [filePreview, setFilePreview] = useState<string | null>(
     initialData?.imageUrl ?? null
   );
-  const [fileCategory, setFileCategory] = useState<"image" | "svg" | "pdf" | "other" | null>(null);
+  const [fileCategory, setFileCategory] = useState<"image" | "svg" | "pdf" | "other" | null>(() => {
+    const url = initialData?.imageUrl;
+    if (!url) return null;
+    if (url.toLowerCase().endsWith(".pdf")) return "pdf";
+    if (url.toLowerCase().endsWith(".svg")) return "svg";
+    return "image";
+  });
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [existingFileUrl, setExistingFileUrl] = useState<string | null>(initialData?.imageUrl ?? null);
   const [processing, setProcessing] = useState(false);
@@ -248,6 +254,11 @@ export default function BadgeForm({ initialData, onSave, onClose, initialCustomO
       return;
     }
 
+    if (!hasFile) {
+      setError("Please upload a badge image.");
+      return;
+    }
+
     const credUrlErr = validateCredUrl(form.credentialUrl);
     if (credUrlErr) { setCredUrlError(credUrlErr); return; }
 
@@ -333,7 +344,7 @@ export default function BadgeForm({ initialData, onSave, onClose, initialCustomO
 
   const hasFile = !!pendingFile || !!existingFileUrl;
   const isDisabled = loading || processing;
-  const canSave = form.title && form.issuingOrganization && form.issuedAt && !isDisabled;
+  const canSave = form.title && form.issuingOrganization && form.issuedAt && hasFile && !isDisabled;
 
   const orgInitials = (form.issuingOrganization || "?")
     .split(" ")
@@ -417,32 +428,11 @@ export default function BadgeForm({ initialData, onSave, onClose, initialCustomO
 
           {/* File upload */}
           <div>
-            <label className="block text-xs font-semibold mb-2 text-slate-700 dark:text-white/70 uppercase tracking-wider">Badge image</label>
+            <label className="block text-xs font-semibold mb-2 text-slate-700 dark:text-white/70 uppercase tracking-wider">
+              Badge image <span className="text-red-500">*</span>
+            </label>
 
-            {!hasFile && !processing ? (
-              <label
-                htmlFor="badge-file"
-                className="flex flex-col items-center justify-center gap-2 p-6 rounded-xl cursor-pointer transition-all
-                  bg-black/[0.03] dark:bg-white/[0.04] border-2 border-dashed border-black/[0.10] dark:border-white/[0.12]
-                  hover:border-violet-500/40 hover:bg-violet-500/[0.03]"
-              >
-                <svg className="w-8 h-8 text-slate-300 dark:text-white/20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5z" />
-                </svg>
-                <p className="text-xs text-slate-400 dark:text-white/40 text-center">
-                  Click to upload any file<br />
-                  <span className="text-[11px] text-slate-300 dark:text-white/25">Max 5MB</span>
-                </p>
-                <input
-                  ref={fileRef}
-                  id="badge-file"
-                  type="file"
-                  accept="*/*"
-                  className="sr-only"
-                  onChange={handleFileSelect}
-                />
-              </label>
-            ) : processing ? (
+            {processing ? (
               <div className="flex flex-col items-center justify-center gap-2 p-6 rounded-xl"
                 style={{ background: "rgba(124,58,237,0.05)", border: "1px solid rgba(124,58,237,0.15)" }}>
                 <svg className="w-5 h-5 animate-spin text-violet-500" fill="none" viewBox="0 0 24 24">
@@ -451,51 +441,77 @@ export default function BadgeForm({ initialData, onSave, onClose, initialCustomO
                 </svg>
                 <p className="text-xs text-violet-600 dark:text-violet-400">{processingMsg}</p>
               </div>
-            ) : (
-              <div className="relative rounded-xl overflow-hidden" style={{ border: "1px solid var(--border)" }}>
-                {fileCategory === "image" || fileCategory === "svg" ? (
-                  filePreview ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={filePreview}
-                      alt="Badge preview"
-                      className="w-full max-h-48 object-contain bg-slate-50 dark:bg-white/5"
-                    />
-                  ) : null
-                ) : fileCategory === "pdf" ? (
-                  <div className="flex items-center gap-3 p-4">
-                    <svg className="w-8 h-8 text-red-500/60" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+            ) : hasFile ? (
+              <div className="rounded-xl overflow-hidden" style={{ border: "1px solid var(--border)" }}>
+                {(fileCategory === "image" || fileCategory === "svg") && filePreview && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={filePreview}
+                    alt="Badge preview"
+                    className="w-full h-32 sm:h-40 object-contain bg-slate-50 dark:bg-white/5"
+                  />
+                )}
+                {fileCategory === "pdf" && (
+                  <div className="h-24 flex items-center justify-center gap-3 bg-red-500/10">
+                    <svg className="w-8 h-8 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
                     </svg>
-                    <span className="text-sm text-slate-600 dark:text-white/60 truncate">{pendingFile?.name}</span>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-3 p-4">
-                    <svg className="w-8 h-8 text-slate-400 dark:text-white/30" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M18.375 12.739l-7.693 7.693a4.5 4.5 0 01-6.364-6.364l10.94-10.94A3 3 0 1119.5 7.372L8.552 18.32m.009-.01l-.01.01m5.699-9.941l-7.81 7.81a1.5 1.5 0 002.112 2.13" />
-                    </svg>
-                    <span className="text-sm text-slate-600 dark:text-white/60 truncate">{pendingFile?.name || existingFileUrl}</span>
+                    <span className="text-sm text-slate-600 dark:text-white/60 truncate">{pendingFile?.name ?? "PDF"}</span>
                   </div>
                 )}
-
-                <button
-                  type="button"
-                  onClick={clearFile}
-                  className="absolute top-2 right-2 w-6 h-6 flex items-center justify-center rounded-full bg-black/40 text-white hover:bg-black/60 transition-all"
-                  title="Remove file"
-                >
-                  <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-
+                <div className="flex items-center gap-2 p-3" style={{ background: "var(--hover-bg)" }}>
+                  <button
+                    type="button"
+                    onClick={() => fileRef.current?.click()}
+                    disabled={isDisabled}
+                    className="flex-1 text-xs font-medium rounded-lg py-1.5 transition-all
+                      text-slate-500 hover:text-slate-800 bg-black/[0.04] hover:bg-black/[0.07] border border-black/[0.06]
+                      dark:text-white/65 dark:hover:text-white dark:bg-white/5 dark:hover:bg-white/10 dark:border-white/10
+                      disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    Replace file
+                  </button>
+                  <button
+                    type="button"
+                    onClick={clearFile}
+                    disabled={isDisabled}
+                    className="text-xs font-medium text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300
+                      bg-red-500/10 hover:bg-red-500/15 border border-red-500/20 rounded-lg py-1.5 px-3 transition-all
+                      disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    Remove
+                  </button>
+                </div>
                 {wasCropped && (
                   <p className="text-[11px] text-slate-400 dark:text-white/35 px-3 py-2" style={{ borderTop: "1px solid var(--border)" }}>
-                    Badge area auto-detected and cropped. If this looks wrong, upload your image again.
+                    Badge area auto-detected and cropped. If this looks wrong, replace the image.
                   </p>
                 )}
               </div>
+            ) : (
+              <label
+                htmlFor="badge-file"
+                className="flex flex-col items-center justify-center gap-2 p-6 rounded-xl cursor-pointer transition-all
+                  bg-black/[0.03] dark:bg-white/[0.04] border-2 border-dashed border-black/[0.10] dark:border-white/[0.12]
+                  hover:border-violet-500/40 hover:bg-violet-500/[0.03]"
+              >
+                <svg className="w-8 h-8 text-slate-300 dark:text-white/20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+                </svg>
+                <p className="text-xs text-slate-400 dark:text-white/40 text-center">
+                  Click to upload<br />
+                  <span className="text-[11px] text-slate-300 dark:text-white/25">Max 5MB</span>
+                </p>
+              </label>
             )}
+            <input
+              ref={fileRef}
+              id="badge-file"
+              type="file"
+              accept="*/*"
+              className="sr-only"
+              onChange={handleFileSelect}
+            />
           </div>
 
           {/* Badge title */}
