@@ -31,6 +31,7 @@ export const DEFAULT_ORGANIZATIONS = [
   "ISACA",
   "ISC2",
   "Kubernetes (CNCF)",
+  "Leetcode",
   "LinkedIn Learning",
   "Linux Foundation",
   "Meta",

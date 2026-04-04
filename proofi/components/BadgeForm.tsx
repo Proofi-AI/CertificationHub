@@ -18,6 +18,16 @@ interface CustomDomain {
   name: string;
 }
 
+interface LeetCodeBadge {
+  title: string;
+  issuingOrganization: string;
+  description: string | null;
+  issuedAt: string | null;
+  imageUrl: string | null;
+  credentialUrl: string | null;
+  originalId: string;
+}
+
 interface Props {
   initialData: Badge | null;
   onSave: (badge: Badge) => void;
@@ -57,9 +67,19 @@ export default function BadgeForm({ initialData, onSave, onClose, initialCustomO
 
   const [customOrgs, setCustomOrgs] = useState<CustomOrg[]>(initialCustomOrgs);
   const [customDomains, setCustomDomains] = useState<CustomDomain[]>(initialCustomDomains);
+  const [importPlatform, setImportPlatform] = useState<"credly" | "leetcode">("credly");
+
   const [credlyUrl, setCredlyUrl] = useState("");
   const [credlyLoading, setCredlyLoading] = useState(false);
   const [credlyNotice, setCredlyNotice] = useState<{ type: "success" | "warn"; message: string } | null>(null);
+
+  const [leetcodeInput, setLeetcodeInput] = useState("");
+  const [leetcodeLoading, setLeetcodeLoading] = useState(false);
+  const [leetcodeNotice, setLeetcodeNotice] = useState<{ type: "success" | "warn"; message: string } | null>(null);
+  const [leetcodeBadges, setLeetcodeBadges] = useState<LeetCodeBadge[] | null>(null);
+  const [leetcodeUsername, setLeetcodeUsername] = useState("");
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [importingLeetcode, setImportingLeetcode] = useState(false);
 
   const [filePreview, setFilePreview] = useState<string | null>(
     initialData?.imageUrl ?? null
@@ -171,6 +191,87 @@ export default function BadgeForm({ initialData, onSave, onClose, initialCustomO
       setCredlyNotice({ type: "warn", message: "Could not import from this URL. Please fill in the details manually." });
     } finally {
       setCredlyLoading(false);
+    }
+  };
+
+  const handleLeetcodeFetch = async () => {
+    if (!leetcodeInput.trim()) return;
+    setLeetcodeLoading(true);
+    setLeetcodeNotice(null);
+    try {
+      const res = await fetch("/api/badges/leetcode", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ input: leetcodeInput.trim() }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        setLeetcodeNotice({ type: "warn", message: json.error || "Could not reach LeetCode. Please try again." });
+        return;
+      }
+      setLeetcodeBadges(json.badges);
+      setLeetcodeUsername(json.username);
+      setSelectedIds(new Set((json.badges as LeetCodeBadge[]).map((b) => b.originalId)));
+    } catch {
+      setLeetcodeNotice({ type: "warn", message: "Could not reach LeetCode. Please try again." });
+    } finally {
+      setLeetcodeLoading(false);
+    }
+  };
+
+  const handleLeetcodeImport = async () => {
+    if (selectedIds.size === 0 || !leetcodeBadges) return;
+    setImportingLeetcode(true);
+    setLeetcodeNotice(null);
+    const toImport = leetcodeBadges.filter((b) => selectedIds.has(b.originalId));
+    try {
+      const res = await fetch("/api/badges/leetcode/import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ badges: toImport }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        setLeetcodeNotice({ type: "warn", message: json.error || "Import failed. Please try again." });
+        return;
+      }
+      for (const badge of (json.data ?? [])) {
+        onSave(badge);
+      }
+      if (json.imported === 0) {
+        setLeetcodeNotice({ type: "warn", message: "All selected badges already exist in your profile." });
+        return;
+      }
+      if (json.skipped > 0) {
+        setLeetcodeNotice({
+          type: "success",
+          message: `${json.imported} badge${json.imported !== 1 ? "s" : ""} imported. ${json.skipped} skipped (already exist).`,
+        });
+        setTimeout(() => onClose(), 2000);
+      } else {
+        onClose();
+      }
+    } catch {
+      setLeetcodeNotice({ type: "warn", message: "Import failed. Please try again." });
+    } finally {
+      setImportingLeetcode(false);
+    }
+  };
+
+  const toggleBadge = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (!leetcodeBadges) return;
+    if (selectedIds.size === leetcodeBadges.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(leetcodeBadges.map((b) => b.originalId)));
     }
   };
 
@@ -353,6 +454,145 @@ export default function BadgeForm({ initialData, onSave, onClose, initialCustomO
     .toUpperCase()
     .slice(0, 2);
 
+  // LeetCode badge picker view
+  if (leetcodeBadges) {
+    const allSelected = selectedIds.size === leetcodeBadges.length;
+    return (
+      <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+        <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+        <div
+          className="relative w-full sm:max-w-lg max-h-[95vh] sm:max-h-[90vh] overflow-y-auto rounded-t-3xl sm:rounded-2xl flex flex-col"
+          style={{ background: "var(--surface)", border: "1px solid var(--border-hover)", boxShadow: "0 24px 80px rgba(0,0,0,0.35)" }}
+        >
+          {/* Header */}
+          <div className="flex items-center justify-between px-6 py-5 shrink-0" style={{ borderBottom: "1px solid var(--border)" }}>
+            <h2 className="text-base font-bold text-slate-900 dark:text-white">Import LeetCode badges</h2>
+            <button type="button" onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-xl transition-all text-slate-400 hover:text-slate-800 hover:bg-black/[0.06] dark:text-white/40 dark:hover:text-white dark:hover:bg-white/[0.08]">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+
+          <div className="p-6 space-y-4">
+            {/* Found count */}
+            <p className="text-sm font-semibold text-slate-900 dark:text-white">
+              Found {leetcodeBadges.length} badge{leetcodeBadges.length !== 1 ? "s" : ""} on{" "}
+              <span className="text-violet-600 dark:text-violet-400">@{leetcodeUsername}</span>&apos;s LeetCode profile
+            </p>
+
+            {/* Select all + count */}
+            <div className="flex items-center justify-between">
+              <button
+                type="button"
+                onClick={toggleSelectAll}
+                className="text-xs font-semibold text-violet-600 dark:text-violet-400 hover:text-violet-700 dark:hover:text-violet-300 transition-colors"
+              >
+                {allSelected ? "Deselect all" : "Select all"}
+              </button>
+              <span className="text-xs text-slate-400 dark:text-white/40">
+                {selectedIds.size} of {leetcodeBadges.length} selected
+              </span>
+            </div>
+
+            {/* Scrollable badge grid */}
+            <div className="overflow-y-auto rounded-xl" style={{ maxHeight: 280, border: "1px solid var(--border)" }}>
+              <div className="grid grid-cols-1 gap-px" style={{ background: "var(--border)" }}>
+                {leetcodeBadges.map((badge) => {
+                  const selected = selectedIds.has(badge.originalId);
+                  return (
+                    <button
+                      key={badge.originalId}
+                      type="button"
+                      onClick={() => toggleBadge(badge.originalId)}
+                      className="flex items-center gap-3 px-4 py-3 text-left transition-all"
+                      style={{
+                        background: selected ? "rgba(124,58,237,0.07)" : "var(--surface)",
+                      }}
+                    >
+                      {/* Checkbox */}
+                      <div
+                        className="w-4 h-4 rounded flex items-center justify-center shrink-0 transition-all"
+                        style={{
+                          background: selected ? "#7c3aed" : "transparent",
+                          border: selected ? "1px solid #7c3aed" : "1px solid var(--border-hover)",
+                        }}
+                      >
+                        {selected && (
+                          <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                          </svg>
+                        )}
+                      </div>
+
+                      {/* Icon */}
+                      {badge.imageUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={badge.imageUrl} alt={badge.title} className="w-9 h-9 object-contain shrink-0" />
+                      ) : (
+                        <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 text-xs font-black text-white" style={{ background: "linear-gradient(135deg, #7c3aed, #4f46e5)" }}>
+                          LC
+                        </div>
+                      )}
+
+                      {/* Text */}
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">{badge.title}</p>
+                        <p className="text-[11px] text-slate-400 dark:text-white/35">
+                          {badge.issuedAt ?? "Date unknown"}
+                        </p>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Notice */}
+            {leetcodeNotice && (
+              <p className={`text-xs px-3 py-2 rounded-lg ${leetcodeNotice.type === "success"
+                ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
+                : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20"}`}>
+                {leetcodeNotice.message}
+              </p>
+            )}
+
+            {/* Actions */}
+            <div className="flex gap-3 pt-1">
+              <button
+                type="button"
+                onClick={handleLeetcodeImport}
+                disabled={selectedIds.size === 0 || importingLeetcode}
+                className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{
+                  background: "linear-gradient(135deg, #7c3aed, #4f46e5)",
+                  boxShadow: selectedIds.size > 0 && !importingLeetcode ? "0 4px 20px rgba(124,58,237,0.35)" : undefined,
+                }}
+              >
+                {importingLeetcode && (
+                  <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                  </svg>
+                )}
+                {importingLeetcode
+                  ? "Importing… this may take a moment"
+                  : `Import ${selectedIds.size > 0 ? `${selectedIds.size} ` : ""}selected badge${selectedIds.size !== 1 ? "s" : ""}`}
+              </button>
+              <button
+                type="button"
+                onClick={() => { setLeetcodeBadges(null); setLeetcodeNotice(null); setSelectedIds(new Set()); }}
+                className="px-5 py-3 rounded-xl text-sm font-semibold transition-all text-slate-500 bg-black/[0.04] border border-black/[0.06] hover:bg-black/[0.08] dark:text-white/55 dark:bg-white/[0.05] dark:border-white/[0.09] dark:hover:bg-white/[0.10]"
+              >
+                Go back
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
@@ -379,43 +619,112 @@ export default function BadgeForm({ initialData, onSave, onClose, initialCustomO
 
         <form onSubmit={handleSubmit} className="p-6 space-y-5 flex-1">
 
-          {/* Credly import */}
+          {/* Import section */}
           <div className="rounded-xl p-4 space-y-3" style={{ background: "rgba(124,58,237,0.05)", border: "1px solid rgba(124,58,237,0.15)" }}>
+            {/* Platform toggle */}
             <div>
-              <p className="text-sm font-semibold text-violet-700 dark:text-violet-300">Import from Credly</p>
-              <p className="text-xs mt-0.5 text-slate-500 dark:text-white/50">Paste your Credly badge URL to auto-fill the form</p>
+              <p className="text-xs font-semibold uppercase tracking-wider mb-2 text-slate-500 dark:text-white/50">Import from</p>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => { setImportPlatform("credly"); setLeetcodeNotice(null); }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
+                  style={importPlatform === "credly"
+                    ? { background: "linear-gradient(135deg, #7c3aed, #4f46e5)", color: "#fff", boxShadow: "0 2px 8px rgba(124,58,237,0.3)" }
+                    : { background: "transparent", color: "var(--foreground)", border: "1px solid var(--border-hover)", opacity: 0.7 }}
+                >
+                  Credly
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setImportPlatform("leetcode"); setCredlyNotice(null); }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
+                  style={importPlatform === "leetcode"
+                    ? { background: "linear-gradient(135deg, #7c3aed, #4f46e5)", color: "#fff", boxShadow: "0 2px 8px rgba(124,58,237,0.3)" }
+                    : { background: "transparent", color: "var(--foreground)", border: "1px solid var(--border-hover)", opacity: 0.7 }}
+                >
+                  LeetCode
+                </button>
+              </div>
             </div>
-            <div className="flex gap-2">
-              <input
-                value={credlyUrl}
-                onChange={(e) => setCredlyUrl(e.target.value)}
-                placeholder="https://www.credly.com/badges/…"
-                className="flex-1 rounded-xl px-3 py-2.5 text-sm outline-none transition-all
-                  bg-black/[0.04] dark:bg-white/[0.06] border border-black/[0.08] dark:border-white/[0.11]
-                  text-slate-800 dark:text-white placeholder-slate-400 dark:placeholder-white/35
-                  focus:border-violet-500/40 focus:ring-1 focus:ring-violet-500/20"
-              />
-              <button
-                type="button"
-                onClick={handleCredlyImport}
-                disabled={credlyLoading || !credlyUrl.trim()}
-                className="shrink-0 flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-semibold text-white transition-all disabled:opacity-60"
-                style={{ background: "linear-gradient(135deg, #7c3aed, #4f46e5)" }}
-              >
-                {credlyLoading ? (
-                  <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                  </svg>
-                ) : "Import"}
-              </button>
-            </div>
-            {credlyNotice && (
-              <p className={`text-xs px-3 py-2 rounded-lg ${credlyNotice.type === "success"
-                ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
-                : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20"}`}>
-                {credlyNotice.message}
-              </p>
+
+            {/* Credly input */}
+            {importPlatform === "credly" && (
+              <>
+                <p className="text-xs text-slate-500 dark:text-white/50">Paste your Credly badge URL to auto-fill the form</p>
+                <div className="flex gap-2">
+                  <input
+                    value={credlyUrl}
+                    onChange={(e) => setCredlyUrl(e.target.value)}
+                    placeholder="https://www.credly.com/badges/…"
+                    className="flex-1 rounded-xl px-3 py-2.5 text-sm outline-none transition-all
+                      bg-black/[0.04] dark:bg-white/[0.06] border border-black/[0.08] dark:border-white/[0.11]
+                      text-slate-800 dark:text-white placeholder-slate-400 dark:placeholder-white/35
+                      focus:border-violet-500/40 focus:ring-1 focus:ring-violet-500/20"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleCredlyImport}
+                    disabled={credlyLoading || !credlyUrl.trim()}
+                    className="shrink-0 flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-semibold text-white transition-all disabled:opacity-60"
+                    style={{ background: "linear-gradient(135deg, #7c3aed, #4f46e5)" }}
+                  >
+                    {credlyLoading ? (
+                      <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                      </svg>
+                    ) : "Import"}
+                  </button>
+                </div>
+                {credlyNotice && (
+                  <p className={`text-xs px-3 py-2 rounded-lg ${credlyNotice.type === "success"
+                    ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
+                    : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20"}`}>
+                    {credlyNotice.message}
+                  </p>
+                )}
+              </>
+            )}
+
+            {/* LeetCode input */}
+            {importPlatform === "leetcode" && (
+              <>
+                <p className="text-xs text-slate-500 dark:text-white/50">Enter your LeetCode username or profile URL to fetch your badges</p>
+                <div className="flex gap-2">
+                  <input
+                    value={leetcodeInput}
+                    onChange={(e) => setLeetcodeInput(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleLeetcodeFetch(); } }}
+                    placeholder="Username or https://leetcode.com/u/…"
+                    className="flex-1 rounded-xl px-3 py-2.5 text-sm outline-none transition-all
+                      bg-black/[0.04] dark:bg-white/[0.06] border border-black/[0.08] dark:border-white/[0.11]
+                      text-slate-800 dark:text-white placeholder-slate-400 dark:placeholder-white/35
+                      focus:border-violet-500/40 focus:ring-1 focus:ring-violet-500/20"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleLeetcodeFetch}
+                    disabled={leetcodeLoading || !leetcodeInput.trim()}
+                    className="shrink-0 flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-semibold text-white transition-all disabled:opacity-60"
+                    style={{ background: "linear-gradient(135deg, #7c3aed, #4f46e5)" }}
+                  >
+                    {leetcodeLoading ? (
+                      <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                      </svg>
+                    ) : "Fetch badges"}
+                  </button>
+                </div>
+                {leetcodeNotice && (
+                  <p className={`text-xs px-3 py-2 rounded-lg ${leetcodeNotice.type === "success"
+                    ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
+                    : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20"}`}>
+                    {leetcodeNotice.message}
+                  </p>
+                )}
+              </>
             )}
           </div>
 
