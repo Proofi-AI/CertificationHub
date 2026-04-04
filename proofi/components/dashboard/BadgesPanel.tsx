@@ -38,6 +38,14 @@ function sortBadges(badges: Badge[], sort: SortOption): Badge[] {
   }
 }
 
+const SORT_OPTIONS: { value: SortOption; label: string; desc: string }[] = [
+  { value: "recent",       label: "Most recent",   desc: "Newest badges first" },
+  { value: "oldest",       label: "Oldest first",  desc: "Earliest badges first" },
+  { value: "alphabetical", label: "Alphabetical",  desc: "A – Z by badge title" },
+  { value: "organization", label: "Organization",  desc: "Grouped by issuing organization" },
+  { value: "custom",       label: "Custom order",  desc: "Drag to reorder manually" },
+];
+
 export default function BadgesPanel({ initialBadges, onBadgesChange, initialSortStrategy, externalEdit, onExternalEditDone }: Props) {
   const [badges, setBadges] = useState<Badge[]>(initialBadges);
   const [modalOpen, setModalOpen] = useState(false);
@@ -49,6 +57,8 @@ export default function BadgesPanel({ initialBadges, onBadgesChange, initialSort
   const [sortSaving, setSortSaving] = useState(false);
   const [sortError, setSortError] = useState<string | null>(null);
   const [customOrgs, setCustomOrgs] = useState<CustomOrg[]>([]);
+  const [sortSheetOpen, setSortSheetOpen] = useState(false);
+  const [orgSheetOpen, setOrgSheetOpen] = useState(false);
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
   const dragCancelTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -284,48 +294,192 @@ export default function BadgesPanel({ initialBadges, onBadgesChange, initialSort
                 dark:bg-white/[0.06] dark:border-white/[0.11] dark:text-white dark:placeholder-white/35"
             />
           </div>
-          <div className="flex items-center gap-2">
+
+          {/* Desktop: dropdowns */}
+          <div className="hidden sm:flex items-center gap-2">
             {allOrgs.length > 2 && (
               <select
                 value={orgFilter}
                 onChange={(e) => setOrgFilter(e.target.value)}
-                className="flex-1 sm:flex-none rounded-xl px-3 py-3 sm:py-2.5 text-sm outline-none transition-all cursor-pointer
-                  bg-white border border-black/[0.08] focus:border-violet-500/40 text-slate-700
-                  dark:bg-[#111425] dark:border-white/[0.11] dark:text-white/75"
+                className="rounded-xl px-3 py-2.5 text-sm outline-none transition-all cursor-pointer appearance-none
+                  bg-black/[0.04] border border-black/[0.08] focus:border-violet-500/40 text-slate-700
+                  dark:bg-white/[0.06] dark:border-white/[0.11] dark:text-white/75"
               >
                 {allOrgs.map((o) => <option key={o} value={o}>{o}</option>)}
               </select>
             )}
-            {/* Sort control */}
-            <div className="flex items-center gap-2 shrink-0">
-              <span className="text-xs font-semibold text-slate-400 dark:text-white/40 hidden sm:inline">Sort</span>
+            <span className="text-xs font-semibold text-slate-400 dark:text-white/40">Sort</span>
+            <div className="relative">
               <select
                 value={sort}
                 onChange={(e) => handleSortChange(e.target.value as SortOption)}
-                className="rounded-xl px-3 py-3 sm:py-2.5 text-sm outline-none transition-all cursor-pointer
-                  bg-white border border-black/[0.08] focus:border-violet-500/40 text-slate-700
-                  dark:bg-[#111425] dark:border-white/[0.11] dark:text-white/75"
+                className="rounded-xl pl-3 pr-8 py-2 text-xs font-semibold outline-none cursor-pointer appearance-none
+                  bg-black/[0.04] border border-black/[0.08] text-slate-700 hover:bg-black/[0.07] transition-all
+                  dark:bg-white/[0.06] dark:border-white/[0.11] dark:text-white/75 dark:hover:bg-white/[0.09]"
               >
-                <option value="recent">Most recent</option>
-                <option value="oldest">Oldest first</option>
-                <option value="alphabetical">Alphabetical</option>
-                <option value="organization">Organization</option>
-                <option value="custom">Custom order</option>
+                {SORT_OPTIONS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
               </select>
-              {sortDirty && (
+              <svg className="w-3 h-3 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 dark:text-white/40" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+              </svg>
+            </div>
+            {sortDirty && (
+              <button
+                onClick={handleSortSave}
+                disabled={sortSaving}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all text-white disabled:opacity-60"
+                style={{ background: "linear-gradient(135deg, #7c3aed, #4f46e5)", boxShadow: "0 2px 10px rgba(124,58,237,0.3)" }}
+              >
+                {sortSaving
+                  ? <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
+                  : <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                }
+                Save order
+              </button>
+            )}
+          </div>
+
+          {/* Mobile: sheet trigger buttons */}
+          <div className="sm:hidden flex items-center gap-2">
+            {allOrgs.length > 2 && (
+              <button
+                onClick={() => setOrgSheetOpen(true)}
+                className="flex items-center gap-1.5 min-w-0 flex-1 px-2.5 py-2 rounded-xl text-xs font-semibold transition-all
+                  text-slate-600 dark:text-white/70 bg-black/[0.04] dark:bg-white/[0.06] border border-black/[0.08] dark:border-white/[0.11]"
+              >
+                <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 3c2.755 0 5.455.232 8.083.678.533.09.917.556.917 1.096v1.044a2.25 2.25 0 01-.659 1.591l-5.432 5.432a2.25 2.25 0 00-.659 1.591v2.927a2.25 2.25 0 01-1.244 2.013L9.75 21v-6.568a2.25 2.25 0 00-.659-1.591L3.659 7.409A2.25 2.25 0 013 5.818V4.774c0-.54.384-1.006.917-1.096A48.32 48.32 0 0112 3z" />
+                </svg>
+                <span className="truncate">{orgFilter === "All" ? "All orgs" : orgFilter}</span>
+              </button>
+            )}
+            <button
+              onClick={() => setSortSheetOpen(true)}
+              className="flex items-center gap-1.5 min-w-0 flex-1 px-2.5 py-2 rounded-xl text-xs font-semibold transition-all
+                text-slate-600 dark:text-white/70 bg-black/[0.04] dark:bg-white/[0.06] border border-black/[0.08] dark:border-white/[0.11]"
+            >
+              <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25H12" />
+              </svg>
+              <span className="truncate">{SORT_OPTIONS.find((s) => s.value === sort)?.label}</span>
+            </button>
+            {sortDirty && (
+              <button
+                onClick={handleSortSave}
+                disabled={sortSaving}
+                className="shrink-0 flex items-center gap-1 px-2.5 py-2 rounded-xl text-xs font-semibold text-white transition-all disabled:opacity-60"
+                style={{ background: "linear-gradient(135deg, #7c3aed, #4f46e5)" }}
+              >
+                {sortSaving
+                  ? <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
+                  : "Save"
+                }
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Mobile: Sort bottom sheet */}
+      {sortSheetOpen && (
+        <div
+          className="fixed inset-0 z-50 flex flex-col justify-end sm:hidden"
+          style={{ background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)" }}
+          onClick={() => setSortSheetOpen(false)}
+        >
+          <div
+            className="rounded-t-2xl overflow-hidden w-full"
+            style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: "1px solid var(--border)" }}>
+              <p className="text-sm font-bold text-slate-900 dark:text-white">Sort badges</p>
+              <button onClick={() => setSortSheetOpen(false)} className="text-slate-400 dark:text-white/40 hover:text-slate-700 dark:hover:text-white transition-colors">
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="py-2">
+              {SORT_OPTIONS.map((s) => (
                 <button
-                  onClick={handleSortSave}
-                  disabled={sortSaving}
-                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all text-white disabled:opacity-60"
-                  style={{ background: "linear-gradient(135deg, #7c3aed, #4f46e5)", boxShadow: "0 2px 10px rgba(124,58,237,0.3)" }}
+                  key={s.value}
+                  onClick={() => { handleSortChange(s.value); setSortSheetOpen(false); }}
+                  className="w-full flex items-center justify-between px-5 py-3.5 transition-all hover:bg-black/[0.04] dark:hover:bg-white/[0.05]"
                 >
-                  {sortSaving
-                    ? <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
-                    : <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
-                  }
-                  Save
+                  <div>
+                    <p className={`text-sm font-semibold ${sort === s.value ? "text-violet-600 dark:text-violet-400" : "text-slate-800 dark:text-white"}`}>
+                      {s.label}
+                    </p>
+                    <p className="text-xs text-slate-400 dark:text-white/40 mt-0.5">{s.desc}</p>
+                  </div>
+                  {sort === s.value && (
+                    <svg className="w-4 h-4 text-violet-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                  )}
                 </button>
-              )}
+              ))}
+            </div>
+            <div className="px-5 pb-6 pt-2">
+              <button
+                onClick={() => setSortSheetOpen(false)}
+                className="w-full py-3 rounded-xl text-sm font-semibold transition-all
+                  text-slate-600 dark:text-white/65 bg-black/[0.04] dark:bg-white/[0.06] border border-black/[0.08] dark:border-white/[0.11]"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Mobile: Org filter bottom sheet */}
+      {orgSheetOpen && (
+        <div
+          className="fixed inset-0 z-50 flex flex-col justify-end sm:hidden"
+          style={{ background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)" }}
+          onClick={() => setOrgSheetOpen(false)}
+        >
+          <div
+            className="rounded-t-2xl overflow-hidden w-full"
+            style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: "1px solid var(--border)" }}>
+              <p className="text-sm font-bold text-slate-900 dark:text-white">Filter by organization</p>
+              <button onClick={() => setOrgSheetOpen(false)} className="text-slate-400 dark:text-white/40 hover:text-slate-700 dark:hover:text-white transition-colors">
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="py-2 max-h-[60vh] overflow-y-auto">
+              {allOrgs.map((o) => (
+                <button
+                  key={o}
+                  onClick={() => { setOrgFilter(o); setOrgSheetOpen(false); }}
+                  className="w-full flex items-center justify-between px-5 py-3.5 transition-all hover:bg-black/[0.04] dark:hover:bg-white/[0.05]"
+                >
+                  <p className={`text-sm font-semibold ${orgFilter === o ? "text-violet-600 dark:text-violet-400" : "text-slate-800 dark:text-white"}`}>
+                    {o}
+                  </p>
+                  {orgFilter === o && (
+                    <svg className="w-4 h-4 text-violet-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                  )}
+                </button>
+              ))}
+            </div>
+            <div className="px-5 pb-6 pt-2">
+              <button
+                onClick={() => setOrgSheetOpen(false)}
+                className="w-full py-3 rounded-xl text-sm font-semibold transition-all
+                  text-slate-600 dark:text-white/65 bg-black/[0.04] dark:bg-white/[0.06] border border-black/[0.08] dark:border-white/[0.11]"
+              >
+                Cancel
+              </button>
             </div>
           </div>
         </div>

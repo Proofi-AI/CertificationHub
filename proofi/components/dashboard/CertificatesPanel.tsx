@@ -362,12 +362,12 @@ export default function CertificatesPanel({
                 dark:bg-white/[0.06] dark:border-white/[0.11] dark:text-white dark:placeholder-white/35"
             />
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 min-w-0">
             {allDomains.length > 2 && (
               <select
                 value={domainFilter}
                 onChange={(e) => setDomainFilter(e.target.value)}
-                className="flex-1 sm:flex-none rounded-xl px-3 py-3 sm:py-2.5 text-sm outline-none transition-all cursor-pointer
+                className="min-w-0 w-[90px] sm:w-auto sm:flex-none rounded-xl px-2 sm:px-3 py-3 sm:py-2.5 text-sm outline-none transition-all cursor-pointer
                   bg-white border border-black/[0.08] focus:border-violet-500/40 text-slate-700
                   dark:bg-[#111425] dark:border-white/[0.11] dark:text-white/75"
               >
