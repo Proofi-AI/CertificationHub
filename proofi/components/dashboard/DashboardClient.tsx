@@ -29,14 +29,14 @@ export default function DashboardClient({ initialCertificates, initialBadges, fe
   const [certificates, setCertificates] = useState<Certificate[]>(initialCertificates);
   const [badges, setBadges] = useState<Badge[]>(initialBadges);
   const [externalEdit, setExternalEdit] = useState<Certificate | null>(null);
+  const [externalBadgeEdit, setExternalBadgeEdit] = useState<Badge | null>(null);
 
-  const handleTabChange = (tab: "certificates" | "badges") => {
+  const switchTab = (tab: "certificates" | "badges") => {
     if (tab === activeTab) return;
     setContentVisible(false);
     setTimeout(() => {
       setActiveTab(tab);
       setContentVisible(true);
-      // Scroll to top on mobile
       if (window.innerWidth < 1024) {
         window.scrollTo({ top: 0, behavior: "smooth" });
       }
@@ -44,6 +44,20 @@ export default function DashboardClient({ initialCertificates, initialBadges, fe
     const params = new URLSearchParams(searchParams.toString());
     params.set("tab", tab);
     router.replace(`?${params.toString()}`, { scroll: false });
+  };
+
+  const handleTabChange = (tab: "certificates" | "badges") => switchTab(tab);
+
+  // Calendar: edit cert — switch to certificates tab then open modal
+  const handleCalendarCertEdit = (cert: Certificate) => {
+    setExternalEdit(cert);
+    switchTab("certificates");
+  };
+
+  // Calendar: edit badge — switch to badges tab then open modal
+  const handleCalendarBadgeEdit = (badge: Badge) => {
+    setExternalBadgeEdit(badge);
+    switchTab("badges");
   };
 
   // Sync tab from URL if it changes externally
@@ -92,6 +106,8 @@ export default function DashboardClient({ initialCertificates, initialBadges, fe
               initialBadges={badges}
               onBadgesChange={setBadges}
               initialSortStrategy={profile.badgeSortStrategy as "recent" | "oldest" | "alphabetical" | "organization" | "custom" | undefined}
+              externalEdit={externalBadgeEdit}
+              onExternalEditDone={() => setExternalBadgeEdit(null)}
             />
           )}
         </div>
@@ -101,9 +117,11 @@ export default function DashboardClient({ initialCertificates, initialBadges, fe
       <div className="w-full lg:flex-[0_0_22%] lg:min-w-0 lg:sticky lg:top-20 order-first lg:order-none">
         <ActivityPanel
           certificates={certificates}
+          badges={badges}
           profileViews={profile.profileViews}
           slug={profile.slug}
-          onEditCertificate={(cert) => setExternalEdit(cert)}
+          onEditCertificate={handleCalendarCertEdit}
+          onEditBadge={handleCalendarBadgeEdit}
         />
       </div>
     </div>

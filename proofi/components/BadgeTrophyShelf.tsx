@@ -10,7 +10,7 @@ interface Props {
 
 function formatDate(date: Date | string | null): string {
   if (!date) return "";
-  return new Date(date).toLocaleDateString("en-US", { month: "short", year: "numeric" });
+  return new Date(date).toLocaleDateString("en-US", { month: "short", year: "numeric", timeZone: "UTC" });
 }
 
 export default function BadgeTrophyShelf({ badges, onBadgeClick }: Props) {

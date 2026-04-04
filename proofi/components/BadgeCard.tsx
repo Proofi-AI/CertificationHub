@@ -22,7 +22,7 @@ interface Props {
 
 function formatDate(date: Date | string | null): string {
   if (!date) return "";
-  return new Date(date).toLocaleDateString("en-US", { month: "short", year: "numeric" });
+  return new Date(date).toLocaleDateString("en-US", { month: "short", year: "numeric", timeZone: "UTC" });
 }
 
 function BadgeStrengthBar({ badge }: { badge: Badge }) {
@@ -117,7 +117,7 @@ export default function BadgeCard({ badge, onEdit, onDelete, onVisibilityToggle,
   return (
     <>
     <div
-      className="group relative rounded-2xl overflow-hidden flex flex-col transition-all duration-300"
+      className="group relative rounded-2xl flex flex-col transition-all duration-300"
       draggable={isDraggable}
       onDragStart={isDraggable && onDragStart ? (e) => onDragStart(e, badge.id) : undefined}
       onDragOver={isDraggable && onDragOver ? (e) => onDragOver(e, badge.id) : undefined}
@@ -165,36 +165,39 @@ export default function BadgeCard({ badge, onEdit, onDelete, onVisibilityToggle,
         </a>
       )}
 
-      {/* Domain accent bar */}
-      <div className="h-[3px] w-full shrink-0" style={{ background: `linear-gradient(90deg, ${accent.from}, ${accent.to})` }} />
+      {/* Image section — clipped to round the top corners */}
+      <div className="overflow-hidden rounded-t-2xl shrink-0">
+        {/* Domain accent bar */}
+        <div className="h-[3px] w-full" style={{ background: `linear-gradient(90deg, ${accent.from}, ${accent.to})` }} />
 
-      {/* Badge image area — square */}
-      <div
-        className="w-full flex items-center justify-center overflow-hidden"
-        style={{ aspectRatio: "1/1", background: "var(--surface-alt)", borderBottom: "1px solid var(--border)" }}
-      >
-        {badge.imageUrl && !isPdf ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={badge.imageUrl}
-            alt={badge.title}
-            className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-[1.06]"
-          />
-        ) : badge.imageUrl && isPdf ? (
-          <div className="flex flex-col items-center gap-2 text-slate-400 dark:text-white/30">
-            <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
-            </svg>
-            <span className="text-[11px]">PDF</span>
-          </div>
-        ) : (
-          <div
-            className="w-16 h-16 rounded-full flex items-center justify-center text-xl font-black text-white"
-            style={{ background: `linear-gradient(135deg, ${accent.from}, ${accent.to})` }}
-          >
-            {orgInitials}
-          </div>
-        )}
+        {/* Badge image area — square */}
+        <div
+          className="w-full flex items-center justify-center overflow-hidden"
+          style={{ aspectRatio: "1/1", background: "var(--surface-alt)", borderBottom: "1px solid var(--border)" }}
+        >
+          {badge.imageUrl && !isPdf ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={badge.imageUrl}
+              alt={badge.title}
+              className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-[1.06]"
+            />
+          ) : badge.imageUrl && isPdf ? (
+            <div className="flex flex-col items-center gap-2 text-slate-400 dark:text-white/30">
+              <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+              </svg>
+              <span className="text-[11px]">PDF</span>
+            </div>
+          ) : (
+            <div
+              className="w-16 h-16 rounded-2xl flex items-center justify-center text-xl font-black text-white"
+              style={{ background: `linear-gradient(135deg, ${accent.from}, ${accent.to})` }}
+            >
+              {orgInitials}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Body */}

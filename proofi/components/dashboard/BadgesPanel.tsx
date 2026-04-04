@@ -14,6 +14,8 @@ interface Props {
   initialBadges: Badge[];
   onBadgesChange?: (badges: Badge[]) => void;
   initialSortStrategy?: SortOption;
+  externalEdit?: Badge | null;
+  onExternalEditDone?: () => void;
 }
 
 type SortOption = "recent" | "oldest" | "alphabetical" | "organization" | "custom";
@@ -36,7 +38,7 @@ function sortBadges(badges: Badge[], sort: SortOption): Badge[] {
   }
 }
 
-export default function BadgesPanel({ initialBadges, onBadgesChange, initialSortStrategy }: Props) {
+export default function BadgesPanel({ initialBadges, onBadgesChange, initialSortStrategy, externalEdit, onExternalEditDone }: Props) {
   const [badges, setBadges] = useState<Badge[]>(initialBadges);
   const [modalOpen, setModalOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<Badge | null>(null);
@@ -66,6 +68,15 @@ export default function BadgesPanel({ initialBadges, onBadgesChange, initialSort
       .then((j) => { if (j.data) setCustomOrgs(j.data); })
       .catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (externalEdit) {
+      setEditTarget(externalEdit);
+      setModalOpen(true);
+      onExternalEditDone?.();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [externalEdit]);
 
   const update = (fn: (prev: Badge[]) => Badge[]) => {
     const next = fn(badgesRef.current);

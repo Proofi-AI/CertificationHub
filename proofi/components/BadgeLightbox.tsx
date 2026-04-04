@@ -11,7 +11,7 @@ interface Props {
 
 function formatDate(date: Date | string | null): string {
   if (!date) return "";
-  return new Date(date).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+  return new Date(date).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric", timeZone: "UTC" });
 }
 
 export default function BadgeLightbox({ badge, onClose, isMobile = false }: Props) {

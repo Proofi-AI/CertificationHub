@@ -11,7 +11,7 @@ interface Props {
 
 function formatDate(date: Date | string | null): string {
   if (!date) return "";
-  return new Date(date).toLocaleDateString("en-US", { month: "short", year: "numeric" });
+  return new Date(date).toLocaleDateString("en-US", { month: "short", year: "numeric", timeZone: "UTC" });
 }
 
 function BadgeTile({

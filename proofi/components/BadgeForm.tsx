@@ -249,7 +249,7 @@ export default function BadgeForm({ initialData, onSave, onClose, initialCustomO
     e.preventDefault();
     setError(null);
 
-    if (!form.title || !form.issuingOrganization || !form.issuedAt) {
+    if (!form.title || !form.issuingOrganization || !form.issuedAt || !form.domain) {
       setError("Please fill in all required fields.");
       return;
     }
@@ -344,7 +344,7 @@ export default function BadgeForm({ initialData, onSave, onClose, initialCustomO
 
   const hasFile = !!pendingFile || !!existingFileUrl;
   const isDisabled = loading || processing;
-  const canSave = form.title && form.issuingOrganization && form.issuedAt && hasFile && !isDisabled;
+  const canSave = form.title && form.issuingOrganization && form.issuedAt && form.domain && hasFile && !isDisabled;
 
   const orgInitials = (form.issuingOrganization || "?")
     .split(" ")
@@ -640,7 +640,9 @@ export default function BadgeForm({ initialData, onSave, onClose, initialCustomO
 
           {/* Domain */}
           <div>
-            <label className="block text-xs font-semibold mb-2 text-slate-700 dark:text-white/70 uppercase tracking-wider">Domain</label>
+            <label className="block text-xs font-semibold mb-2 text-slate-700 dark:text-white/70 uppercase tracking-wider">
+              Domain <span className="text-red-500">*</span>
+            </label>
             <DomainDropdown
               value={form.domain}
               onChange={(val) => handleField("domain", val)}

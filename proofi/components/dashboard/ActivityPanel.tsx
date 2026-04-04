@@ -1,11 +1,13 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import type { Certificate } from "@prisma/client";
+import type { Badge, Certificate } from "@prisma/client";
 
 interface Props {
   certificates: Certificate[];
+  badges: Badge[];
   onEditCertificate: (cert: Certificate) => void;
+  onEditBadge: (badge: Badge) => void;
   profileViews: number;
   slug: string;
 }
@@ -30,44 +32,76 @@ const DAYS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
 
 /* ─── sub-component: Calendar ─────────────────────────────────────────── */
 
+type DayPopup = {
+  day: number;
+  certs: Certificate[];
+  certExpiring: Certificate[];
+  badges: Badge[];
+  badgeExpiring: Badge[];
+};
+
 function MiniCalendar({
-  year, month, certificates, onEditCertificate,
+  year, month, certificates, badges, onEditCertificate, onEditBadge,
 }: {
   year: number; month: number;
   certificates: Certificate[];
+  badges: Badge[];
   onEditCertificate: (c: Certificate) => void;
+  onEditBadge: (b: Badge) => void;
 }) {
-  const [popup, setPopup] = useState<{ day: number; certs: Certificate[] } | null>(null);
+  const [popup, setPopup] = useState<DayPopup | null>(null);
   const today = new Date();
 
   const days = daysInMonth(year, month);
-  const offset = startOfMonth(year, month).getDay(); // 0=Sun
-  const now = new Date();
+  const offset = startOfMonth(year, month).getDay();
 
-  // Map day → certs
-  const issuedMap = useMemo<Map<number, Certificate[]>>(() => {
+  const certIssuedMap = useMemo<Map<number, Certificate[]>>(() => {
     const m = new Map<number, Certificate[]>();
     certificates.forEach((c) => {
       const d = toDate(c.issuedAt);
-      if (d && d.getFullYear() === year && d.getMonth() === month) {
-        const k = d.getDate();
+      if (d && d.getUTCFullYear() === year && d.getUTCMonth() === month) {
+        const k = d.getUTCDate();
         m.set(k, [...(m.get(k) ?? []), c]);
       }
     });
     return m;
   }, [certificates, year, month]);
 
-  const expiryMap = useMemo<Map<number, Certificate[]>>(() => {
+  const certExpiryMap = useMemo<Map<number, Certificate[]>>(() => {
     const m = new Map<number, Certificate[]>();
     certificates.forEach((c) => {
       const d = toDate(c.expiresAt);
-      if (d && d.getFullYear() === year && d.getMonth() === month) {
-        const k = d.getDate();
+      if (d && d.getUTCFullYear() === year && d.getUTCMonth() === month) {
+        const k = d.getUTCDate();
         m.set(k, [...(m.get(k) ?? []), c]);
       }
     });
     return m;
   }, [certificates, year, month]);
+
+  const badgeIssuedMap = useMemo<Map<number, Badge[]>>(() => {
+    const m = new Map<number, Badge[]>();
+    badges.forEach((b) => {
+      const d = toDate(b.issuedAt);
+      if (d && d.getUTCFullYear() === year && d.getUTCMonth() === month) {
+        const k = d.getUTCDate();
+        m.set(k, [...(m.get(k) ?? []), b]);
+      }
+    });
+    return m;
+  }, [badges, year, month]);
+
+  const badgeExpiryMap = useMemo<Map<number, Badge[]>>(() => {
+    const m = new Map<number, Badge[]>();
+    badges.forEach((b) => {
+      const d = toDate(b.expiresAt);
+      if (d && d.getUTCFullYear() === year && d.getUTCMonth() === month) {
+        const k = d.getUTCDate();
+        m.set(k, [...(m.get(k) ?? []), b]);
+      }
+    });
+    return m;
+  }, [badges, year, month]);
 
   const cells: (number | null)[] = [
     ...Array(offset).fill(null),
@@ -75,12 +109,14 @@ function MiniCalendar({
   ];
 
   const handleDay = (day: number) => {
-    const certs = [
-      ...(issuedMap.get(day) ?? []),
-      ...(expiryMap.get(day) ?? []),
-    ];
-    if (certs.length === 0) { setPopup(null); return; }
-    setPopup({ day, certs });
+    const certs = certIssuedMap.get(day) ?? [];
+    const certExpiring = certExpiryMap.get(day) ?? [];
+    const bs = badgeIssuedMap.get(day) ?? [];
+    const badgeExpiring = badgeExpiryMap.get(day) ?? [];
+    if (!certs.length && !certExpiring.length && !bs.length && !badgeExpiring.length) {
+      setPopup(null); return;
+    }
+    setPopup({ day, certs, certExpiring, badges: bs, badgeExpiring });
   };
 
   return (
@@ -99,20 +135,22 @@ function MiniCalendar({
         {cells.map((day, i) => {
           if (!day) return <div key={`empty-${i}`} />;
 
-          const issued = issuedMap.get(day);
-          const expiring = expiryMap.get(day);
+          const certIssued = certIssuedMap.get(day);
+          const certExpiring = certExpiryMap.get(day);
+          const badgeIssued = badgeIssuedMap.get(day);
+          const badgeExpiring = badgeExpiryMap.get(day);
           const isToday = isSameDay(new Date(year, month, day), today);
+          const hasAnything = certIssued || certExpiring || badgeIssued || badgeExpiring;
 
-          // Determine dot color
-          // Expiry: past → red, today or future → amber. Issue: violet.
-          let dotColor = "";
-          if (expiring) {
+          // Build dots array: expiry (shared) → cert issued → badge issued
+          const dots: string[] = [];
+          if (certExpiring || badgeExpiring) {
             const cellDate = new Date(year, month, day);
             const isPast = cellDate < new Date(today.getFullYear(), today.getMonth(), today.getDate());
-            dotColor = isPast ? "bg-red-500" : "bg-amber-400";
-          } else if (issued) {
-            dotColor = "bg-violet-500";
+            dots.push(isPast ? "bg-red-500" : "bg-amber-400");
           }
+          if (certIssued) dots.push("bg-violet-500");
+          if (badgeIssued) dots.push("bg-emerald-500");
 
           return (
             <button
@@ -121,14 +159,18 @@ function MiniCalendar({
               className={`relative flex flex-col items-center justify-center rounded-md h-6 text-[11px] font-medium transition-all
                 ${isToday
                   ? "bg-violet-600 text-white font-bold"
-                  : (issued || expiring)
+                  : hasAnything
                     ? "text-slate-800 dark:text-white hover:bg-black/[0.06] dark:hover:bg-white/[0.08] cursor-pointer"
                     : "text-slate-500 dark:text-white/40 hover:bg-black/[0.04] dark:hover:bg-white/[0.05]"
                 }`}
             >
               {day}
-              {dotColor && (
-                <span className={`absolute bottom-0.5 w-1 h-1 rounded-full ${dotColor}`} />
+              {dots.length > 0 && (
+                <span className="absolute bottom-0.5 flex items-center gap-[2px]">
+                  {dots.map((c, di) => (
+                    <span key={di} className={`w-1 h-1 rounded-full ${c}`} />
+                  ))}
+                </span>
               )}
             </button>
           );
@@ -155,21 +197,62 @@ function MiniCalendar({
             </button>
           </div>
           <div className="space-y-2">
-            {popup.certs.map((c) => {
-              const isExpiring = expiryMap.get(popup.day)?.some((x) => x.id === c.id);
-              return (
-                <button
-                  key={c.id}
-                  onClick={() => { onEditCertificate(c); setPopup(null); }}
-                  className="w-full text-left rounded-lg px-2.5 py-2 transition-all hover:bg-black/[0.05] dark:hover:bg-white/[0.06]"
-                >
-                  <p className="font-semibold text-slate-800 dark:text-white text-xs leading-snug">{c.name}</p>
-                  <p className="text-[11px] text-slate-500 dark:text-white/50 mt-0.5">
-                    {isExpiring ? "⚠ Expires" : "✓ Issued"} — {c.issuer}
-                  </p>
-                </button>
-              );
-            })}
+            {/* Cert issued */}
+            {popup.certs.map((c) => (
+              <button
+                key={`ci-${c.id}`}
+                onClick={() => { onEditCertificate(c); setPopup(null); }}
+                className="w-full text-left rounded-lg px-2.5 py-2 transition-all hover:bg-black/[0.05] dark:hover:bg-white/[0.06]"
+              >
+                <div className="flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-violet-500 shrink-0" />
+                  <p className="font-semibold text-slate-800 dark:text-white text-xs leading-snug truncate">{c.name}</p>
+                </div>
+                <p className="text-[11px] text-slate-500 dark:text-white/50 mt-0.5 pl-3">✓ Issued — {c.issuer}</p>
+              </button>
+            ))}
+            {/* Cert expiring */}
+            {popup.certExpiring.map((c) => (
+              <button
+                key={`ce-${c.id}`}
+                onClick={() => { onEditCertificate(c); setPopup(null); }}
+                className="w-full text-left rounded-lg px-2.5 py-2 transition-all hover:bg-black/[0.05] dark:hover:bg-white/[0.06]"
+              >
+                <div className="flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />
+                  <p className="font-semibold text-slate-800 dark:text-white text-xs leading-snug truncate">{c.name}</p>
+                </div>
+                <p className="text-[11px] text-slate-500 dark:text-white/50 mt-0.5 pl-3">⚠ Expires — {c.issuer}</p>
+              </button>
+            ))}
+            {/* Badge issued */}
+            {popup.badges.map((b) => (
+              <button
+                key={`bi-${b.id}`}
+                onClick={() => { onEditBadge(b); setPopup(null); }}
+                className="w-full text-left rounded-lg px-2.5 py-2 transition-all hover:bg-black/[0.05] dark:hover:bg-white/[0.06]"
+              >
+                <div className="flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                  <p className="font-semibold text-slate-800 dark:text-white text-xs leading-snug truncate">{b.title}</p>
+                </div>
+                <p className="text-[11px] text-slate-500 dark:text-white/50 mt-0.5 pl-3">✓ Badge — {b.issuingOrganization}</p>
+              </button>
+            ))}
+            {/* Badge expiring */}
+            {popup.badgeExpiring.map((b) => (
+              <button
+                key={`be-${b.id}`}
+                onClick={() => { onEditBadge(b); setPopup(null); }}
+                className="w-full text-left rounded-lg px-2.5 py-2 transition-all hover:bg-black/[0.05] dark:hover:bg-white/[0.06]"
+              >
+                <div className="flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />
+                  <p className="font-semibold text-slate-800 dark:text-white text-xs leading-snug truncate">{b.title}</p>
+                </div>
+                <p className="text-[11px] text-slate-500 dark:text-white/50 mt-0.5 pl-3">⚠ Badge expires — {b.issuingOrganization}</p>
+              </button>
+            ))}
           </div>
         </div>
       )}
@@ -181,9 +264,11 @@ function MiniCalendar({
 
 function MonthlyBarChart({
   certificates,
+  badges,
   year,
 }: {
   certificates: Certificate[];
+  badges: Badge[];
   year: number;
 }) {
   const today = new Date();
@@ -193,26 +278,30 @@ function MonthlyBarChart({
 
   const bars = useMemo(() => {
     return Array.from({ length: 12 }, (_, m) => {
-      const count = certificates.filter((c) => {
+      const certCount = certificates.filter((c) => {
         const issued = toDate(c.issuedAt);
-        return issued && issued.getFullYear() === year && issued.getMonth() === m;
+        return issued && issued.getUTCFullYear() === year && issued.getUTCMonth() === m;
       }).length;
-      // Future months in the current year are "pending"
+      const badgeCount = badges.filter((b) => {
+        const issued = toDate(b.issuedAt);
+        return issued && issued.getUTCFullYear() === year && issued.getUTCMonth() === m;
+      }).length;
       const isFuture = year === currentYear && m > currentMonth;
-      return { label: MONTHS[m], year, month: m, count, isFuture };
+      return { label: MONTHS[m], year, month: m, certCount, badgeCount, total: certCount + badgeCount, isFuture };
     });
-  }, [certificates, year]);
+  }, [certificates, badges, year]);
 
-  const maxCount = Math.max(...bars.map((b) => b.count), 1);
+  const maxCount = Math.max(...bars.map((b) => b.total), 1);
 
   return (
     <div className="relative pt-5">
-      {/* Bars */}
       <div className="flex items-end gap-[3px] h-14">
         {bars.map((bar, i) => {
           const isCurrentMonth = year === currentYear && i === currentMonth;
-          const heightPct = bar.count === 0 ? 0 : Math.max((bar.count / maxCount) * 100, 12);
           const isHovered = hovered === i;
+          const totalHeight = bar.total === 0 ? 0 : Math.max((bar.total / maxCount) * 100, 12);
+          const certFrac = bar.total > 0 ? bar.certCount / bar.total : 0;
+          const badgeFrac = bar.total > 0 ? bar.badgeCount / bar.total : 0;
 
           return (
             <div
@@ -221,34 +310,58 @@ function MonthlyBarChart({
               onMouseEnter={() => setHovered(i)}
               onMouseLeave={() => setHovered(null)}
             >
-              {/* Count label — shown on hover or always for current month */}
-              {bar.count > 0 && (isHovered || isCurrentMonth) && (
+              {bar.total > 0 && (isHovered || isCurrentMonth) && (
                 <span
                   className="absolute -top-4 text-[10px] font-bold leading-none"
                   style={{ color: isCurrentMonth ? "#7c3aed" : "var(--muted)" }}
                 >
-                  {bar.count}
+                  {bar.total}
                 </span>
               )}
 
-              {/* Bar */}
+              {/* Stacked bar */}
               <div
-                className="w-full rounded-t-sm transition-all duration-300"
+                className="w-full flex flex-col justify-end overflow-hidden rounded-t-sm transition-all duration-300"
                 style={{
-                  height: bar.count === 0 ? "3px" : `${heightPct}%`,
-                  background: bar.count === 0
-                    ? bar.isFuture
-                      ? "transparent"
-                      : "var(--border)"
-                    : isCurrentMonth
-                      ? "linear-gradient(to top, #6d28d9, #a78bfa)"
-                      : isHovered
-                        ? "linear-gradient(to top, rgba(124,58,237,0.7), rgba(167,139,250,0.7))"
-                        : "linear-gradient(to top, rgba(124,58,237,0.3), rgba(167,139,250,0.3))",
-                  borderRadius: bar.count === 0 ? "2px" : undefined,
-                  opacity: bar.isFuture ? 0 : bar.count === 0 ? 0.35 : 1,
+                  height: bar.total === 0 ? "3px" : `${totalHeight}%`,
+                  opacity: bar.isFuture ? 0 : bar.total === 0 ? 0.35 : 1,
+                  borderRadius: bar.total === 0 ? "2px" : undefined,
+                  background: bar.total === 0
+                    ? (bar.isFuture ? "transparent" : "var(--border)")
+                    : undefined,
                 }}
-              />
+              >
+                {bar.total > 0 && (
+                  <>
+                    {/* Badge portion (top, emerald) */}
+                    {bar.badgeCount > 0 && (
+                      <div
+                        style={{
+                          height: `${badgeFrac * 100}%`,
+                          background: isCurrentMonth
+                            ? "linear-gradient(to top, #059669, #34d399)"
+                            : isHovered
+                              ? "rgba(16,185,129,0.7)"
+                              : "rgba(16,185,129,0.35)",
+                        }}
+                      />
+                    )}
+                    {/* Cert portion (bottom, violet) */}
+                    {bar.certCount > 0 && (
+                      <div
+                        style={{
+                          height: `${certFrac * 100}%`,
+                          background: isCurrentMonth
+                            ? "linear-gradient(to top, #6d28d9, #a78bfa)"
+                            : isHovered
+                              ? "rgba(124,58,237,0.7)"
+                              : "rgba(124,58,237,0.3)",
+                        }}
+                      />
+                    )}
+                  </>
+                )}
+              </div>
             </div>
           );
         })}
@@ -274,21 +387,42 @@ function MonthlyBarChart({
       </div>
 
       {/* Hover tooltip */}
-      {hovered !== null && bars[hovered].count > 0 && (
+      {hovered !== null && bars[hovered].total > 0 && (
         <div
-          className="absolute top-0 left-1/2 -translate-x-1/2 pointer-events-none z-10 px-2 py-0.5 rounded-md text-[10px] font-semibold text-white whitespace-nowrap shadow-lg"
+          className="absolute top-0 left-1/2 -translate-x-1/2 pointer-events-none z-10 px-2 py-1 rounded-md text-[10px] font-semibold text-white whitespace-nowrap shadow-lg"
           style={{ background: "rgba(15,10,30,0.82)" }}
         >
-          {bars[hovered].count} cert{bars[hovered].count !== 1 ? "s" : ""} · {bars[hovered].label} {year}
+          {bars[hovered].certCount > 0 && (
+            <span className="text-violet-300">{bars[hovered].certCount} cert{bars[hovered].certCount !== 1 ? "s" : ""}</span>
+          )}
+          {bars[hovered].certCount > 0 && bars[hovered].badgeCount > 0 && (
+            <span className="text-white/40 mx-1">·</span>
+          )}
+          {bars[hovered].badgeCount > 0 && (
+            <span className="text-emerald-300">{bars[hovered].badgeCount} badge{bars[hovered].badgeCount !== 1 ? "s" : ""}</span>
+          )}
+          <span className="text-white/40 ml-1">· {bars[hovered].label} {year}</span>
         </div>
       )}
+
+      {/* Legend */}
+      <div className="flex items-center gap-3 mt-2 pt-2" style={{ borderTop: "1px solid var(--border)" }}>
+        <div className="flex items-center gap-1">
+          <span className="w-2 h-2 rounded-sm inline-block" style={{ background: "rgba(124,58,237,0.5)" }} />
+          <span className="text-[10px] text-slate-500 dark:text-white/40">Certs</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <span className="w-2 h-2 rounded-sm inline-block" style={{ background: "rgba(16,185,129,0.5)" }} />
+          <span className="text-[10px] text-slate-500 dark:text-white/40">Badges</span>
+        </div>
+      </div>
     </div>
   );
 }
 
 /* ─── sub-component: Activity bar card (owns year nav state) ─────────── */
 
-function ActivityBarCard({ certificates }: { certificates: Certificate[] }) {
+function ActivityBarCard({ certificates, badges }: { certificates: Certificate[]; badges: Badge[] }) {
   const currentYear = new Date().getFullYear();
   const [year, setYear] = useState(currentYear);
   const isCurrentYear = year === currentYear;
@@ -323,14 +457,14 @@ function ActivityBarCard({ certificates }: { certificates: Certificate[] }) {
           </button>
         </div>
       </div>
-      <MonthlyBarChart certificates={certificates} year={year} />
+      <MonthlyBarChart certificates={certificates} badges={badges} year={year} />
     </div>
   );
 }
 
 /* ─── sub-component: Goal Ring ────────────────────────────────────────── */
 
-function GoalRing({ certsThisYear }: { certsThisYear: number }) {
+function GoalRing({ itemsThisYear }: { itemsThisYear: number }) {
   const [goal, setGoal] = useState<number>(12);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState("12");
@@ -340,11 +474,11 @@ function GoalRing({ certsThisYear }: { certsThisYear: number }) {
     if (stored) { const n = parseInt(stored, 10); if (!isNaN(n) && n > 0) setGoal(n); }
   }, []);
 
-  const pct = Math.min(certsThisYear / goal, 1);
+  const pct = Math.min(itemsThisYear / goal, 1);
   const r = 22;
   const circ = 2 * Math.PI * r;
   const dash = circ * pct;
-  const met = certsThisYear >= goal;
+  const met = itemsThisYear >= goal;
 
   const commitGoal = () => {
     const n = parseInt(draft, 10);
@@ -357,7 +491,6 @@ function GoalRing({ certsThisYear }: { certsThisYear: number }) {
 
   return (
     <div className="flex items-center gap-3">
-      {/* Ring */}
       <div className="relative shrink-0">
         <svg width="56" height="56" className="-rotate-90">
           <circle cx="28" cy="28" r={r} fill="none" strokeWidth="5"
@@ -371,16 +504,15 @@ function GoalRing({ certsThisYear }: { certsThisYear: number }) {
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
           <span className={`text-sm font-black leading-none ${met ? "text-emerald-500" : "text-slate-800 dark:text-white"}`}>
-            {certsThisYear}
+            {itemsThisYear}
           </span>
           <span className="text-[9px] font-bold text-slate-400 dark:text-white/30">/{goal}</span>
         </div>
       </div>
 
-      {/* Label */}
       <div className="min-w-0">
         <p className="text-xs font-bold text-slate-800 dark:text-white">
-          {met ? "Goal reached! 🎉" : `${goal - certsThisYear} more to go`}
+          {met ? "Goal reached! 🎉" : `${goal - itemsThisYear} more to go`}
         </p>
         <p className="text-[11px] text-slate-500 dark:text-white/50 mt-0.5">Annual goal</p>
         {editing ? (
@@ -413,56 +545,73 @@ function GoalRing({ certsThisYear }: { certsThisYear: number }) {
 
 /* ─── main component ──────────────────────────────────────────────────── */
 
-export default function ActivityPanel({ certificates, onEditCertificate, profileViews, slug }: Props) {
+export default function ActivityPanel({ certificates, badges, onEditCertificate, onEditBadge, profileViews, slug }: Props) {
   const today = new Date();
   const [calYear, setCalYear] = useState(today.getFullYear());
   const [calMonth, setCalMonth] = useState(today.getMonth());
 
-  /* ── Stats ── */
+  /* ── Stats: this month (certs + badges) ── */
   const thisMonthCerts = useMemo(() => {
-    const y = today.getFullYear(), m = today.getMonth();
+    const y = today.getUTCFullYear(), m = today.getUTCMonth();
     return certificates.filter((c) => {
       const d = toDate(c.issuedAt);
-      return d && d.getFullYear() === y && d.getMonth() === m;
+      return d && d.getUTCFullYear() === y && d.getUTCMonth() === m;
     });
   }, [certificates]);
+
+  const thisMonthBadges = useMemo(() => {
+    const y = today.getUTCFullYear(), m = today.getUTCMonth();
+    return badges.filter((b) => {
+      const d = toDate(b.issuedAt);
+      return d && d.getUTCFullYear() === y && d.getUTCMonth() === m;
+    });
+  }, [badges]);
 
   const lastMonthCerts = useMemo(() => {
-    const d = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+    const prev = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth() - 1, 1));
     return certificates.filter((c) => {
       const issued = toDate(c.issuedAt);
-      return issued && issued.getFullYear() === d.getFullYear() && issued.getMonth() === d.getMonth();
+      return issued && issued.getUTCFullYear() === prev.getUTCFullYear() && issued.getUTCMonth() === prev.getUTCMonth();
     });
   }, [certificates]);
 
-  const certsThisYear = useMemo(() => {
-    return certificates.filter((c) => {
-      const d = toDate(c.issuedAt);
-      return d && d.getFullYear() === today.getFullYear();
-    }).length;
-  }, [certificates]);
+  const lastMonthBadges = useMemo(() => {
+    const prev = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth() - 1, 1));
+    return badges.filter((b) => {
+      const issued = toDate(b.issuedAt);
+      return issued && issued.getUTCFullYear() === prev.getUTCFullYear() && issued.getUTCMonth() === prev.getUTCMonth();
+    });
+  }, [badges]);
 
-  /* ── Streak (consecutive months) ── */
+  const itemsThisYear = useMemo(() => {
+    const y = today.getUTCFullYear();
+    const c = certificates.filter((c) => { const d = toDate(c.issuedAt); return d && d.getUTCFullYear() === y; }).length;
+    const b = badges.filter((b) => { const d = toDate(b.issuedAt); return d && d.getUTCFullYear() === y; }).length;
+    return c + b;
+  }, [certificates, badges]);
+
+  /* ── Streak (consecutive months with any cert OR badge) ── */
   const { currentStreak, bestStreak } = useMemo(() => {
-    if (certificates.length === 0) return { currentStreak: 0, bestStreak: 0 };
+    if (certificates.length === 0 && badges.length === 0) return { currentStreak: 0, bestStreak: 0 };
 
     const set = new Set<string>();
     certificates.forEach((c) => {
       const d = toDate(c.issuedAt);
-      if (d) set.add(`${d.getFullYear()}-${d.getMonth()}`);
+      if (d) set.add(`${d.getUTCFullYear()}-${d.getUTCMonth()}`);
+    });
+    badges.forEach((b) => {
+      const d = toDate(b.issuedAt);
+      if (d) set.add(`${d.getUTCFullYear()}-${d.getUTCMonth()}`);
     });
 
     let cur = 0;
-    const y = today.getFullYear();
-    const m = today.getMonth();
-    // Walk backwards from this month
+    const y = today.getUTCFullYear(), m = today.getUTCMonth();
     let cy = y, cm = m;
     while (set.has(`${cy}-${cm}`)) {
       cur++;
       if (cm === 0) { cy--; cm = 11; } else cm--;
     }
 
-    // Best: find longest run in sorted month list
     const sorted = Array.from(set).map((k) => {
       const [ky, km] = k.split("-").map(Number);
       return ky * 12 + km;
@@ -475,38 +624,53 @@ export default function ActivityPanel({ certificates, onEditCertificate, profile
     }
 
     return { currentStreak: cur, bestStreak: best };
-  }, [certificates]);
+  }, [certificates, badges]);
 
-  /* ── Velocity badge ── */
+  /* ── Velocity (based on total items) ── */
   const velocity = useMemo(() => {
-    const t = thisMonthCerts.length;
-    const l = lastMonthCerts.length;
-    const total = certificates.length;
+    const t = thisMonthCerts.length + thisMonthBadges.length;
+    const l = lastMonthCerts.length + lastMonthBadges.length;
+    const total = certificates.length + badges.length;
 
     if (total === 0) return { label: "Getting started", color: "text-slate-400 dark:text-white/40", icon: "🌱" };
     if (t > l && l > 0) return { label: "Accelerating", color: "text-emerald-600 dark:text-emerald-400", icon: "🚀" };
     if (t === l && l > 0) return { label: "Consistent", color: "text-violet-600 dark:text-violet-400", icon: "⚡" };
     if (t < l && l > 0) return { label: "Slowing down", color: "text-amber-600 dark:text-amber-400", icon: "📉" };
     return { label: "Getting started", color: "text-slate-400 dark:text-white/40", icon: "🌱" };
-  }, [thisMonthCerts, lastMonthCerts, certificates]);
+  }, [thisMonthCerts, thisMonthBadges, lastMonthCerts, lastMonthBadges, certificates, badges]);
 
-  /* ── Expiry alerts ── */
-  const expiryAlerts = useMemo(() => {
+  /* ── Expiry alerts (certs + badges within 60 days) ── */
+  const certExpiryAlerts = useMemo(() => {
     const now = today.getTime();
     return certificates
       .filter((c) => {
         const d = toDate(c.expiresAt);
         if (!d) return false;
-        const diff = Math.ceil((d.getTime() - now) / 86400000);
-        return diff <= 60;
+        return Math.ceil((d.getTime() - now) / 86400000) <= 60;
       })
       .map((c) => {
         const d = toDate(c.expiresAt)!;
-        const diff = Math.ceil((d.getTime() - now) / 86400000);
-        return { cert: c, diff };
-      })
-      .sort((a, b) => a.diff - b.diff);
+        return { type: "cert" as const, cert: c, diff: Math.ceil((d.getTime() - now) / 86400000) };
+      });
   }, [certificates]);
+
+  const badgeExpiryAlerts = useMemo(() => {
+    const now = today.getTime();
+    return badges
+      .filter((b) => {
+        const d = toDate(b.expiresAt);
+        if (!d) return false;
+        return Math.ceil((d.getTime() - now) / 86400000) <= 60;
+      })
+      .map((b) => {
+        const d = toDate(b.expiresAt)!;
+        return { type: "badge" as const, badge: b, diff: Math.ceil((d.getTime() - now) / 86400000) };
+      });
+  }, [badges]);
+
+  const allExpiryAlerts = useMemo(() => {
+    return [...certExpiryAlerts, ...badgeExpiryAlerts].sort((a, b) => a.diff - b.diff);
+  }, [certExpiryAlerts, badgeExpiryAlerts]);
 
   /* ── Calendar nav ── */
   const prevMonth = () => {
@@ -519,54 +683,18 @@ export default function ActivityPanel({ certificates, onEditCertificate, profile
   };
   const isCurrentMonth = calYear === today.getFullYear() && calMonth === today.getMonth();
 
-  const thisMonthDelta = thisMonthCerts.length - lastMonthCerts.length;
+  const thisMonthTotal = thisMonthCerts.length + thisMonthBadges.length;
+  const lastMonthTotal = lastMonthCerts.length + lastMonthBadges.length;
+  const thisMonthDelta = thisMonthTotal - lastMonthTotal;
 
   return (
     <div className="space-y-3 heatmap-root">
-
-      {/* ── Profile views card ── */}
-      {/* <div
-        className="rounded-xl p-3"
-        style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
-      >
-        <div className="flex items-center gap-2 mb-2">
-          <svg className="w-3.5 h-3.5 text-violet-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
-            <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-          </svg>
-          <h3 className="text-xs font-bold text-slate-800 dark:text-white">Your profile</h3>
-        </div>
-        <div className="truncate mb-2">
-          <a
-            href={`/${slug}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-[11px] font-mono text-violet-600 dark:text-violet-400 hover:underline truncate"
-          >
-            proofihub.vercel.app/{slug}
-          </a>
-        </div>
-        {profileViews > 0 ? (
-          <div className="flex items-center gap-1.5">
-            <svg className="w-3 h-3 text-slate-400 dark:text-white/30 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
-            <span className="text-[11px] font-semibold text-slate-700 dark:text-white/65">
-              {profileViews.toLocaleString()} profile {profileViews === 1 ? "view" : "views"}
-            </span>
-          </div>
-        ) : (
-          <p className="text-[11px] text-slate-400 dark:text-white/35">No views yet — share your profile to get started.</p>
-        )}
-      </div> */}
 
       {/* ── Calendar ── */}
       <div
         className="rounded-2xl p-3"
         style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
       >
-        {/* Calendar header */}
         <div className="flex items-center justify-between mb-2">
           <h3 className="text-xs font-bold text-slate-800 dark:text-white">
             {MONTHS[calMonth]} {calYear}
@@ -603,14 +731,20 @@ export default function ActivityPanel({ certificates, onEditCertificate, profile
           year={calYear}
           month={calMonth}
           certificates={certificates}
+          badges={badges}
           onEditCertificate={onEditCertificate}
+          onEditBadge={onEditBadge}
         />
 
         {/* Legend */}
-        <div className="flex items-center gap-3 mt-2 pt-2" style={{ borderTop: "1px solid var(--border)" }}>
+        <div className="flex items-center gap-3 mt-2 pt-2 flex-wrap" style={{ borderTop: "1px solid var(--border)" }}>
           <div className="flex items-center gap-1">
             <span className="w-1.5 h-1.5 rounded-full bg-violet-500 inline-block" />
-            <span className="text-[10px] text-slate-500 dark:text-white/40">Issued</span>
+            <span className="text-[10px] text-slate-500 dark:text-white/40">Cert issued</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
+            <span className="text-[10px] text-slate-500 dark:text-white/40">Badge issued</span>
           </div>
           <div className="flex items-center gap-1">
             <span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block" />
@@ -647,24 +781,32 @@ export default function ActivityPanel({ certificates, onEditCertificate, profile
           className="rounded-xl p-3"
           style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
         >
-          <p className="text-lg font-black text-slate-900 dark:text-white leading-none">{thisMonthCerts.length}</p>
+          <p className="text-lg font-black text-slate-900 dark:text-white leading-none">{thisMonthTotal}</p>
           <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-white/40 mt-0.5">This month</p>
-          <div className="flex items-center gap-1 mt-0.5">
-            {thisMonthDelta !== 0 && (
-              <span className={`text-[10px] font-semibold ${thisMonthDelta > 0 ? "text-emerald-500" : "text-red-500 dark:text-red-400"}`}>
-                {thisMonthDelta > 0 ? "↑" : "↓"}{Math.abs(thisMonthDelta)} vs last
-              </span>
-            )}
-            {thisMonthDelta === 0 && (
-              <span className="text-[10px] text-slate-400 dark:text-white/30">
-                {lastMonthCerts.length > 0 ? "Same as last" : "—"}
-              </span>
-            )}
-          </div>
+          {(thisMonthCerts.length > 0 || thisMonthBadges.length > 0) && (
+            <div className="flex items-center gap-1.5 mt-0.5">
+              {thisMonthCerts.length > 0 && (
+                <span className="text-[10px] text-violet-500 font-semibold">{thisMonthCerts.length}c</span>
+              )}
+              {thisMonthBadges.length > 0 && (
+                <span className="text-[10px] text-emerald-500 font-semibold">{thisMonthBadges.length}b</span>
+              )}
+              {thisMonthDelta !== 0 && (
+                <span className={`text-[10px] font-semibold ml-auto ${thisMonthDelta > 0 ? "text-emerald-500" : "text-red-500 dark:text-red-400"}`}>
+                  {thisMonthDelta > 0 ? "↑" : "↓"}{Math.abs(thisMonthDelta)}
+                </span>
+              )}
+            </div>
+          )}
+          {thisMonthTotal === 0 && (
+            <span className="text-[10px] text-slate-400 dark:text-white/30">
+              {lastMonthTotal > 0 ? "Same as last" : "—"}
+            </span>
+          )}
         </div>
       </div>
 
-      {/* ── Velocity + Goal ring in one card ── */}
+      {/* ── Velocity + Goal ring ── */}
       <div
         className="rounded-xl p-3 flex items-center justify-between gap-3 flex-wrap"
         style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
@@ -674,15 +816,15 @@ export default function ActivityPanel({ certificates, onEditCertificate, profile
           <p className={`text-xs font-bold mt-0.5 ${velocity.color}`}>{velocity.icon} {velocity.label}</p>
         </div>
         <div style={{ borderLeft: "1px solid var(--border)" }} className="pl-3">
-          <GoalRing certsThisYear={certsThisYear} />
+          <GoalRing itemsThisYear={itemsThisYear} />
         </div>
       </div>
 
       {/* ── Monthly bar chart ── */}
-      <ActivityBarCard certificates={certificates} />
+      <ActivityBarCard certificates={certificates} badges={badges} />
 
       {/* ── Expiry alerts ── */}
-      {expiryAlerts.length > 0 && (
+      {allExpiryAlerts.length > 0 && (
         <div
           className="rounded-xl p-3"
           style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
@@ -694,7 +836,8 @@ export default function ActivityPanel({ certificates, onEditCertificate, profile
             Expiry alerts
           </h3>
           <div className="space-y-1.5">
-            {expiryAlerts.map(({ cert, diff }) => {
+            {allExpiryAlerts.map((alert) => {
+              const { diff } = alert;
               const isExpired = diff < 0;
               const isCritical = diff >= 0 && diff <= 14;
               const color = isExpired
@@ -703,23 +846,40 @@ export default function ActivityPanel({ certificates, onEditCertificate, profile
                   ? { bg: "rgba(239,68,68,0.06)", border: "rgba(239,68,68,0.14)", text: "text-red-500 dark:text-red-400" }
                   : { bg: "rgba(245,158,11,0.08)", border: "rgba(245,158,11,0.18)", text: "text-amber-600 dark:text-amber-400" };
 
-              return (
-                <button
-                  key={cert.id}
-                  onClick={() => onEditCertificate(cert)}
-                  className="w-full text-left rounded-lg px-2.5 py-2 transition-all hover:opacity-90"
-                  style={{ background: color.bg, border: `1px solid ${color.border}` }}
-                >
-                  <p className="text-[11px] font-semibold text-slate-800 dark:text-white leading-snug truncate">{cert.name}</p>
-                  <p className={`text-[10px] font-bold mt-0.5 ${color.text}`}>
-                    {isExpired
-                      ? `Expired ${Math.abs(diff)}d ago`
-                      : diff === 0
-                        ? "Expires today"
-                        : `Expires in ${diff}d`}
-                  </p>
-                </button>
-              );
+              const label = isExpired
+                ? `Expired ${Math.abs(diff)}d ago`
+                : diff === 0 ? "Expires today" : `Expires in ${diff}d`;
+
+              if (alert.type === "cert") {
+                return (
+                  <button
+                    key={`cert-${alert.cert.id}`}
+                    onClick={() => onEditCertificate(alert.cert)}
+                    className="w-full text-left rounded-lg px-2.5 py-2 transition-all hover:opacity-90"
+                    style={{ background: color.bg, border: `1px solid ${color.border}` }}
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-violet-500 shrink-0" />
+                      <p className="text-[11px] font-semibold text-slate-800 dark:text-white leading-snug truncate">{alert.cert.name}</p>
+                    </div>
+                    <p className={`text-[10px] font-bold mt-0.5 pl-3 ${color.text}`}>{label}</p>
+                  </button>
+                );
+              } else {
+                return (
+                  <div
+                    key={`badge-${alert.badge.id}`}
+                    className="rounded-lg px-2.5 py-2"
+                    style={{ background: color.bg, border: `1px solid ${color.border}` }}
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                      <p className="text-[11px] font-semibold text-slate-800 dark:text-white leading-snug truncate">{alert.badge.title}</p>
+                    </div>
+                    <p className={`text-[10px] font-bold mt-0.5 pl-3 ${color.text}`}>{label}</p>
+                  </div>
+                );
+              }
             })}
           </div>
         </div>
