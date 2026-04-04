@@ -17,13 +17,6 @@ function toISODate(dateStr: string | null | undefined): string | null {
   }
 }
 
-function buildHighResImageUrl(imageUrl: string): string {
-  const m = imageUrl.match(/images\.credly\.com\/images\/([^/]+)\//);
-  if (m) {
-    return `https://images.credly.com/size/680x680/images/${m[1]}/image.png`;
-  }
-  return imageUrl;
-}
 
 async function downloadImageAsBase64(imageUrl: string): Promise<string | null> {
   try {
@@ -69,8 +62,9 @@ async function fetchViaOBIv2(slug: string) {
   if (!classRes.ok) return null;
 
   const cls = await classRes.json();
-  const imageRawUrl: string | null = cls.image?.id ?? null;
-  const imageUrl = imageRawUrl ? buildHighResImageUrl(imageRawUrl) : null;
+  // Use image.id directly — it's the authoritative named PNG (e.g. /images/{id}/badge.png)
+  // Do NOT rewrite to /size/680x680/images/{id}/image.png — that URL is access-denied
+  const imageUrl: string | null = cls.image?.id ?? null;
 
   return {
     title: cls.name ?? null,
@@ -126,7 +120,8 @@ async function fetchViaHTMLScrape(slug: string) {
   if (!ogTitle) return null;
 
   const { title, org } = parseTitleAndOrg(ogTitle);
-  const imageUrl = ogImage ? buildHighResImageUrl(ogImage) : null;
+  // Use the OG image URL as-is — the /size/680x680/.../image.png variant is access-denied
+  const imageUrl = ogImage ?? null;
 
   return { title, org, description: ogDescription ?? null, issuedAt: null, imageUrl };
 }
