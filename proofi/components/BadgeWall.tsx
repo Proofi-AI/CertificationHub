@@ -23,7 +23,6 @@ function BadgeTile({
   index: number;
   onClick: () => void;
 }) {
-
   const orgInitials = (badge.issuingOrganization || "?")
     .split(" ")
     .map((w: string) => w[0])
@@ -47,7 +46,11 @@ function BadgeTile({
       >
         {badge.imageUrl && !isPdf ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={badge.imageUrl} alt={badge.title} className="w-full h-full object-contain p-2" />
+          <img
+            src={badge.imageUrl}
+            alt={badge.title}
+            className="w-full h-full object-contain p-2"
+          />
         ) : (
           <div
             className="w-full h-full flex items-center justify-center text-sm font-black text-white"
@@ -69,7 +72,6 @@ function BadgeTile({
           </div>
         )}
       </button>
-
     </div>
   );
 }
@@ -81,7 +83,7 @@ export default function BadgeWall({ badges, onBadgeClick, maxVisible = 24 }: Pro
 
   return (
     <div>
-      {/* Responsive square grid — matches certificate grid style */}
+      {/* Responsive square grid */}
       <div className="grid grid-cols-5 sm:grid-cols-6 md:grid-cols-7 lg:grid-cols-8 gap-3">
         {visible.map((badge, i) => (
           <BadgeTile

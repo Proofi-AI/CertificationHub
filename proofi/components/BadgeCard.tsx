@@ -193,30 +193,30 @@ export default function BadgeCard({ badge, onEdit, onDelete, onVisibilityToggle,
       </div>
 
       {/* Body */}
-      <div className="p-4 flex-1 flex flex-col gap-3">
+      <div className="p-3 flex-1 flex flex-col gap-2">
 
         {/* Org name + visibility */}
-        <div className="flex items-start justify-between gap-2">
-          <p className="text-[12px] text-slate-500 dark:text-white/50 truncate flex-1 min-w-0">
+        <div className="flex items-start justify-between gap-1.5">
+          <p className="text-[11px] text-slate-500 dark:text-white/50 truncate flex-1 min-w-0">
             {badge.issuingOrganization}
           </p>
           <button
             onClick={() => onVisibilityToggle(badge.id, !badge.isPublic)}
             title={badge.isPublic ? "Public — click to hide" : "Hidden — click to make public"}
-            className={`relative w-8 h-[18px] rounded-full transition-colors duration-200 shrink-0 mt-0.5 ${
+            className={`relative w-7 h-[15px] rounded-full transition-colors duration-200 shrink-0 mt-0.5 ${
               badge.isPublic ? "bg-emerald-500" : "bg-slate-300 dark:bg-white/15"
             }`}
           >
             <span
-              className={`absolute top-[2px] left-[2px] w-3.5 h-3.5 bg-white rounded-full shadow-sm transition-transform duration-200 ${
-                badge.isPublic ? "translate-x-[14px]" : "translate-x-0"
+              className={`absolute top-[2px] left-[2px] w-[11px] h-[11px] bg-white rounded-full shadow-sm transition-transform duration-200 ${
+                badge.isPublic ? "translate-x-[12px]" : "translate-x-0"
               }`}
             />
           </button>
         </div>
 
         {/* Title */}
-        <h3 className="font-bold text-[14px] leading-snug line-clamp-2 text-slate-900 dark:text-white">
+        <h3 className="font-bold text-[12px] leading-snug line-clamp-2 text-slate-900 dark:text-white">
           {badge.title}
         </h3>
 
@@ -226,13 +226,13 @@ export default function BadgeCard({ badge, onEdit, onDelete, onVisibilityToggle,
             <button
               type="button"
               onClick={() => setDescExpanded((v) => !v)}
-              className="flex items-center gap-1.5 w-full text-left"
+              className="flex items-center gap-1 w-full text-left"
             >
-              <span className="text-[12px] text-slate-400 dark:text-white/35 truncate flex-1">
+              <span className="text-[11px] text-slate-400 dark:text-white/35 truncate flex-1">
                 {badge.description}
               </span>
               <svg
-                className={`w-3 h-3 shrink-0 text-slate-300 dark:text-white/20 transition-transform duration-200 ${descExpanded ? "rotate-180" : ""}`}
+                className={`w-2.5 h-2.5 shrink-0 text-slate-300 dark:text-white/20 transition-transform duration-200 ${descExpanded ? "rotate-180" : ""}`}
                 fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}
               >
                 <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
@@ -243,7 +243,7 @@ export default function BadgeCard({ badge, onEdit, onDelete, onVisibilityToggle,
                 className="absolute left-0 right-0 top-full z-30 mt-1.5 rounded-xl p-3"
                 style={{ background: "var(--surface)", border: "1px solid var(--border-hover)", boxShadow: "0 8px 32px rgba(0,0,0,0.18)" }}
               >
-                <p className="text-[12px] leading-relaxed text-slate-500 dark:text-white/50 whitespace-pre-wrap break-words">
+                <p className="text-[11px] leading-relaxed text-slate-500 dark:text-white/50 whitespace-pre-wrap break-words">
                   {badge.description}
                 </p>
               </div>
@@ -252,18 +252,16 @@ export default function BadgeCard({ badge, onEdit, onDelete, onVisibilityToggle,
         )}
 
         {/* Dates */}
-        <div className="flex items-center gap-2 text-[11px] text-slate-400 dark:text-white/40">
-          <svg className="w-3 h-3 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+        <div className="flex items-center gap-1.5 text-[10px] text-slate-400 dark:text-white/40">
+          <svg className="w-2.5 h-2.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 9v7.5" />
           </svg>
           <span>{formatDate(badge.issuedAt)}</span>
-          <span className="text-slate-200 dark:text-white/20">·</span>
-          <span>{badge.expiresAt ? `Exp. ${formatDate(badge.expiresAt)}` : "No expiry"}</span>
         </div>
 
         {/* Domain pill */}
         {badge.domain && (
-          <span className={`inline-flex items-center gap-1 self-start text-[10px] font-semibold px-2 py-0.5 rounded-full border ${colors.bg} ${colors.text} ${colors.border} tracking-wide`}>
+          <span className={`inline-flex items-center gap-1 self-start text-[9px] font-semibold px-1.5 py-0.5 rounded-full border ${colors.bg} ${colors.text} ${colors.border} tracking-wide`}>
             <span className="w-1 h-1 rounded-full" style={{ background: accent.from }} />
             {badge.domain}
           </span>
@@ -273,29 +271,29 @@ export default function BadgeCard({ badge, onEdit, onDelete, onVisibilityToggle,
         <BadgeStrengthBar badge={badge} />
 
         {/* Actions */}
-        <div className="pt-3 flex items-center gap-2" style={{ borderTop: "1px solid var(--border)" }}>
+        <div className="pt-2 flex items-center gap-1.5" style={{ borderTop: "1px solid var(--border)" }}>
           {/* Pin to profile */}
           <button
             onClick={handleFeatureClick}
             title={badge.isFeatured ? "Unpin from profile" : "Pin to profile"}
-            className={`w-8 h-[34px] flex items-center justify-center rounded-xl transition-all duration-200
+            className={`w-7 h-[28px] flex items-center justify-center rounded-lg transition-all duration-200
               ${badge.isFeatured
                 ? "text-amber-500 bg-amber-500/10 border border-amber-500/25 hover:bg-amber-500/15"
                 : "text-slate-400 hover:text-amber-500 bg-black/[0.04] hover:bg-amber-500/10 border border-black/[0.06] hover:border-amber-500/20 dark:text-white/40 dark:bg-white/[0.05] dark:border-white/[0.09] dark:hover:bg-amber-500/10 dark:hover:border-amber-500/20"
               }`}
           >
-            <svg className="w-3.5 h-3.5" fill={badge.isFeatured ? "currentColor" : "none"} viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <svg className="w-3 h-3" fill={badge.isFeatured ? "currentColor" : "none"} viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z" />
             </svg>
           </button>
 
           <button
             onClick={() => onEdit(badge)}
-            className="flex-1 flex items-center justify-center gap-1.5 text-xs font-semibold py-2 px-2 rounded-xl transition-all duration-200
+            className="flex-1 flex items-center justify-center gap-1 text-[11px] font-semibold py-1.5 px-1.5 rounded-lg transition-all duration-200
               text-slate-500 hover:text-slate-900 bg-black/[0.04] hover:bg-black/[0.08] border border-black/[0.06] hover:border-black/[0.12]
               dark:text-white/55 dark:hover:text-white dark:bg-white/[0.05] dark:hover:bg-white/[0.10] dark:border-white/[0.09] dark:hover:border-white/[0.18]"
           >
-            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z" />
             </svg>
             Edit
@@ -304,11 +302,11 @@ export default function BadgeCard({ badge, onEdit, onDelete, onVisibilityToggle,
           <button
             onClick={() => setConfirmDelete(true)}
             title="Delete"
-            className="w-8 h-[34px] flex items-center justify-center rounded-xl transition-all duration-200
+            className="w-7 h-[28px] flex items-center justify-center rounded-lg transition-all duration-200
               text-slate-400 hover:text-red-600 bg-black/[0.04] hover:bg-red-500/10 border border-black/[0.06] hover:border-red-500/20
               dark:text-white/40 dark:hover:text-red-400 dark:bg-white/[0.05] dark:hover:bg-red-500/10 dark:border-white/[0.09] dark:hover:border-red-500/20"
           >
-            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
             </svg>
           </button>
