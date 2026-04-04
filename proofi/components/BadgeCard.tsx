@@ -78,7 +78,6 @@ function BadgeStrengthBar({ badge }: { badge: Badge }) {
 
 export default function BadgeCard({ badge, onEdit, onDelete, onVisibilityToggle, onFeatureToggle, featuredCount, isDraggable = false, onDragStart, onDragOver, onDrop, onDragEnd, dragOverId }: Props) {
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const [hovered, setHovered] = useState(false);
   const [descExpanded, setDescExpanded] = useState(false);
   const descRef = useRef<HTMLDivElement>(null);
 
@@ -125,18 +124,11 @@ export default function BadgeCard({ badge, onEdit, onDelete, onVisibilityToggle,
       onDragEnd={isDraggable && onDragEnd ? onDragEnd : undefined}
       style={{
         background: "var(--surface)",
-        border: isDragOver
-          ? "2px dashed #7c3aed"
-          : hovered ? "1px solid var(--border-hover)" : "1px solid var(--border)",
-        boxShadow: isDragOver
-          ? "0 0 0 4px rgba(124,58,237,0.12)"
-          : hovered ? `0 12px 40px ${accent.glow}, var(--card-glow-mul)` : "var(--card-shadow)",
-        transform: hovered && !isDraggable ? "translateY(-3px)" : "translateY(0)",
+        border: isDragOver ? "2px dashed #7c3aed" : "1px solid var(--border)",
+        boxShadow: isDragOver ? "0 0 0 4px rgba(124,58,237,0.12)" : "var(--card-shadow)",
         cursor: isDraggable ? "grab" : undefined,
         opacity: isDragOver ? 0.85 : 1,
       }}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
     >
       {isDraggable && (
         <div className="absolute top-2 left-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 p-1.5 rounded-lg"
@@ -180,7 +172,7 @@ export default function BadgeCard({ badge, onEdit, onDelete, onVisibilityToggle,
             <img
               src={badge.imageUrl}
               alt={badge.title}
-              className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-[1.06]"
+              className="w-full h-full object-contain"
             />
           ) : badge.imageUrl && isPdf ? (
             <div className="flex flex-col items-center gap-2 text-slate-400 dark:text-white/30">

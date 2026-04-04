@@ -66,7 +66,7 @@ export default function BadgesPanel({ initialBadges, onBadgesChange, initialSort
     fetch("/api/organizations")
       .then((r) => r.json())
       .then((j) => { if (j.data) setCustomOrgs(j.data); })
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   useEffect(() => {
@@ -75,7 +75,7 @@ export default function BadgesPanel({ initialBadges, onBadgesChange, initialSort
       setModalOpen(true);
       onExternalEditDone?.();
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [externalEdit]);
 
   const update = (fn: (prev: Badge[]) => Badge[]) => {
@@ -235,7 +235,7 @@ export default function BadgesPanel({ initialBadges, onBadgesChange, initialSort
         <div className="min-w-0">
           <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Badges</h1>
           <p className="text-xs sm:text-sm mt-0.5 sm:mt-1 text-slate-500 dark:text-white/55 hidden sm:block">
-            Showcase your digital credentials and achievements
+            Manage and showcase your digital credentials and achievements
           </p>
         </div>
         <button
