@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import type { Badge } from "@prisma/client";
 
 interface Props {
@@ -34,7 +33,6 @@ export default function BadgeTrophyShelf({ badges, onBadgeClick }: Props) {
 }
 
 function TrophyCard({ badge, onClick, delay }: { badge: Badge; onClick: () => void; delay: number }) {
-  const [hovered, setHovered] = useState(false);
 
   const orgInitials = (badge.issuingOrganization || "?")
     .split(" ")
@@ -49,14 +47,11 @@ function TrophyCard({ badge, onClick, delay }: { badge: Badge; onClick: () => vo
     <button
       type="button"
       onClick={onClick}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      className="flex-1 max-w-[220px] mx-auto sm:mx-0 relative flex flex-col items-center gap-3 p-5 rounded-2xl transition-all duration-300 text-left"
+      className="flex-1 max-w-[220px] mx-auto sm:mx-0 relative flex flex-col items-center gap-3 p-5 rounded-2xl text-left cursor-pointer"
       style={{
         background: "var(--surface)",
-        border: hovered ? "1px solid rgba(124,58,237,0.35)" : "1px solid var(--border)",
-        boxShadow: hovered ? "0 12px 40px rgba(124,58,237,0.25)" : "var(--card-shadow)",
-        transform: hovered ? "translateY(-4px)" : "translateY(0)",
+        border: "1px solid var(--border)",
+        boxShadow: "var(--card-shadow)",
       }}
     >
       {/* Featured badge label */}
@@ -70,10 +65,7 @@ function TrophyCard({ badge, onClick, delay }: { badge: Badge; onClick: () => vo
       {/* Badge image — square frame with amber ring */}
       <div
         className="w-20 h-20 rounded-2xl overflow-hidden flex items-center justify-center mt-3"
-        style={{ boxShadow: hovered
-          ? "0 0 0 3px #f59e0b, 0 0 0 6px rgba(245,158,11,0.15), 0 8px 24px rgba(245,158,11,0.2)"
-          : "0 0 0 2px rgba(245,158,11,0.6), 0 0 0 5px rgba(245,158,11,0.1)"
-        }}
+        style={{ boxShadow: "0 0 0 2px rgba(245,158,11,0.6), 0 0 0 5px rgba(245,158,11,0.1)" }}
       >
         {badge.imageUrl && !isPdf ? (
           // eslint-disable-next-line @next/next/no-img-element

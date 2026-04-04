@@ -28,7 +28,6 @@ function PublicCertCard({
   cert: Certificate;
   onImageClick: (cert: Certificate) => void;
 }) {
-  const [hovered, setHovered] = useState(false);
   const [descExpanded, setDescExpanded] = useState(false);
   const descRef = useRef<HTMLDivElement>(null);
 
@@ -48,17 +47,12 @@ function PublicCertCard({
 
   return (
     <div
-      className="rounded-2xl overflow-hidden flex flex-col transition-all duration-300"
+      className="rounded-2xl overflow-hidden flex flex-col"
       style={{
         background: "var(--surface)",
-        border: hovered ? "1px solid var(--border-hover)" : "1px solid var(--border)",
-        boxShadow: hovered
-          ? `0 12px 40px ${accent.glow}, var(--card-glow-mul)`
-          : "var(--card-shadow)",
-        transform: hovered ? "translateY(-3px)" : "translateY(0)",
+        border: "1px solid var(--border)",
+        boxShadow: "var(--card-shadow)",
       }}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
     >
       {/* Domain accent bar */}
       <div className="h-[3px] w-full shrink-0" style={{ background: `linear-gradient(90deg, ${accent.from}, ${accent.to})` }} />
@@ -86,19 +80,9 @@ function PublicCertCard({
             <img
               src={cert.imageUrl}
               alt={cert.name}
-              className="absolute inset-0 w-full h-full object-contain transition-transform duration-500 group-hover:scale-[1.04]"
+              className="absolute inset-0 w-full h-full object-contain"
             />
           )}
-          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/25 transition-all duration-300 flex items-center justify-center">
-            <div
-              className="w-10 h-10 rounded-full backdrop-blur-sm flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 scale-75 group-hover:scale-100"
-              style={{ background: "rgba(0,0,0,0.65)" }}
-            >
-              <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607zM10.5 7.5v6m3-3h-6" />
-              </svg>
-            </div>
-          </div>
         </button>
       ) : (
         <div className="h-24 flex items-center justify-center" style={{ background: "var(--surface-alt)", borderBottom: "1px solid var(--border)" }}>
