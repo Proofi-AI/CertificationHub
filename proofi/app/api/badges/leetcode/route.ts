@@ -110,9 +110,10 @@ export async function POST(request: NextRequest) {
         title: b.displayName || b.name || b.shortName,
         issuingOrganization: "LeetCode",
         description: b.hoverText || null,
-        issuedAt: b.creationDate
-          ? new Date(parseInt(b.creationDate) * 1000).toISOString().split("T")[0]
-          : null,
+        issuedAt: (() => {
+          const ts = parseInt(b.creationDate);
+          return ts > 0 ? new Date(ts * 1000).toISOString().split("T")[0] : null;
+        })(),
         imageUrl: iconUrl || null,
         credentialUrl: `https://leetcode.com/${username}`,
         originalId: String(b.id),
