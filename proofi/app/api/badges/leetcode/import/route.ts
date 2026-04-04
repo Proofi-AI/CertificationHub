@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { prisma } from "@/lib/prisma";
+import sharp from "sharp";
 
 interface SelectedBadge {
   title: string;
@@ -28,13 +29,27 @@ async function downloadAndUploadImage(
     });
     if (!response.ok) return null;
 
-    const buffer = await response.arrayBuffer();
+    const rawBuffer = await response.arrayBuffer();
     const contentType = response.headers.get("content-type") || "image/png";
-    const lowerUrl = imageUrl.toLowerCase();
-    const ext = lowerUrl.includes(".gif") ? "gif"
-      : lowerUrl.includes(".webp") ? "webp"
-      : lowerUrl.includes(".svg") ? "svg"
-      : "png";
+    const isGif = contentType.includes("gif") || imageUrl.toLowerCase().includes(".gif");
+
+    // Convert GIFs to static PNG (first frame) so they don't animate in the UI
+    let buffer: ArrayBuffer;
+    let finalContentType: string;
+    let ext: string;
+    if (isGif) {
+      const pngBuffer = await sharp(Buffer.from(rawBuffer), { animated: false })
+        .toFormat("png")
+        .toBuffer();
+      buffer = pngBuffer.buffer.slice(pngBuffer.byteOffset, pngBuffer.byteOffset + pngBuffer.byteLength) as ArrayBuffer;
+      finalContentType = "image/png";
+      ext = "png";
+    } else {
+      buffer = rawBuffer;
+      finalContentType = contentType;
+      const lowerUrl = imageUrl.toLowerCase();
+      ext = lowerUrl.includes(".webp") ? "webp" : lowerUrl.includes(".svg") ? "svg" : "png";
+    }
     const path = `${userId}/${badgeId}.${ext}`;
 
     // Ensure bucket exists
@@ -42,7 +57,7 @@ async function downloadAndUploadImage(
 
     const { error } = await supabaseAdmin.storage
       .from("badges")
-      .upload(path, buffer, { contentType, upsert: true });
+      .upload(path, buffer, { contentType: finalContentType, upsert: true });
 
     if (error) return null;
 
