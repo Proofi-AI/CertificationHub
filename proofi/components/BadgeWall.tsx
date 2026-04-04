@@ -112,7 +112,7 @@ export default function BadgeWall({ badges, onBadgeClick, maxVisible = 24 }: Pro
   return (
     <div>
       {/* Responsive square grid — matches certificate grid style */}
-      <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-7 gap-3">
+      <div className="grid grid-cols-5 sm:grid-cols-6 md:grid-cols-7 lg:grid-cols-8 gap-3">
         {visible.map((badge, i) => (
           <BadgeTile
             key={badge.id}

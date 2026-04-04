@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Badge } from "@prisma/client";
 import { DOMAIN_COLORS, DOMAIN_ACCENT } from "@/lib/constants";
 import DeleteConfirmModal from "@/components/DeleteConfirmModal";
@@ -79,6 +79,19 @@ function BadgeStrengthBar({ badge }: { badge: Badge }) {
 export default function BadgeCard({ badge, onEdit, onDelete, onVisibilityToggle, onFeatureToggle, featuredCount, isDraggable = false, onDragStart, onDragOver, onDrop, onDragEnd, dragOverId }: Props) {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [hovered, setHovered] = useState(false);
+  const [descExpanded, setDescExpanded] = useState(false);
+  const descRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!descExpanded) return;
+    const handler = (e: MouseEvent) => {
+      if (descRef.current && !descRef.current.contains(e.target as Node)) {
+        setDescExpanded(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [descExpanded]);
 
   const isDragOver = dragOverId === badge.id;
   const domain = badge.domain || "Other";
@@ -214,9 +227,33 @@ export default function BadgeCard({ badge, onEdit, onDelete, onVisibilityToggle,
 
         {/* Description */}
         {badge.description && (
-          <p className="text-[12px] text-slate-400 dark:text-white/35 line-clamp-2 leading-relaxed">
-            {badge.description}
-          </p>
+          <div className="relative" ref={descRef}>
+            <button
+              type="button"
+              onClick={() => setDescExpanded((v) => !v)}
+              className="flex items-center gap-1.5 w-full text-left"
+            >
+              <span className="text-[12px] text-slate-400 dark:text-white/35 truncate flex-1">
+                {badge.description}
+              </span>
+              <svg
+                className={`w-3 h-3 shrink-0 text-slate-300 dark:text-white/20 transition-transform duration-200 ${descExpanded ? "rotate-180" : ""}`}
+                fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+            {descExpanded && (
+              <div
+                className="absolute left-0 right-0 top-full z-30 mt-1.5 rounded-xl p-3"
+                style={{ background: "var(--surface)", border: "1px solid var(--border-hover)", boxShadow: "0 8px 32px rgba(0,0,0,0.18)" }}
+              >
+                <p className="text-[12px] leading-relaxed text-slate-500 dark:text-white/50 whitespace-pre-wrap break-words">
+                  {badge.description}
+                </p>
+              </div>
+            )}
+          </div>
         )}
 
         {/* Dates */}
@@ -228,13 +265,6 @@ export default function BadgeCard({ badge, onEdit, onDelete, onVisibilityToggle,
           <span className="text-slate-200 dark:text-white/20">·</span>
           <span>{badge.expiresAt ? `Exp. ${formatDate(badge.expiresAt)}` : "No expiry"}</span>
         </div>
-
-        {/* Credential ID */}
-        {badge.credentialId && (
-          <p className="text-[11px] font-mono truncate text-slate-400 dark:text-white/25">
-            ID: {badge.credentialId}
-          </p>
-        )}
 
         {/* Domain pill */}
         {badge.domain && (

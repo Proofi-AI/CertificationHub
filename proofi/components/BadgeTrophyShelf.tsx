@@ -67,9 +67,9 @@ function TrophyCard({ badge, onClick, delay }: { badge: Badge; onClick: () => vo
         Featured
       </span>
 
-      {/* Badge image — circular frame with amber ring */}
+      {/* Badge image — square frame with amber ring */}
       <div
-        className="w-20 h-20 rounded-full overflow-hidden flex items-center justify-center mt-3"
+        className="w-20 h-20 rounded-2xl overflow-hidden flex items-center justify-center mt-3"
         style={{ boxShadow: hovered
           ? "0 0 0 3px #f59e0b, 0 0 0 6px rgba(245,158,11,0.15), 0 8px 24px rgba(245,158,11,0.2)"
           : "0 0 0 2px rgba(245,158,11,0.6), 0 0 0 5px rgba(245,158,11,0.1)"

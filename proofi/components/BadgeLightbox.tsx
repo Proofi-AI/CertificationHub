@@ -66,14 +66,14 @@ export default function BadgeLightbox({ badge, onClose, isMobile = false }: Prop
         {/* Badge image */}
         <div className="flex items-center justify-center p-8 pb-4" style={{ background: "var(--surface-alt)" }}>
           {badge.imageUrl && !isPdf ? (
-            <div className="relative w-36 h-36 rounded-full overflow-hidden"
+            <div className="relative w-36 h-36 rounded-2xl overflow-hidden"
               style={{ boxShadow: "0 0 0 3px rgba(124,58,237,0.4), 0 12px 40px rgba(124,58,237,0.3)" }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={badge.imageUrl} alt={badge.title} className="w-full h-full object-contain" />
             </div>
           ) : (
             <div
-              className="w-36 h-36 rounded-full flex items-center justify-center text-4xl font-black text-white"
+              className="w-36 h-36 rounded-2xl flex items-center justify-center text-4xl font-black text-white"
               style={{ background: "linear-gradient(135deg, #7c3aed, #4f46e5)", boxShadow: "0 0 0 3px rgba(124,58,237,0.4), 0 12px 40px rgba(124,58,237,0.3)" }}
             >
               {orgInitials}
