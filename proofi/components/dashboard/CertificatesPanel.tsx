@@ -76,6 +76,7 @@ export default function CertificatesPanel({
   const [sortDirty, setSortDirty] = useState(false);
   const [sortSaving, setSortSaving] = useState(false);
   const [sortError, setSortError] = useState<string | null>(null);
+  const [domainSheetOpen, setDomainSheetOpen] = useState(false);
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
   const dragCancelTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -364,15 +365,29 @@ export default function CertificatesPanel({
           </div>
           <div className="flex items-center gap-2 min-w-0">
             {allDomains.length > 2 && (
-              <select
-                value={domainFilter}
-                onChange={(e) => setDomainFilter(e.target.value)}
-                className="min-w-0 w-[90px] sm:w-auto sm:flex-none rounded-xl px-2 sm:px-3 py-3 sm:py-2.5 text-sm outline-none transition-all cursor-pointer
-                  bg-white border border-black/[0.08] focus:border-violet-500/40 text-slate-700
-                  dark:bg-[#111425] dark:border-white/[0.11] dark:text-white/75"
-              >
-                {allDomains.map((d) => <option key={d} value={d}>{d}</option>)}
-              </select>
+              <>
+                {/* Desktop domain select */}
+                <select
+                  value={domainFilter}
+                  onChange={(e) => setDomainFilter(e.target.value)}
+                  className="hidden sm:block rounded-xl px-3 py-2.5 text-sm outline-none transition-all cursor-pointer
+                    bg-black/[0.04] border border-black/[0.08] focus:border-violet-500/40 text-slate-700
+                    dark:bg-white/[0.06] dark:border-white/[0.11] dark:text-white/75"
+                >
+                  {allDomains.map((d) => <option key={d} value={d}>{d}</option>)}
+                </select>
+                {/* Mobile domain filter button — flex-1 matches SortControl's sm:hidden flex-1 for 50/50 */}
+                <button
+                  onClick={() => setDomainSheetOpen(true)}
+                  className="sm:hidden flex items-center gap-1.5 min-w-0 flex-1 px-2.5 py-2 rounded-xl text-xs font-semibold transition-all
+                    text-slate-600 dark:text-white/70 bg-black/[0.04] dark:bg-white/[0.06] border border-black/[0.08] dark:border-white/[0.11]"
+                >
+                  <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 3c2.755 0 5.455.232 8.083.678.533.09.917.556.917 1.096v1.044a2.25 2.25 0 01-.659 1.591l-5.432 5.432a2.25 2.25 0 00-.659 1.591v2.927a2.25 2.25 0 01-1.244 2.013L9.75 21v-6.568a2.25 2.25 0 00-.659-1.591L3.659 7.409A2.25 2.25 0 013 5.818V4.774c0-.54.384-1.006.917-1.096A48.32 48.32 0 0112 3z" />
+                  </svg>
+                  <span className="truncate">{domainFilter === "All" ? "All domains" : domainFilter}</span>
+                </button>
+              </>
             )}
             <SortControl
               value={sortStrategy}
@@ -381,6 +396,57 @@ export default function CertificatesPanel({
               onSave={sortStrategy === "custom" ? handleSortSaveWithOrder : handleSortSave}
               saving={sortSaving}
             />
+          </div>
+        </div>
+      )}
+
+      {/* Mobile: Domain filter bottom sheet */}
+      {domainSheetOpen && (
+        <div
+          className="fixed inset-0 z-50 flex flex-col justify-end sm:hidden"
+          style={{ background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)" }}
+          onClick={() => setDomainSheetOpen(false)}
+        >
+          <div
+            className="rounded-t-2xl overflow-hidden w-full"
+            style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: "1px solid var(--border)" }}>
+              <p className="text-sm font-bold text-slate-900 dark:text-white">Filter by domain</p>
+              <button onClick={() => setDomainSheetOpen(false)} className="text-slate-400 dark:text-white/40 hover:text-slate-700 dark:hover:text-white transition-colors">
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="py-2 max-h-[60vh] overflow-y-auto">
+              {allDomains.map((d) => (
+                <button
+                  key={d}
+                  onClick={() => { setDomainFilter(d); setDomainSheetOpen(false); }}
+                  className="w-full flex items-center justify-between px-5 py-3.5 transition-all hover:bg-black/[0.04] dark:hover:bg-white/[0.05]"
+                >
+                  <p className={`text-sm font-semibold ${domainFilter === d ? "text-violet-600 dark:text-violet-400" : "text-slate-800 dark:text-white"}`}>
+                    {d}
+                  </p>
+                  {domainFilter === d && (
+                    <svg className="w-4 h-4 text-violet-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                  )}
+                </button>
+              ))}
+            </div>
+            <div className="px-5 pb-6 pt-2">
+              <button
+                onClick={() => setDomainSheetOpen(false)}
+                className="w-full py-3 rounded-xl text-sm font-semibold transition-all
+                  text-slate-600 dark:text-white/65 bg-black/[0.04] dark:bg-white/[0.06] border border-black/[0.08] dark:border-white/[0.11]"
+              >
+                Cancel
+              </button>
+            </div>
           </div>
         </div>
       )}
