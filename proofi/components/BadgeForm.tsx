@@ -112,12 +112,42 @@ export default function BadgeForm({ initialData, onSave, onClose, initialCustomO
         credentialId: d.credentialId || prev.credentialId,
         credentialUrl: d.credentialUrl || prev.credentialUrl,
       }));
-      if (d.imageUrl && !existingFileUrl) {
+      if (d.imageBase64 && !pendingFile) {
+        try {
+          const res2 = await fetch(d.imageBase64);
+          const blob = await res2.blob();
+          const imgFile = new File([blob], "credly-badge.png", { type: blob.type || "image/png" });
+          setProcessing(true);
+          setProcessingMsg("Optimising badge image…");
+          try {
+            const cropResult = await smartCropBadge(imgFile);
+            const compressed = await compressImage(cropResult.croppedFile);
+            setPendingFile(compressed);
+            setFilePreview(URL.createObjectURL(compressed));
+          } catch {
+            setPendingFile(imgFile);
+            setFilePreview(URL.createObjectURL(imgFile));
+          } finally {
+            setProcessing(false);
+            setProcessingMsg("");
+          }
+          setExistingFileUrl(null);
+          setFileCategory("image");
+        } catch {
+          // fallback: store URL only
+          if (d.imageUrl) {
+            setFilePreview(d.imageUrl);
+            setExistingFileUrl(d.imageUrl);
+            setFileCategory("image");
+          }
+        }
+      } else if (d.imageUrl && !existingFileUrl && !pendingFile) {
         setFilePreview(d.imageUrl);
         setExistingFileUrl(d.imageUrl);
         setFileCategory("image");
       }
-      setCredlyNotice({ type: "success", message: "Badge details imported from Credly. Review and save." });
+      const dateNotice = d.issuedAt ? "" : " Issue date was not available — please fill it in manually.";
+      setCredlyNotice({ type: "success", message: `Badge details imported from Credly.${dateNotice}` });
     } catch {
       setCredlyNotice({ type: "warn", message: "Could not import from this URL. Please fill in the details manually." });
     } finally {
@@ -262,7 +292,7 @@ export default function BadgeForm({ initialData, onSave, onClose, initialCustomO
             expiresAt: form.noExpiry ? null : form.expiresAt || null,
             credentialId: form.credentialId || null,
             credentialUrl: form.credentialUrl || null,
-            imageUrl: null,
+            imageUrl: (!pendingFile && existingFileUrl) ? existingFileUrl : null,
             domain: effectiveDomain,
           }),
         });
@@ -495,7 +525,7 @@ export default function BadgeForm({ initialData, onSave, onClose, initialCustomO
             <textarea
               value={form.description}
               onChange={(e) => {
-                if (e.target.value.length <= 300) handleField("description", e.target.value);
+                if (e.target.value.length <= 1000) handleField("description", e.target.value);
               }}
               placeholder="What did you earn this badge for?"
               rows={3}
@@ -505,7 +535,7 @@ export default function BadgeForm({ initialData, onSave, onClose, initialCustomO
                 focus:border-violet-500/40 focus:ring-1 focus:ring-violet-500/20"
             />
             <p className="text-[11px] text-slate-400 dark:text-white/30 mt-1 text-right">
-              {form.description.length}/300
+              {form.description.length}/1000
             </p>
           </div>
 
