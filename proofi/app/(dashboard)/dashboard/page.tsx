@@ -33,6 +33,24 @@ export default async function DashboardPage() {
     }),
   ]);
 
+  // Apply the user's saved badgeSortStrategy so initialBadges arrive pre-sorted
+  const badgeSortStrategy = (profile as { badgeSortStrategy?: string }).badgeSortStrategy ?? "recent";
+  switch (badgeSortStrategy) {
+    case "alphabetical":
+      badges.sort((a, b) => a.title.localeCompare(b.title));
+      break;
+    case "oldest":
+      badges.sort((a, b) => new Date(a.issuedAt).getTime() - new Date(b.issuedAt).getTime());
+      break;
+    case "organization":
+      badges.sort((a, b) => a.issuingOrganization.localeCompare(b.issuingOrganization));
+      break;
+    case "custom":
+      badges.sort((a, b) => (a.sortOrder ?? 9999) - (b.sortOrder ?? 9999));
+      break;
+    // "recent" already handled by orderBy above
+  }
+
   // Apply the user's saved sortStrategy so initialCertificates arrive pre-sorted
   const sortStrategy = profile.sortStrategy ?? "recent";
   switch (sortStrategy) {

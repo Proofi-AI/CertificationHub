@@ -20,6 +20,7 @@ model User {
   isAdmin             Boolean              @default(false)
   profileViews        Int                  @default(0)
   sortStrategy        String               @default("recent")
+  badgeSortStrategy   String               @default("recent")
   securityQ1          String?
   securityA1          String?
   securityQ2          String?
@@ -33,6 +34,7 @@ model User {
   feedbacks           Feedback[]
   badges              Badge[]
   customOrganizations CustomOrganization[]
+  customDomains       CustomDomain[]
 }
 
 model Certificate {
@@ -79,6 +81,16 @@ model Badge {
 }
 
 model CustomOrganization {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model CustomDomain {
   id        String   @id @default(cuid())
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)

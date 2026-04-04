@@ -13,7 +13,7 @@ interface Props {
   initialCertificates: Certificate[];
   initialBadges: Badge[];
   features: UserFeatures;
-  profile: Pick<User, "avatarUrl" | "bio" | "slug" | "sortStrategy" | "profileViews" | "name">;
+  profile: Pick<User, "avatarUrl" | "bio" | "slug" | "sortStrategy" | "profileViews" | "name"> & { badgeSortStrategy?: string };
 }
 
 export default function DashboardClient({ initialCertificates, initialBadges, features, profile }: Props) {
@@ -67,6 +67,7 @@ export default function DashboardClient({ initialCertificates, initialBadges, fe
             activeTab={activeTab}
             onTabChange={handleTabChange}
             badgeCount={badges.length}
+            certificateCount={certificates.length}
           />
         </div>
 
@@ -90,6 +91,7 @@ export default function DashboardClient({ initialCertificates, initialBadges, fe
             <BadgesPanel
               initialBadges={badges}
               onBadgesChange={setBadges}
+              initialSortStrategy={profile.badgeSortStrategy as "recent" | "oldest" | "alphabetical" | "organization" | "custom" | undefined}
             />
           )}
         </div>

@@ -34,7 +34,7 @@ export default async function PublicProfilePage({ params }: Props) {
         },
         badges: {
           where: { isPublic: true },
-          orderBy: [{ isFeatured: "desc" }, { issuedAt: "desc" }],
+          orderBy: [{ isFeatured: "desc" }, { sortOrder: "asc" }, { issuedAt: "desc" }],
         },
       },
     });
@@ -43,6 +43,24 @@ export default async function PublicProfilePage({ params }: Props) {
   }
 
   if (!user) notFound();
+
+  // Apply badgeSortStrategy — mirrors the same logic used in BadgesPanel
+  const badgeSortStrategy = user.badgeSortStrategy ?? "recent";
+  switch (badgeSortStrategy) {
+    case "alphabetical":
+      user.badges.sort((a, b) => a.title.localeCompare(b.title));
+      break;
+    case "oldest":
+      user.badges.sort((a, b) => new Date(a.issuedAt).getTime() - new Date(b.issuedAt).getTime());
+      break;
+    case "organization":
+      user.badges.sort((a, b) => a.issuingOrganization.localeCompare(b.issuingOrganization));
+      break;
+    case "custom":
+      user.badges.sort((a, b) => (a.sortOrder ?? 9999) - (b.sortOrder ?? 9999));
+      break;
+    // "recent" is already handled by orderBy: { issuedAt: "desc" } above
+  }
 
   // Apply sortStrategy — mirrors the exact same logic used in the dashboard CertificatesPanel
   const sortStrategy = user.sortStrategy ?? "recent";

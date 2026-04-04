@@ -2,13 +2,18 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { Badge } from "@prisma/client";
-import { DOMAINS } from "@/lib/constants";
 import { compressImage } from "@/lib/compressImage";
 import { smartCropBadge } from "@/lib/smartCrop";
 import { uploadBadgeImage } from "@/lib/utils/storage";
 import OrganizationDropdown from "@/components/OrganizationDropdown";
+import DomainDropdown from "@/components/DomainDropdown";
 
 interface CustomOrg {
+  id: string;
+  name: string;
+}
+
+interface CustomDomain {
   id: string;
   name: string;
 }
@@ -18,6 +23,7 @@ interface Props {
   onSave: (badge: Badge) => void;
   onClose: () => void;
   initialCustomOrgs?: CustomOrg[];
+  initialCustomDomains?: CustomDomain[];
 }
 
 const toInputDate = (date: Date | string | null | undefined): string => {
@@ -34,11 +40,8 @@ function getFileCategory(file: File): "image" | "svg" | "pdf" | "other" {
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 
-export default function BadgeForm({ initialData, onSave, onClose, initialCustomOrgs = [] }: Props) {
+export default function BadgeForm({ initialData, onSave, onClose, initialCustomOrgs = [], initialCustomDomains = [] }: Props) {
   const isEdit = !!initialData;
-
-  const domainValues = DOMAINS.map((d) => d.value as string);
-  const isCustomDomain = initialData?.domain ? !domainValues.includes(initialData.domain) && initialData.domain !== null : false;
 
   const [form, setForm] = useState({
     title: initialData?.title ?? "",
@@ -49,11 +52,11 @@ export default function BadgeForm({ initialData, onSave, onClose, initialCustomO
     noExpiry: !initialData?.expiresAt,
     credentialId: initialData?.credentialId ?? "",
     credentialUrl: initialData?.credentialUrl ?? "",
-    domain: isCustomDomain ? "Other" : (initialData?.domain ?? ""),
-    customDomain: isCustomDomain ? (initialData?.domain ?? "") : "",
+    domain: initialData?.domain ?? "",
   });
 
   const [customOrgs, setCustomOrgs] = useState<CustomOrg[]>(initialCustomOrgs);
+  const [customDomains, setCustomDomains] = useState<CustomDomain[]>(initialCustomDomains);
   const [credlyUrl, setCredlyUrl] = useState("");
   const [credlyLoading, setCredlyLoading] = useState(false);
   const [credlyNotice, setCredlyNotice] = useState<{ type: "success" | "warn"; message: string } | null>(null);
@@ -79,6 +82,16 @@ export default function BadgeForm({ initialData, onSave, onClose, initialCustomO
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
   }, [onClose]);
+
+  // Load custom domains if none provided
+  useEffect(() => {
+    if (initialCustomDomains.length === 0) {
+      fetch("/api/domains")
+        .then((r) => r.json())
+        .then((j) => { if (j.data) setCustomDomains(j.data); })
+        .catch(() => {});
+    }
+  }, [initialCustomDomains.length]);
 
   const handleField = (field: keyof typeof form, value: string | boolean) => {
     setForm((p) => ({ ...p, [field]: value }));
@@ -238,10 +251,7 @@ export default function BadgeForm({ initialData, onSave, onClose, initialCustomO
     const credUrlErr = validateCredUrl(form.credentialUrl);
     if (credUrlErr) { setCredUrlError(credUrlErr); return; }
 
-    const effectiveDomain =
-      form.domain === "Other" && form.customDomain.trim()
-        ? form.customDomain.trim()
-        : form.domain || null;
+    const effectiveDomain = form.domain || null;
 
     setLoading(true);
     try {
@@ -615,30 +625,12 @@ export default function BadgeForm({ initialData, onSave, onClose, initialCustomO
           {/* Domain */}
           <div>
             <label className="block text-xs font-semibold mb-2 text-slate-700 dark:text-white/70 uppercase tracking-wider">Domain</label>
-            <select
+            <DomainDropdown
               value={form.domain}
-              onChange={(e) => handleField("domain", e.target.value)}
-              className="w-full rounded-xl px-4 py-3 text-sm outline-none transition-all cursor-pointer
-                bg-white dark:bg-[#111425] border border-black/[0.08] dark:border-white/[0.11]
-                text-slate-800 dark:text-white/75
-                focus:border-violet-500/40 focus:ring-1 focus:ring-violet-500/20"
-            >
-              <option value="">No domain</option>
-              {DOMAINS.map((d) => (
-                <option key={d.value} value={d.value}>{d.label}</option>
-              ))}
-            </select>
-            {form.domain === "Other" && (
-              <input
-                value={form.customDomain}
-                onChange={(e) => handleField("customDomain", e.target.value)}
-                placeholder="Enter custom domain"
-                className="w-full mt-2 rounded-xl px-4 py-3 text-sm outline-none transition-all
-                  bg-black/[0.04] dark:bg-white/[0.06] border border-black/[0.08] dark:border-white/[0.11]
-                  text-slate-800 dark:text-white placeholder-slate-400 dark:placeholder-white/35
-                  focus:border-violet-500/40 focus:ring-1 focus:ring-violet-500/20"
-              />
-            )}
+              onChange={(val) => handleField("domain", val)}
+              customDomains={customDomains}
+              onCustomDomainsChange={setCustomDomains}
+            />
           </div>
 
           {/* Error */}

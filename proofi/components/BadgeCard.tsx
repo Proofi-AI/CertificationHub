@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { Badge } from "@prisma/client";
 import { DOMAIN_COLORS, DOMAIN_ACCENT } from "@/lib/constants";
+import DeleteConfirmModal from "@/components/DeleteConfirmModal";
 
 interface Props {
   badge: Badge;
@@ -11,6 +12,12 @@ interface Props {
   onVisibilityToggle: (id: string, isPublic: boolean) => void;
   onFeatureToggle: (id: string, isFeatured: boolean) => void;
   featuredCount: number;
+  isDraggable?: boolean;
+  onDragStart?: (e: React.DragEvent, id: string) => void;
+  onDragOver?: (e: React.DragEvent, id: string) => void;
+  onDrop?: (e: React.DragEvent, id: string) => void;
+  onDragEnd?: () => void;
+  dragOverId?: string | null;
 }
 
 function formatDate(date: Date | string | null): string {
@@ -69,10 +76,11 @@ function BadgeStrengthBar({ badge }: { badge: Badge }) {
   );
 }
 
-export default function BadgeCard({ badge, onEdit, onDelete, onVisibilityToggle, onFeatureToggle, featuredCount }: Props) {
+export default function BadgeCard({ badge, onEdit, onDelete, onVisibilityToggle, onFeatureToggle, featuredCount, isDraggable = false, onDragStart, onDragOver, onDrop, onDragEnd, dragOverId }: Props) {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [hovered, setHovered] = useState(false);
 
+  const isDragOver = dragOverId === badge.id;
   const domain = badge.domain || "Other";
   const colors = DOMAIN_COLORS[domain] ?? DOMAIN_COLORS["Other"];
   const accent = DOMAIN_ACCENT[domain] ?? DOMAIN_ACCENT["Other"];
@@ -94,19 +102,39 @@ export default function BadgeCard({ badge, onEdit, onDelete, onVisibilityToggle,
   };
 
   return (
+    <>
     <div
       className="group relative rounded-2xl overflow-hidden flex flex-col transition-all duration-300"
+      draggable={isDraggable}
+      onDragStart={isDraggable && onDragStart ? (e) => onDragStart(e, badge.id) : undefined}
+      onDragOver={isDraggable && onDragOver ? (e) => onDragOver(e, badge.id) : undefined}
+      onDrop={isDraggable && onDrop ? (e) => onDrop(e, badge.id) : undefined}
+      onDragEnd={isDraggable && onDragEnd ? onDragEnd : undefined}
       style={{
         background: "var(--surface)",
-        border: hovered ? "1px solid var(--border-hover)" : "1px solid var(--border)",
-        boxShadow: hovered
-          ? `0 12px 40px ${accent.glow}, var(--card-glow-mul)`
-          : "var(--card-shadow)",
-        transform: hovered ? "translateY(-3px)" : "translateY(0)",
+        border: isDragOver
+          ? "2px dashed #7c3aed"
+          : hovered ? "1px solid var(--border-hover)" : "1px solid var(--border)",
+        boxShadow: isDragOver
+          ? "0 0 0 4px rgba(124,58,237,0.12)"
+          : hovered ? `0 12px 40px ${accent.glow}, var(--card-glow-mul)` : "var(--card-shadow)",
+        transform: hovered && !isDraggable ? "translateY(-3px)" : "translateY(0)",
+        cursor: isDraggable ? "grab" : undefined,
+        opacity: isDragOver ? 0.85 : 1,
       }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
+      {isDraggable && (
+        <div className="absolute top-2 left-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 p-1.5 rounded-lg"
+          style={{ background: "rgba(0,0,0,0.4)", cursor: "grab" }} title="Drag to reorder">
+          <svg className="w-3 h-3 text-white/80" viewBox="0 0 16 16" fill="currentColor">
+            <circle cx="5" cy="3" r="1.2"/><circle cx="11" cy="3" r="1.2"/>
+            <circle cx="5" cy="8" r="1.2"/><circle cx="11" cy="8" r="1.2"/>
+            <circle cx="5" cy="13" r="1.2"/><circle cx="11" cy="13" r="1.2"/>
+          </svg>
+        </div>
+      )}
       {/* Credential URL link — top right */}
       {badge.credentialUrl && (
         <a
@@ -248,34 +276,29 @@ export default function BadgeCard({ badge, onEdit, onDelete, onVisibilityToggle,
             Edit
           </button>
 
-          {confirmDelete ? (
-            <div className="flex items-center gap-1">
-              <button
-                onClick={() => { onDelete(badge.id); setConfirmDelete(false); }}
-                className="text-xs font-semibold text-red-600 dark:text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl py-2 px-2 hover:bg-red-500/20 transition-all"
-              >Confirm</button>
-              <button
-                onClick={() => setConfirmDelete(false)}
-                className="text-xs font-semibold rounded-xl py-2 px-2 transition-all
-                  text-slate-500 bg-black/[0.04] border border-black/[0.06] hover:bg-black/[0.07]
-                  dark:text-white/55 dark:bg-white/[0.05] dark:border-white/[0.09]"
-              >Cancel</button>
-            </div>
-          ) : (
-            <button
-              onClick={() => setConfirmDelete(true)}
-              title="Delete"
-              className="w-8 h-[34px] flex items-center justify-center rounded-xl transition-all duration-200
-                text-slate-400 hover:text-red-600 bg-black/[0.04] hover:bg-red-500/10 border border-black/[0.06] hover:border-red-500/20
-                dark:text-white/40 dark:hover:text-red-400 dark:bg-white/[0.05] dark:hover:bg-red-500/10 dark:border-white/[0.09] dark:hover:border-red-500/20"
-            >
-              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
-              </svg>
-            </button>
-          )}
+          <button
+            onClick={() => setConfirmDelete(true)}
+            title="Delete"
+            className="w-8 h-[34px] flex items-center justify-center rounded-xl transition-all duration-200
+              text-slate-400 hover:text-red-600 bg-black/[0.04] hover:bg-red-500/10 border border-black/[0.06] hover:border-red-500/20
+              dark:text-white/40 dark:hover:text-red-400 dark:bg-white/[0.05] dark:hover:bg-red-500/10 dark:border-white/[0.09] dark:hover:border-red-500/20"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+            </svg>
+          </button>
         </div>
       </div>
     </div>
+
+    {confirmDelete && (
+      <DeleteConfirmModal
+        title="Delete this badge?"
+        message="This will permanently remove the badge and its image. This cannot be undone."
+        onConfirm={() => { onDelete(badge.id); setConfirmDelete(false); }}
+        onCancel={() => setConfirmDelete(false)}
+      />
+    )}
+    </>
   );
 }

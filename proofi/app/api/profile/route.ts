@@ -22,7 +22,7 @@ export async function PUT(request: NextRequest) {
     if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
     const body = await request.json();
-    const { name, bio, slug, avatarUrl, defaultTheme, features, sortStrategy } = body;
+    const { name, bio, slug, avatarUrl, defaultTheme, features, sortStrategy, badgeSortStrategy } = body;
 
     if (bio && bio.length > 160) {
       return Response.json({ error: "Bio must be 160 characters or less" }, { status: 400 });
@@ -55,6 +55,7 @@ export async function PUT(request: NextRequest) {
         ...(defaultTheme !== undefined && { defaultTheme }),
         ...(features !== undefined && { features }),
         ...(sortStrategy !== undefined && { sortStrategy }),
+        ...(badgeSortStrategy !== undefined && { badgeSortStrategy }),
       },
     });
     return Response.json({ data: updated });

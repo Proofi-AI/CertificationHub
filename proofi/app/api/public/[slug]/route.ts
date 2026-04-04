@@ -16,7 +16,7 @@ export async function GET(
       },
       badges: {
         where: { isPublic: true },
-        orderBy: [{ isFeatured: "desc" }, { issuedAt: "desc" }],
+        orderBy: [{ isFeatured: "desc" }, { sortOrder: "asc" }, { issuedAt: "desc" }],
       },
     },
   });

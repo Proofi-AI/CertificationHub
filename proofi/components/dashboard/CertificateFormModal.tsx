@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { Certificate } from "@prisma/client";
-import { DOMAINS, MAX_FILE_SIZE_BYTES, ACCEPTED_FILE_TYPES, ACCEPTED_FILE_ACCEPT } from "@/lib/constants";
+import { MAX_FILE_SIZE_BYTES, ACCEPTED_FILE_TYPES, ACCEPTED_FILE_ACCEPT } from "@/lib/constants";
+import DomainDropdown from "@/components/DomainDropdown";
 import { uploadCertificateImage } from "@/lib/utils/storage";
 import { compressImage } from "@/lib/compressImage";
 import { pdfToJpeg } from "@/lib/utils/pdfToImage";
@@ -30,20 +31,17 @@ type ExtractNotice =
 export default function CertificateFormModal({ initialData, onSave, onClose, autoFillEnabled = false, aiVerificationEnabled = false }: Props) {
   const isEdit = !!initialData;
 
-  const domainValues = DOMAINS.map((d) => d.value as string);
-  const isCustomDomain = initialData?.domain ? !domainValues.includes(initialData.domain) : false;
-
   const [form, setForm] = useState({
     name: initialData?.name ?? "",
     issuer: initialData?.issuer ?? "",
     issuedAt: toInputDate(initialData?.issuedAt),
     expiresAt: toInputDate(initialData?.expiresAt),
     noExpiry: !initialData?.expiresAt,
-    domain: isCustomDomain ? "Other" : (initialData?.domain ?? DOMAINS[0].value),
-    customDomain: isCustomDomain ? (initialData?.domain ?? "") : "",
+    domain: initialData?.domain ?? "",
     credentialId: initialData?.credentialId ?? "",
     description: initialData?.description ?? "",
   });
+  const [customDomains, setCustomDomains] = useState<{ id: string; name: string }[]>([]);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(
     initialData?.imageUrl && !initialData.imageUrl.endsWith(".pdf") ? initialData.imageUrl : null
@@ -65,6 +63,14 @@ export default function CertificateFormModal({ initialData, onSave, onClose, aut
   const [generatingDescription, setGeneratingDescription] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  // Load custom domains
+  useEffect(() => {
+    fetch("/api/domains")
+      .then((r) => r.json())
+      .then((j) => { if (j.data) setCustomDomains(j.data); })
+      .catch(() => {});
+  }, []);
 
   // Close on Escape
   useEffect(() => {
@@ -256,10 +262,7 @@ export default function CertificateFormModal({ initialData, onSave, onClose, aut
       return;
     }
 
-    const effectiveDomain =
-      form.domain === "Other" && form.customDomain.trim()
-        ? form.customDomain.trim()
-        : form.domain;
+    const effectiveDomain = form.domain;
 
     setLoading(true);
 
@@ -593,26 +596,15 @@ export default function CertificateFormModal({ initialData, onSave, onClose, aut
             <label className="text-xs font-semibold mb-1.5 block text-slate-500 dark:text-white/65">
               Domain <span className="text-red-500 dark:text-red-400">*</span>
             </label>
-            <select
+            <DomainDropdown
               value={form.domain}
-              onChange={(e) => handleField("domain", e.target.value)}
+              onChange={(val) => handleField("domain", val)}
+              customDomains={customDomains}
+              onCustomDomainsChange={setCustomDomains}
               required
               disabled={isDisabled}
-              className="w-full rounded-xl px-4 py-2.5 text-sm outline-none transition-all cursor-pointer bg-white border border-black/[0.09] focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20 text-slate-800 dark:bg-[#111425] dark:border-white/[0.13] dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {DOMAINS.map((d) => (
-                <option key={d.value} value={d.value}>{d.label}</option>
-              ))}
-            </select>
-            {form.domain === "Other" && (
-              <input
-                value={form.customDomain}
-                onChange={(e) => handleField("customDomain", e.target.value)}
-                placeholder="Specify your domain…"
-                disabled={isDisabled}
-                className="mt-2 w-full rounded-xl px-4 py-2.5 text-sm outline-none transition-all bg-black/[0.04] border border-black/[0.09] focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20 text-slate-800 placeholder-slate-400 dark:bg-white/[0.07] dark:border-white/[0.13] dark:text-white dark:placeholder-white/40 disabled:opacity-50 disabled:cursor-not-allowed"
-              />
-            )}
+              error={!form.domain && !!error ? "Required" : undefined}
+            />
           </div>
 
           {/* Credential ID */}
