@@ -26,8 +26,8 @@ export default function BadgeTrophyShelf({ badges, onBadgeClick }: Props) {
         <span className="text-[11px] font-bold uppercase tracking-widest text-amber-500/80">Pinned</span>
       </div>
 
-      {/* Compact horizontal cards — 1 col on mobile, 3 on sm+ */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+      {/* Pinned badge cards with visible preview */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         {featured.map((badge) => {
           const isPdf = badge.imageUrl?.toLowerCase().endsWith(".pdf") ?? false;
           const orgInitials = (badge.issuingOrganization || "?")
@@ -42,25 +42,27 @@ export default function BadgeTrophyShelf({ badges, onBadgeClick }: Props) {
               key={badge.id}
               type="button"
               onClick={() => onBadgeClick(badge)}
-              className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-left cursor-pointer"
+              className="rounded-xl overflow-hidden text-left cursor-pointer flex flex-col"
               style={{
                 background: "var(--surface)",
-                border: "1px solid var(--border)",
-                borderLeft: "3px solid rgba(245,158,11,0.6)",
+                border: "1px solid rgba(245,158,11,0.4)",
                 boxShadow: "var(--card-shadow)",
               }}
             >
-              {/* Small badge image with amber ring */}
+              {/* Amber accent bar */}
+              <div className="h-[3px] w-full shrink-0" style={{ background: "linear-gradient(90deg, #f59e0b, #fbbf24)" }} />
+
+              {/* Badge image preview */}
               <div
-                className="w-10 h-10 rounded-lg overflow-hidden shrink-0 flex items-center justify-center"
-                style={{ boxShadow: "0 0 0 1.5px rgba(245,158,11,0.55)" }}
+                className="w-full h-20 relative overflow-hidden shrink-0"
+                style={{ background: "var(--surface-alt)", borderBottom: "1px solid var(--border)" }}
               >
                 {badge.imageUrl && !isPdf ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={badge.imageUrl} alt={badge.title} className="w-full h-full object-contain" />
+                  <img src={badge.imageUrl} alt={badge.title} className="absolute inset-0 w-full h-full object-contain p-2" />
                 ) : (
                   <div
-                    className="w-full h-full flex items-center justify-center text-[10px] font-black text-white"
+                    className="absolute inset-0 flex items-center justify-center text-lg font-black text-white"
                     style={{ background: "linear-gradient(135deg, #7c3aed, #4f46e5)" }}
                   >
                     {orgInitials}
@@ -68,12 +70,12 @@ export default function BadgeTrophyShelf({ badges, onBadgeClick }: Props) {
                 )}
               </div>
 
-              {/* Text */}
-              <div className="min-w-0 flex-1">
-                <p className="text-xs font-bold text-slate-900 dark:text-white truncate leading-tight">
+              {/* Text info */}
+              <div className="px-3 py-2.5 flex-1 flex flex-col gap-0.5">
+                <p className="text-xs font-bold text-slate-900 dark:text-white line-clamp-1 leading-tight">
                   {badge.title}
                 </p>
-                <p className="text-[10px] text-slate-400 dark:text-white/40 truncate mt-0.5">
+                <p className="text-[10px] text-slate-400 dark:text-white/40 truncate">
                   {badge.issuingOrganization}
                   {badge.issuedAt ? <span className="text-slate-300 dark:text-white/20"> · {formatDate(badge.issuedAt)}</span> : null}
                 </p>

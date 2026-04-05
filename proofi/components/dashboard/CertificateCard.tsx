@@ -6,6 +6,7 @@ import { DOMAIN_COLORS, DOMAIN_ACCENT } from "@/lib/constants";
 import CertificateLightbox from "@/components/CertificateLightbox";
 import CertificateStrengthBar from "@/components/CertificateStrengthBar";
 import DeleteConfirmModal from "@/components/DeleteConfirmModal";
+import InfoModal from "@/components/InfoModal";
 
 interface Props {
   certificate: Certificate;
@@ -33,6 +34,7 @@ export default function CertificateCard({
   dragOverId,
 }: Props) {
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [pinLimitOpen, setPinLimitOpen] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [descExpanded, setDescExpanded] = useState(false);
   const descRef = useRef<HTMLDivElement>(null);
@@ -244,7 +246,7 @@ export default function CertificateCard({
             <button
               onClick={() => {
                 if (!certificate.isFeatured && featuredCount >= 3) {
-                  alert("You can only pin up to 3 certificates. Unpin one first.");
+                  setPinLimitOpen(true);
                   return;
                 }
                 onFeatureToggle(certificate.id, !certificate.isFeatured);
@@ -303,6 +305,13 @@ export default function CertificateCard({
           message="This will permanently remove the certificate and its image. This cannot be undone."
           onConfirm={() => { onDelete(certificate.id); setConfirmDelete(false); }}
           onCancel={() => setConfirmDelete(false)}
+        />
+      )}
+      {pinLimitOpen && (
+        <InfoModal
+          title="Pin limit reached"
+          message="You can only pin up to 3 certificates. Unpin one first to pin another."
+          onClose={() => setPinLimitOpen(false)}
         />
       )}
     </>

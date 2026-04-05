@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import type { Badge } from "@prisma/client";
 import { DOMAIN_COLORS, DOMAIN_ACCENT } from "@/lib/constants";
 import DeleteConfirmModal from "@/components/DeleteConfirmModal";
+import InfoModal from "@/components/InfoModal";
 
 interface Props {
   badge: Badge;
@@ -78,6 +79,7 @@ function BadgeStrengthBar({ badge }: { badge: Badge }) {
 
 export default function BadgeCard({ badge, onEdit, onDelete, onVisibilityToggle, onFeatureToggle, featuredCount, isDraggable = false, onDragStart, onDragOver, onDrop, onDragEnd, dragOverId }: Props) {
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [pinLimitOpen, setPinLimitOpen] = useState(false);
   const [descExpanded, setDescExpanded] = useState(false);
   const descRef = useRef<HTMLDivElement>(null);
 
@@ -107,7 +109,7 @@ export default function BadgeCard({ badge, onEdit, onDelete, onVisibilityToggle,
 
   const handleFeatureClick = () => {
     if (!badge.isFeatured && featuredCount >= 3) {
-      alert("You can only feature up to 3 badges. Unpin one first.");
+      setPinLimitOpen(true);
       return;
     }
     onFeatureToggle(badge.id, !badge.isFeatured);
@@ -320,6 +322,13 @@ export default function BadgeCard({ badge, onEdit, onDelete, onVisibilityToggle,
         message="This will permanently remove the badge and its image. This cannot be undone."
         onConfirm={() => { onDelete(badge.id); setConfirmDelete(false); }}
         onCancel={() => setConfirmDelete(false)}
+      />
+    )}
+    {pinLimitOpen && (
+      <InfoModal
+        title="Pin limit reached"
+        message="You can only pin up to 3 badges. Unpin one first to pin another."
+        onClose={() => setPinLimitOpen(false)}
       />
     )}
     </>

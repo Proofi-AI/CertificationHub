@@ -27,8 +27,8 @@ export default function CertificatePinnedShelf({ certificates, onCertClick }: Pr
         <span className="text-[11px] font-bold uppercase tracking-widest text-amber-500/80">Pinned</span>
       </div>
 
-      {/* Compact horizontal cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+      {/* Pinned certificate cards with visible preview */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         {featured.map((cert) => {
           const accent = DOMAIN_ACCENT[cert.domain] ?? DOMAIN_ACCENT["Other"];
           const isPdf = cert.imageUrl?.toLowerCase().endsWith(".pdf") ?? false;
@@ -44,25 +44,34 @@ export default function CertificatePinnedShelf({ certificates, onCertClick }: Pr
               key={cert.id}
               type="button"
               onClick={() => onCertClick(cert)}
-              className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-left cursor-pointer"
+              className="rounded-xl overflow-hidden text-left cursor-pointer flex flex-col"
               style={{
                 background: "var(--surface)",
-                border: "1px solid var(--border)",
-                borderLeft: "3px solid rgba(245,158,11,0.6)",
+                border: "1px solid rgba(245,158,11,0.4)",
                 boxShadow: "var(--card-shadow)",
               }}
             >
-              {/* Thumbnail with amber ring */}
+              {/* Amber accent bar */}
+              <div className="h-[3px] w-full shrink-0" style={{ background: "linear-gradient(90deg, #f59e0b, #fbbf24)" }} />
+
+              {/* Certificate preview */}
               <div
-                className="w-10 h-10 rounded-lg overflow-hidden shrink-0 flex items-center justify-center"
-                style={{ boxShadow: "0 0 0 1.5px rgba(245,158,11,0.55)" }}
+                className="w-full h-20 relative overflow-hidden shrink-0"
+                style={{ background: "var(--surface-alt)", borderBottom: "1px solid var(--border)" }}
               >
                 {cert.imageUrl && !isPdf ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={cert.imageUrl} alt={cert.name} className="w-full h-full object-cover" />
+                  <img src={cert.imageUrl} alt={cert.name} className="absolute inset-0 w-full h-full object-contain" />
+                ) : cert.imageUrl && isPdf ? (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 text-slate-400 dark:text-white/30">
+                    <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+                    </svg>
+                    <span className="text-[10px] font-medium">PDF Certificate</span>
+                  </div>
                 ) : (
                   <div
-                    className="w-full h-full flex items-center justify-center text-[10px] font-black text-white"
+                    className="absolute inset-0 flex items-center justify-center text-lg font-black text-white"
                     style={{ background: `linear-gradient(135deg, ${accent.from}, ${accent.to})` }}
                   >
                     {issuerInitials}
@@ -70,12 +79,12 @@ export default function CertificatePinnedShelf({ certificates, onCertClick }: Pr
                 )}
               </div>
 
-              {/* Text */}
-              <div className="min-w-0 flex-1">
-                <p className="text-xs font-bold text-slate-900 dark:text-white truncate leading-tight">
+              {/* Text info */}
+              <div className="px-3 py-2.5 flex-1 flex flex-col gap-0.5">
+                <p className="text-xs font-bold text-slate-900 dark:text-white line-clamp-1 leading-tight">
                   {cert.name}
                 </p>
-                <p className="text-[10px] text-slate-400 dark:text-white/40 truncate mt-0.5">
+                <p className="text-[10px] text-slate-400 dark:text-white/40 truncate">
                   {cert.issuer}
                   {cert.issuedAt ? (
                     <span className="text-slate-300 dark:text-white/20"> · {formatDate(cert.issuedAt)}</span>
