@@ -48,7 +48,7 @@ function PublicCertCard({
 
   return (
     <div
-      className="rounded-2xl overflow-hidden flex flex-col"
+      className="rounded-2xl flex flex-col"
       style={{
         background: "var(--surface)",
         border: "1px solid var(--border)",
@@ -56,7 +56,7 @@ function PublicCertCard({
       }}
     >
       {/* Domain accent bar */}
-      <div className="h-[3px] w-full shrink-0" style={{ background: `linear-gradient(90deg, ${accent.from}, ${accent.to})` }} />
+      <div className="h-[3px] w-full shrink-0 rounded-t-2xl" style={{ background: `linear-gradient(90deg, ${accent.from}, ${accent.to})` }} />
 
       {/* Preview */}
       {cert.imageUrl ? (
@@ -94,7 +94,7 @@ function PublicCertCard({
       )}
 
       {/* Body */}
-      <div className="p-5 flex-1 flex flex-col gap-3">
+      <div className="p-5 flex-1 flex flex-col gap-3 rounded-b-2xl">
         {/* Domain badge */}
         <span className={`inline-flex items-center gap-1.5 self-start text-[11px] font-semibold px-2.5 py-1 rounded-full border ${colors.bg} ${colors.text} ${colors.border} tracking-wide`}>
           <span className="w-1.5 h-1.5 rounded-full" style={{ background: accent.from }} />
