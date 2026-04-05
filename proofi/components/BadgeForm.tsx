@@ -28,6 +28,19 @@ interface LeetCodeBadge {
   originalId: string;
 }
 
+interface GitHubBadge {
+  title: string;
+  issuingOrganization: string;
+  description: string | null;
+  issuedAt: string | null;
+  imageUrl: string | null;
+  credentialUrl: string | null;
+  originalId: string;
+  slug: string;
+  variant: string;
+  tier: string;
+}
+
 interface Props {
   initialData: Badge | null;
   onSave: (badge: Badge) => void;
@@ -67,7 +80,7 @@ export default function BadgeForm({ initialData, onSave, onClose, initialCustomO
 
   const [customOrgs, setCustomOrgs] = useState<CustomOrg[]>(initialCustomOrgs);
   const [customDomains, setCustomDomains] = useState<CustomDomain[]>(initialCustomDomains);
-  const [importPlatform, setImportPlatform] = useState<"credly" | "leetcode">("credly");
+  const [importPlatform, setImportPlatform] = useState<"credly" | "leetcode" | "github">("credly");
 
   const [credlyUrl, setCredlyUrl] = useState("");
   const [credlyLoading, setCredlyLoading] = useState(false);
@@ -80,6 +93,14 @@ export default function BadgeForm({ initialData, onSave, onClose, initialCustomO
   const [leetcodeUsername, setLeetcodeUsername] = useState("");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [importingLeetcode, setImportingLeetcode] = useState(false);
+
+  const [githubInput, setGithubInput] = useState("");
+  const [githubLoading, setGithubLoading] = useState(false);
+  const [githubNotice, setGithubNotice] = useState<{ type: "success" | "warn"; message: string; noAchievements?: boolean } | null>(null);
+  const [githubBadges, setGithubBadges] = useState<GitHubBadge[] | null>(null);
+  const [githubUsername, setGithubUsername] = useState("");
+  const [githubSelectedIds, setGithubSelectedIds] = useState<Set<string>>(new Set());
+  const [importingGithub, setImportingGithub] = useState(false);
 
   const [filePreview, setFilePreview] = useState<string | null>(
     initialData?.imageUrl ?? null
@@ -272,6 +293,87 @@ export default function BadgeForm({ initialData, onSave, onClose, initialCustomO
       setSelectedIds(new Set());
     } else {
       setSelectedIds(new Set(leetcodeBadges.map((b) => b.originalId)));
+    }
+  };
+
+  const handleGithubFetch = async () => {
+    if (!githubInput.trim()) return;
+    setGithubLoading(true);
+    setGithubNotice(null);
+    try {
+      const res = await fetch("/api/badges/github", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ input: githubInput.trim() }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        setGithubNotice({ type: "warn", message: json.error || "Could not reach GitHub. Please try again.", noAchievements: json.noAchievements });
+        return;
+      }
+      setGithubBadges(json.badges);
+      setGithubUsername(json.username);
+      setGithubSelectedIds(new Set((json.badges as GitHubBadge[]).map((b) => b.originalId)));
+    } catch {
+      setGithubNotice({ type: "warn", message: "Could not reach GitHub. Please try again." });
+    } finally {
+      setGithubLoading(false);
+    }
+  };
+
+  const handleGithubImport = async () => {
+    if (githubSelectedIds.size === 0 || !githubBadges) return;
+    setImportingGithub(true);
+    setGithubNotice(null);
+    const toImport = githubBadges.filter((b) => githubSelectedIds.has(b.originalId));
+    try {
+      const res = await fetch("/api/badges/github/import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ badges: toImport }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        setGithubNotice({ type: "warn", message: json.error || "Import failed. Please try again." });
+        return;
+      }
+      for (const badge of (json.data ?? [])) {
+        onSave(badge);
+      }
+      if (json.imported === 0) {
+        setGithubNotice({ type: "warn", message: "All selected badges already exist in your profile." });
+        return;
+      }
+      if (json.skipped > 0) {
+        setGithubNotice({
+          type: "success",
+          message: `${json.imported} badge${json.imported !== 1 ? "s" : ""} imported. ${json.skipped} skipped (already exist).`,
+        });
+        setTimeout(() => onClose(), 2000);
+      } else {
+        onClose();
+      }
+    } catch {
+      setGithubNotice({ type: "warn", message: "Import failed. Please try again." });
+    } finally {
+      setImportingGithub(false);
+    }
+  };
+
+  const toggleGithubBadge = (id: string) => {
+    setGithubSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleGithubSelectAll = () => {
+    if (!githubBadges) return;
+    if (githubSelectedIds.size === githubBadges.length) {
+      setGithubSelectedIds(new Set());
+    } else {
+      setGithubSelectedIds(new Set(githubBadges.map((b) => b.originalId)));
     }
   };
 
@@ -593,6 +695,162 @@ export default function BadgeForm({ initialData, onSave, onClose, initialCustomO
     );
   }
 
+  // GitHub achievement picker view
+  if (githubBadges) {
+    const allSelected = githubSelectedIds.size === githubBadges.length;
+    const tierPill = (tier: string) => {
+      switch (tier) {
+        case "Bronze": return "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400";
+        case "Silver": return "bg-slate-200 text-slate-600 dark:bg-slate-500/20 dark:text-slate-300";
+        case "Gold":   return "bg-yellow-100 text-yellow-700 dark:bg-yellow-500/20 dark:text-yellow-400";
+        default:       return "bg-slate-100 text-slate-500 dark:bg-white/[0.08] dark:text-white/40";
+      }
+    };
+    return (
+      <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+        <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+        <div
+          className="relative w-full sm:max-w-lg max-h-[95vh] sm:max-h-[90vh] overflow-y-auto rounded-t-3xl sm:rounded-2xl flex flex-col"
+          style={{ background: "var(--surface)", border: "1px solid var(--border-hover)", boxShadow: "0 24px 80px rgba(0,0,0,0.35)" }}
+        >
+          {/* Header */}
+          <div className="flex items-center justify-between px-6 py-5 shrink-0" style={{ borderBottom: "1px solid var(--border)" }}>
+            <h2 className="text-base font-bold text-slate-900 dark:text-white">Import GitHub achievements</h2>
+            <button type="button" onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-xl transition-all text-slate-400 hover:text-slate-800 hover:bg-black/[0.06] dark:text-white/40 dark:hover:text-white dark:hover:bg-white/[0.08]">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+
+          <div className="p-6 space-y-4">
+            {/* Found count */}
+            <p className="text-sm font-semibold text-slate-900 dark:text-white">
+              Found {githubBadges.length} achievement{githubBadges.length !== 1 ? "s" : ""} on{" "}
+              <span className="text-violet-600 dark:text-violet-400">@{githubUsername}</span>&apos;s GitHub profile
+            </p>
+
+            {/* Date note */}
+            <p className="text-xs px-3 py-2 rounded-lg bg-slate-100 text-slate-500 dark:bg-white/[0.06] dark:text-white/45 border border-slate-200 dark:border-white/[0.08]">
+              GitHub does not provide exact achievement dates. Today&apos;s date will be used.
+            </p>
+
+            {/* Select all + count */}
+            <div className="flex items-center justify-between">
+              <button
+                type="button"
+                onClick={toggleGithubSelectAll}
+                className="text-xs font-semibold text-violet-600 dark:text-violet-400 hover:text-violet-700 dark:hover:text-violet-300 transition-colors"
+              >
+                {allSelected ? "Deselect all" : "Select all"}
+              </button>
+              <span className="text-xs text-slate-400 dark:text-white/40">
+                {githubSelectedIds.size} of {githubBadges.length} selected
+              </span>
+            </div>
+
+            {/* Scrollable badge list */}
+            <div className="overflow-y-auto rounded-xl" style={{ maxHeight: 280, border: "1px solid var(--border)" }}>
+              <div className="grid grid-cols-1 gap-px" style={{ background: "var(--border)" }}>
+                {githubBadges.map((badge) => {
+                  const selected = githubSelectedIds.has(badge.originalId);
+                  return (
+                    <button
+                      key={badge.originalId}
+                      type="button"
+                      onClick={() => toggleGithubBadge(badge.originalId)}
+                      className="flex items-start gap-3 px-4 py-3 text-left transition-all"
+                      style={{ background: selected ? "rgba(124,58,237,0.07)" : "var(--surface)" }}
+                    >
+                      {/* Checkbox */}
+                      <div
+                        className="w-4 h-4 rounded flex items-center justify-center shrink-0 mt-0.5 transition-all"
+                        style={{
+                          background: selected ? "#7c3aed" : "transparent",
+                          border: selected ? "1px solid #7c3aed" : "1px solid var(--border-hover)",
+                        }}
+                      >
+                        {selected && (
+                          <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                          </svg>
+                        )}
+                      </div>
+
+                      {/* Icon */}
+                      {badge.imageUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={badge.imageUrl} alt={badge.title} className="w-9 h-9 object-contain shrink-0" />
+                      ) : (
+                        <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 text-xs font-black text-white" style={{ background: "linear-gradient(135deg, #24292f, #57606a)" }}>
+                          GH
+                        </div>
+                      )}
+
+                      {/* Text */}
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="text-sm font-semibold text-slate-900 dark:text-white">{badge.title}</p>
+                          <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${tierPill(badge.tier)}`}>
+                            {badge.tier}
+                          </span>
+                        </div>
+                        {badge.description && (
+                          <p className="text-[11px] text-slate-400 dark:text-white/35 mt-0.5 line-clamp-2">{badge.description}</p>
+                        )}
+                        <p className="text-[11px] text-slate-400 dark:text-white/35 mt-0.5">Date unknown</p>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Notice */}
+            {githubNotice && (
+              <p className={`text-xs px-3 py-2 rounded-lg ${githubNotice.type === "success"
+                ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
+                : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20"}`}>
+                {githubNotice.message}
+              </p>
+            )}
+
+            {/* Actions */}
+            <div className="flex gap-3 pt-1">
+              <button
+                type="button"
+                onClick={handleGithubImport}
+                disabled={githubSelectedIds.size === 0 || importingGithub}
+                className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{
+                  background: "linear-gradient(135deg, #7c3aed, #4f46e5)",
+                  boxShadow: githubSelectedIds.size > 0 && !importingGithub ? "0 4px 20px rgba(124,58,237,0.35)" : undefined,
+                }}
+              >
+                {importingGithub && (
+                  <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                  </svg>
+                )}
+                {importingGithub
+                  ? "Importing… this may take a moment"
+                  : `Import ${githubSelectedIds.size > 0 ? `${githubSelectedIds.size} ` : ""}selected achievement${githubSelectedIds.size !== 1 ? "s" : ""}`}
+              </button>
+              <button
+                type="button"
+                onClick={() => { setGithubBadges(null); setGithubNotice(null); setGithubSelectedIds(new Set()); }}
+                className="px-5 py-3 rounded-xl text-sm font-semibold transition-all text-slate-500 bg-black/[0.04] border border-black/[0.06] hover:bg-black/[0.08] dark:text-white/55 dark:bg-white/[0.05] dark:border-white/[0.09] dark:hover:bg-white/[0.10]"
+              >
+                Go back
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
@@ -624,10 +882,10 @@ export default function BadgeForm({ initialData, onSave, onClose, initialCustomO
             {/* Platform toggle */}
             <div>
               <p className="text-xs font-semibold uppercase tracking-wider mb-2 text-slate-500 dark:text-white/50">Import from</p>
-              <div className="flex gap-2">
+              <div className="flex gap-2 flex-wrap">
                 <button
                   type="button"
-                  onClick={() => { setImportPlatform("credly"); setLeetcodeNotice(null); }}
+                  onClick={() => { setImportPlatform("credly"); setLeetcodeNotice(null); setGithubNotice(null); }}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
                   style={importPlatform === "credly"
                     ? { background: "linear-gradient(135deg, #7c3aed, #4f46e5)", color: "#fff", boxShadow: "0 2px 8px rgba(124,58,237,0.3)" }
@@ -637,13 +895,23 @@ export default function BadgeForm({ initialData, onSave, onClose, initialCustomO
                 </button>
                 <button
                   type="button"
-                  onClick={() => { setImportPlatform("leetcode"); setCredlyNotice(null); }}
+                  onClick={() => { setImportPlatform("leetcode"); setCredlyNotice(null); setGithubNotice(null); }}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
                   style={importPlatform === "leetcode"
                     ? { background: "linear-gradient(135deg, #7c3aed, #4f46e5)", color: "#fff", boxShadow: "0 2px 8px rgba(124,58,237,0.3)" }
                     : { background: "transparent", color: "var(--foreground)", border: "1px solid var(--border-hover)", opacity: 0.7 }}
                 >
                   LeetCode
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setImportPlatform("github"); setCredlyNotice(null); setLeetcodeNotice(null); }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
+                  style={importPlatform === "github"
+                    ? { background: "linear-gradient(135deg, #7c3aed, #4f46e5)", color: "#fff", boxShadow: "0 2px 8px rgba(124,58,237,0.3)" }
+                    : { background: "transparent", color: "var(--foreground)", border: "1px solid var(--border-hover)", opacity: 0.7 }}
+                >
+                  GitHub
                 </button>
               </div>
             </div>
@@ -723,6 +991,54 @@ export default function BadgeForm({ initialData, onSave, onClose, initialCustomO
                     : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20"}`}>
                     {leetcodeNotice.message}
                   </p>
+                )}
+              </>
+            )}
+
+            {/* GitHub input */}
+            {importPlatform === "github" && (
+              <>
+                <p className="text-xs text-slate-500 dark:text-white/50">Enter your GitHub username or profile URL to fetch your achievements</p>
+                <div className="flex gap-2">
+                  <input
+                    value={githubInput}
+                    onChange={(e) => setGithubInput(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleGithubFetch(); } }}
+                    placeholder="GitHub username or profile URL"
+                    className="flex-1 rounded-xl px-3 py-2.5 text-sm outline-none transition-all
+                      bg-black/[0.04] dark:bg-white/[0.06] border border-black/[0.08] dark:border-white/[0.11]
+                      text-slate-800 dark:text-white placeholder-slate-400 dark:placeholder-white/35
+                      focus:border-violet-500/40 focus:ring-1 focus:ring-violet-500/20"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleGithubFetch}
+                    disabled={githubLoading || !githubInput.trim()}
+                    className="shrink-0 flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-semibold text-white transition-all disabled:opacity-60"
+                    style={{ background: "linear-gradient(135deg, #7c3aed, #4f46e5)" }}
+                  >
+                    {githubLoading ? (
+                      <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                      </svg>
+                    ) : "Fetch achievements"}
+                  </button>
+                </div>
+                {githubNotice && (
+                  <>
+                    <p className={`text-xs px-3 py-2 rounded-lg ${githubNotice.type === "success"
+                      ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
+                      : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20"}`}>
+                      {githubNotice.message}
+                    </p>
+                    {githubNotice.noAchievements && (
+                      <p className="text-xs px-3 py-2 rounded-lg bg-slate-100 text-slate-500 dark:bg-white/[0.06] dark:text-white/45 border border-slate-200 dark:border-white/[0.08]">
+                        Make sure your GitHub achievements are set to public:{" "}
+                        <span className="font-semibold">GitHub → Settings → Profile → check &quot;Show Achievements on my profile&quot;</span>
+                      </p>
+                    )}
+                  </>
                 )}
               </>
             )}
