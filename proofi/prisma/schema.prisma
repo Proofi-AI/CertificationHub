@@ -50,6 +50,7 @@ model Certificate {
   description  String?
   imageUrl     String?
   isPublic     Boolean   @default(true)
+  isFeatured   Boolean   @default(false)
   verifyStatus String    @default("self_reported")
   sortOrder    Int?
   createdAt    DateTime  @default(now())

@@ -128,6 +128,15 @@ export default function CertificatesPanel({
     if (!res.ok) update((prev) => prev.map((c) => (c.id === id ? { ...c, isPublic: !isPublic } : c)));
   };
 
+  const handleFeatureToggle = async (id: string, isFeatured: boolean) => {
+    update((prev) => prev.map((c) => (c.id === id ? { ...c, isFeatured } : c)));
+    await fetch(`/api/certificates/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ isFeatured }),
+    });
+  };
+
   /* ── Sort ─────────────────────────────────────────────────────────────── */
 
   const handleSortChange = (s: SortStrategy) => {
@@ -246,6 +255,7 @@ export default function CertificatesPanel({
 
   const totalCount = certificates.length;
   const publicCount = certificates.filter((c) => c.isPublic).length;
+  const featuredCount = useMemo(() => certificates.filter((c) => c.isFeatured).length, [certificates]);
   const privateCount = totalCount - publicCount;
   const domainCount = useMemo(() => new Set(certificates.map((c) => c.domain)).size, [certificates]);
   const allDomains = useMemo(() => ["All", ...Array.from(new Set(certificates.map((c) => c.domain)))], [certificates]);
@@ -543,6 +553,8 @@ export default function CertificatesPanel({
               onEdit={openEdit}
               onDelete={handleDelete}
               onVisibilityToggle={handleVisibilityToggle}
+              onFeatureToggle={handleFeatureToggle}
+              featuredCount={featuredCount}
               isDraggable={sortStrategy === "custom" && !isFiltered}
               onDragStart={handleDragStart}
               onDragOver={handleDragOver}

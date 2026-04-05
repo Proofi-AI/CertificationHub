@@ -103,6 +103,14 @@ export default function BadgeWall({ badges, onBadgeClick, maxVisible = 24 }: Pro
           View all {badges.length} badges
         </button>
       )}
+      {hasMore && showAll && (
+        <button
+          onClick={() => setShowAll(false)}
+          className="mt-5 mx-auto flex items-center gap-2 text-sm font-semibold py-2.5 px-6 rounded-xl transition-all text-violet-600 dark:text-violet-400 bg-violet-500/5 border border-violet-500/15 hover:bg-violet-500/10"
+        >
+          View less
+        </button>
+      )}
     </div>
   );
 }

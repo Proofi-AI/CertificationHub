@@ -9,6 +9,7 @@ import CertificateLightbox from "@/components/CertificateLightbox";
 import BadgeWall from "@/components/BadgeWall";
 import BadgeTrophyShelf from "@/components/BadgeTrophyShelf";
 import BadgeLightbox from "@/components/BadgeLightbox";
+import CertificatePinnedShelf from "@/components/CertificatePinnedShelf";
 
 type PublicUser = Omit<User, "email"> & { certificates: Certificate[]; badges: Badge[] };
 
@@ -363,11 +364,21 @@ export default function PublicProfile({ profile }: Props) {
               {filteredBadges.length > 0 && (
                 <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-5">Certificates</h2>
               )}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                {filteredCerts.map((cert) => (
-                  <PublicCertCard key={cert.id} cert={cert} onImageClick={setLightboxCert} />
-                ))}
-              </div>
+
+              {/* Pinned shelf — featured certificates */}
+              <CertificatePinnedShelf
+                certificates={filteredCerts}
+                onCertClick={setLightboxCert}
+              />
+
+              {/* Certificate grid — non-featured only */}
+              {filteredCerts.filter((c) => !c.isFeatured).length > 0 && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                  {filteredCerts.filter((c) => !c.isFeatured).map((cert) => (
+                    <PublicCertCard key={cert.id} cert={cert} onImageClick={setLightboxCert} />
+                  ))}
+                </div>
+              )}
             </>
           )}
 

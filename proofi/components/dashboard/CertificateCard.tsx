@@ -12,6 +12,8 @@ interface Props {
   onEdit: (cert: Certificate) => void;
   onDelete: (id: string) => void;
   onVisibilityToggle: (id: string, isPublic: boolean) => void;
+  onFeatureToggle: (id: string, isFeatured: boolean) => void;
+  featuredCount: number;
   isDraggable?: boolean;
   onDragStart?: (e: React.DragEvent, id: string) => void;
   onDragOver?: (e: React.DragEvent, id: string) => void;
@@ -25,7 +27,7 @@ function formatDate(date: Date | string | null): string {
 }
 
 export default function CertificateCard({
-  certificate, onEdit, onDelete, onVisibilityToggle,
+  certificate, onEdit, onDelete, onVisibilityToggle, onFeatureToggle, featuredCount,
   isDraggable = false,
   onDragStart, onDragOver, onDrop,
   dragOverId,
@@ -239,6 +241,26 @@ export default function CertificateCard({
 
           {/* Actions */}
           <div className="pt-3 flex items-center gap-2" style={{ borderTop: "1px solid var(--border)" }}>
+            <button
+              onClick={() => {
+                if (!certificate.isFeatured && featuredCount >= 3) {
+                  alert("You can only pin up to 3 certificates. Unpin one first.");
+                  return;
+                }
+                onFeatureToggle(certificate.id, !certificate.isFeatured);
+              }}
+              title={certificate.isFeatured ? "Unpin from profile" : "Pin to profile"}
+              className={`flex items-center justify-center w-10 h-[38px] rounded-xl transition-all duration-200 ${
+                certificate.isFeatured
+                  ? "text-amber-500 bg-amber-500/10 border border-amber-500/25 hover:bg-amber-500/15"
+                  : "text-slate-400 hover:text-amber-500 bg-black/[0.04] hover:bg-amber-500/10 border border-black/[0.06] hover:border-amber-500/20 dark:text-white/40 dark:bg-white/[0.05] dark:border-white/[0.09] dark:hover:bg-amber-500/10 dark:hover:border-amber-500/20"
+              }`}
+            >
+              <svg className="w-3.5 h-3.5" fill={certificate.isFeatured ? "currentColor" : "none"} viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z" />
+              </svg>
+            </button>
+
             <button
               onClick={() => onEdit(certificate)}
               className="flex-1 flex items-center justify-center gap-2 text-xs font-semibold py-2.5 px-3 rounded-xl transition-all duration-200
