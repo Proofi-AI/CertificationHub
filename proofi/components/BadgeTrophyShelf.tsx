@@ -53,7 +53,6 @@ export default function BadgeTrophyShelf({ badges, onBadgeClick }: Props) {
               {/* Badge image with amber ring */}
               <div
                 className="w-16 h-16 rounded-xl overflow-hidden shrink-0 flex items-center justify-center"
-                style={{ boxShadow: "0 0 0 1.5px rgba(245,158,11,0.55)" }}
               >
                 {badge.imageUrl && !isPdf ? (
                   // eslint-disable-next-line @next/next/no-img-element
