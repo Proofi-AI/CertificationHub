@@ -56,7 +56,7 @@ export default function CertificatePinnedShelf({ certificates, onCertClick }: Pr
 
               {/* Certificate preview */}
               <div
-                className="w-full h-20 relative overflow-hidden shrink-0"
+                className="w-full h-36 relative overflow-hidden shrink-0"
                 style={{ background: "var(--surface-alt)", borderBottom: "1px solid var(--border)" }}
               >
                 {cert.imageUrl && !isPdf ? (
