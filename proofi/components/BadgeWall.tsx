@@ -76,16 +76,26 @@ function BadgeTile({
   );
 }
 
-export default function BadgeWall({ badges, onBadgeClick, maxVisible = 24 }: Props) {
+// 2 rows × columns at each breakpoint: 5→10, 6→12, 7→14, 8→16
+const TWO_ROW_LIMITS = { base: 10, sm: 12, md: 14, lg: 16 };
+
+export default function BadgeWall({ badges, onBadgeClick }: Omit<Props, "maxVisible">) {
   const [showAll, setShowAll] = useState(false);
-  const visible = showAll ? badges : badges.slice(0, maxVisible);
-  const hasMore = badges.length > maxVisible;
+  // Show button when there are more badges than the smallest 2-row limit (mobile)
+  const hasMore = badges.length > TWO_ROW_LIMITS.base;
 
   return (
     <div>
-      {/* Responsive square grid */}
-      <div className="grid grid-cols-5 sm:grid-cols-6 md:grid-cols-7 lg:grid-cols-8 gap-3">
-        {visible.map((badge, i) => (
+      {/* Responsive square grid — when collapsed, nth-child CSS hides items beyond 2 rows at each breakpoint */}
+      <div
+        className={
+          "grid grid-cols-5 sm:grid-cols-6 md:grid-cols-7 lg:grid-cols-8 gap-3" +
+          (!showAll
+            ? " [&>*:nth-child(n+11)]:hidden sm:[&>*:nth-child(n+11)]:block sm:[&>*:nth-child(n+13)]:hidden md:[&>*:nth-child(n+13)]:block md:[&>*:nth-child(n+15)]:hidden lg:[&>*:nth-child(n+15)]:block lg:[&>*:nth-child(n+17)]:hidden"
+            : "")
+        }
+      >
+        {badges.map((badge, i) => (
           <BadgeTile
             key={badge.id}
             badge={badge}
