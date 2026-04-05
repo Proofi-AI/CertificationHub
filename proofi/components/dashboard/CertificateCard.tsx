@@ -147,9 +147,9 @@ export default function CertificateCard({
           {/* Domain badge + visibility toggle */}
           <div className="flex items-start justify-between gap-2">
             <div className="flex flex-wrap items-center gap-1.5 min-w-0 flex-1">
-              <span className={`inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full border ${colors.bg} ${colors.text} ${colors.border} tracking-wide shrink-0`}>
-                <span className="w-1.5 h-1.5 rounded-full" style={{ background: accent.from }} />
-                {certificate.domain}
+              <span className={`inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full border ${colors.bg} ${colors.text} ${colors.border} tracking-wide min-w-0 max-w-full`}>
+                <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: accent.from }} />
+                <span className="truncate">{certificate.domain}</span>
               </span>
               {certificate.verifyStatus === "ai_verified" && (
                 <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0"

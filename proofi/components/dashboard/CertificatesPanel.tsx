@@ -539,7 +539,7 @@ export default function CertificatesPanel({
       {/* Grid */}
       {sortedAndFiltered.length > 0 && (
         <div
-          className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5"
+          className="grid grid-cols-2 sm:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-5"
           onDragLeave={() => {
             // Debounce dragLeave to avoid flicker
             if (dragCancelTimer.current) clearTimeout(dragCancelTimer.current);
