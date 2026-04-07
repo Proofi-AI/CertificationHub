@@ -10,6 +10,7 @@ import BadgeWall from "@/components/BadgeWall";
 import BadgeTrophyShelf from "@/components/BadgeTrophyShelf";
 import BadgeLightbox from "@/components/BadgeLightbox";
 import CertificatePinnedShelf from "@/components/CertificatePinnedShelf";
+import { buildOrgColorMap } from "@/lib/orgColors";
 
 type PublicUser = Omit<User, "email"> & { certificates: Certificate[]; badges: Badge[] };
 
@@ -180,6 +181,7 @@ export default function PublicProfile({ profile }: Props) {
   const [lightboxCert, setLightboxCert] = useState<Certificate | null>(null);
   const [lightboxBadge, setLightboxBadge] = useState<Badge | null>(null);
   const [activeTab, setActiveTab] = useState("All");
+  const [activeBadgeOrg, setActiveBadgeOrg] = useState<string>("All");
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
@@ -188,6 +190,9 @@ export default function PublicProfile({ profile }: Props) {
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
+
+  // Reset org tab when domain tab changes
+  useEffect(() => { setActiveBadgeOrg("All"); }, [activeTab]);
 
   const publicCerts = profile.certificates.filter((c) => c.isPublic);
   const publicBadges = profile.badges?.filter((b) => b.isPublic) ?? [];
@@ -199,6 +204,41 @@ export default function PublicProfile({ profile }: Props) {
 
   const filteredCerts = activeTab === "All" ? publicCerts : publicCerts.filter((c) => c.domain === activeTab);
   const filteredBadges = activeTab === "All" ? publicBadges : publicBadges.filter((b) => b.domain === activeTab);
+
+  // Parse badgeGroupOrder from profile
+  const badgeGroupOrder: string[] = (() => {
+    try { return JSON.parse((profile as { badgeGroupOrder?: string }).badgeGroupOrder ?? "[]"); } catch { return []; }
+  })();
+
+  // Orgs in preferred order (from dashboard setting), filtered to only those with public non-featured badges
+  const orgsInOrder = badgeGroupOrder.length > 0
+    ? [
+        ...badgeGroupOrder.filter(org => filteredBadges.some(b => !b.isFeatured && b.issuingOrganization === org)),
+        ...Array.from(new Set(filteredBadges.filter(b => !b.isFeatured).map(b => b.issuingOrganization)))
+          .filter(org => !badgeGroupOrder.includes(org)),
+      ]
+    : Array.from(new Set(filteredBadges.filter(b => !b.isFeatured).map(b => b.issuingOrganization)));
+
+  // Unique color per org — index-based so no two orgs share the same color
+  const orgColorMap = buildOrgColorMap(orgsInOrder);
+
+  const nonFeaturedBadges = filteredBadges.filter(b => !b.isFeatured);
+
+  // Sort by org group order + sortOrder within org
+  const sortedNonFeaturedBadges = badgeGroupOrder.length > 0
+    ? [...nonFeaturedBadges].sort((a, b) => {
+        const aIdx = badgeGroupOrder.indexOf(a.issuingOrganization);
+        const bIdx = badgeGroupOrder.indexOf(b.issuingOrganization);
+        const aOrd = aIdx === -1 ? 9999 : aIdx;
+        const bOrd = bIdx === -1 ? 9999 : bIdx;
+        if (aOrd !== bOrd) return aOrd - bOrd;
+        return (a.sortOrder ?? 9999) - (b.sortOrder ?? 9999);
+      })
+    : nonFeaturedBadges;
+
+  const badgesForWall = activeBadgeOrg === "All"
+    ? sortedNonFeaturedBadges
+    : sortedNonFeaturedBadges.filter(b => b.issuingOrganization === activeBadgeOrg);
 
   const initials = (profile.name || "U")
     .split(" ")
@@ -344,10 +384,66 @@ export default function PublicProfile({ profile }: Props) {
                 onBadgeClick={setLightboxBadge}
               />
 
+              {/* Org filter pills — only shown when user has set a custom org order with 2+ orgs */}
+              {orgsInOrder.length > 1 && (
+                <div className="flex items-center gap-2 overflow-x-auto pb-1 mb-4 -mx-1 px-1 scrollbar-hide">
+                  <button
+                    onClick={() => setActiveBadgeOrg("All")}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap border transition-all shrink-0 ${
+                      activeBadgeOrg === "All"
+                        ? "bg-violet-500/10 text-violet-600 border-violet-500/30 dark:bg-violet-600/20 dark:text-violet-300 dark:border-violet-500/40"
+                        : "text-slate-500 border-black/[0.08] bg-black/[0.03] hover:border-black/[0.14] dark:text-white/50 dark:border-white/[0.10] dark:bg-white/[0.03] dark:hover:border-white/[0.18]"
+                    }`}
+                  >
+                    All
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${activeBadgeOrg === "All" ? "bg-violet-500/15 text-violet-600 dark:text-violet-300" : "bg-black/[0.06] text-slate-400 dark:bg-white/[0.08] dark:text-white/40"}`}>
+                      {sortedNonFeaturedBadges.length}
+                    </span>
+                  </button>
+                  {orgsInOrder.map(org => {
+                    const count = sortedNonFeaturedBadges.filter(b => b.issuingOrganization === org).length;
+                    const orgInitials = org.split(" ").map((w: string) => w[0]).join("").toUpperCase().slice(0, 2);
+                    const isActive = activeBadgeOrg === org;
+                    const c = orgColorMap.get(org) ?? { border: "#7c3aed", pill: "rgba(124,58,237,0.12)", pillText: "#7c3aed", pillBorder: "rgba(124,58,237,0.40)" };
+                    return (
+                      <button
+                        key={org}
+                        onClick={() => setActiveBadgeOrg(org)}
+                        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap border transition-all shrink-0"
+                        style={isActive ? {
+                          background: c.pill,
+                          color: c.pillText,
+                          borderColor: c.pillBorder,
+                        } : {
+                          background: "transparent",
+                          color: "var(--foreground-muted, #64748b)",
+                          borderColor: "var(--border)",
+                        }}
+                      >
+                        <span
+                          className="w-4 h-4 rounded-full text-[7px] font-black text-white flex items-center justify-center shrink-0"
+                          style={{ background: `linear-gradient(135deg, ${c.border}, ${c.border}cc)` }}
+                        >
+                          {orgInitials}
+                        </span>
+                        {org}
+                        <span
+                          className="text-[10px] px-1.5 py-0.5 rounded-full font-bold"
+                          style={isActive ? { background: c.pill, color: c.pillText } : { background: "var(--border)", color: "inherit", opacity: 0.7 }}
+                        >
+                          {count}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
               {/* Hex badge wall */}
               <BadgeWall
-                badges={filteredBadges.filter((b) => !b.isFeatured)}
+                badges={badgesForWall}
                 onBadgeClick={setLightboxBadge}
+                orgColorMap={orgColorMap}
               />
             </div>
           )}

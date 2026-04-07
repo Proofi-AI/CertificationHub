@@ -1,26 +1,28 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import type { Badge } from "@prisma/client";
+import { buildOrgColorMap, type OrgColor } from "@/lib/orgColors";
 
 interface Props {
   badges: Badge[];
   onBadgeClick: (badge: Badge) => void;
   maxVisible?: number;
+  // Optional: pass a pre-built color map so badge borders match external pill colors exactly
+  orgColorMap?: Map<string, OrgColor>;
 }
 
-function formatDate(date: Date | string | null): string {
-  if (!date) return "";
-  return new Date(date).toLocaleDateString("en-US", { month: "short", year: "numeric", timeZone: "UTC" });
-}
+const FALLBACK_COLOR: OrgColor = { border: "#7c3aed", pill: "rgba(124,58,237,0.12)", pillText: "#7c3aed", pillBorder: "rgba(124,58,237,0.40)" };
 
 function BadgeTile({
   badge,
   index,
+  color,
   onClick,
 }: {
   badge: Badge;
   index: number;
+  color: OrgColor;
   onClick: () => void;
 }) {
   const orgInitials = (badge.issuingOrganization || "?")
@@ -37,10 +39,10 @@ function BadgeTile({
       <button
         type="button"
         onClick={onClick}
-        className="w-full aspect-square rounded-2xl overflow-hidden flex items-center justify-center cursor-pointer"
+        className="w-full aspect-square rounded-2xl overflow-hidden flex items-center justify-center cursor-pointer transition-all duration-200"
         style={{
           background: "var(--surface)",
-          border: "1px solid var(--border)",
+          border: `1.5px solid ${color.border}55`,
           boxShadow: "var(--card-shadow)",
         }}
       >
@@ -54,13 +56,12 @@ function BadgeTile({
         ) : (
           <div
             className="w-full h-full flex items-center justify-center text-sm font-black text-white"
-            style={{ background: "linear-gradient(135deg, #7c3aed, #4f46e5)" }}
+            style={{ background: `linear-gradient(135deg, ${color.border}, ${color.border}bb)` }}
           >
             {orgInitials}
           </div>
         )}
 
-        {/* Verified indicator */}
         {badge.credentialUrl && (
           <div
             className="absolute bottom-1.5 right-1.5 w-5 h-5 rounded-full flex items-center justify-center"
@@ -79,14 +80,22 @@ function BadgeTile({
 // 2 rows × columns at each breakpoint: 5→10, 6→12, 7→14, 8→16
 const TWO_ROW_LIMITS = { base: 10, sm: 12, md: 14, lg: 16 };
 
-export default function BadgeWall({ badges, onBadgeClick }: Omit<Props, "maxVisible">) {
+export default function BadgeWall({ badges, onBadgeClick, orgColorMap: externalColorMap }: Omit<Props, "maxVisible">) {
   const [showAll, setShowAll] = useState(false);
-  // Show button when there are more badges than the smallest 2-row limit (mobile)
   const hasMore = badges.length > TWO_ROW_LIMITS.base;
+
+  // Use the external map when provided (ensures pill colors match border colors).
+  // Fall back to building from the badge list itself when used standalone.
+  const internalColorMap = useMemo(() => {
+    if (externalColorMap) return null;
+    const orgs = Array.from(new Set(badges.map(b => b.issuingOrganization)));
+    return buildOrgColorMap(orgs);
+  }, [badges, externalColorMap]);
+
+  const colorMap = externalColorMap ?? internalColorMap!;
 
   return (
     <div>
-      {/* Responsive square grid — when collapsed, nth-child CSS hides items beyond 2 rows at each breakpoint */}
       <div
         className={
           "grid grid-cols-5 sm:grid-cols-6 md:grid-cols-7 lg:grid-cols-8 gap-3" +
@@ -100,6 +109,7 @@ export default function BadgeWall({ badges, onBadgeClick }: Omit<Props, "maxVisi
             key={badge.id}
             badge={badge}
             index={i}
+            color={colorMap.get(badge.issuingOrganization) ?? FALLBACK_COLOR}
             onClick={() => onBadgeClick(badge)}
           />
         ))}

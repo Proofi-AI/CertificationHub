@@ -21,6 +21,7 @@ model User {
   profileViews        Int                  @default(0)
   sortStrategy        String               @default("recent")
   badgeSortStrategy   String               @default("recent")
+  badgeGroupOrder     String               @default("[]")
   securityQ1          String?
   securityA1          String?
   securityQ2          String?

@@ -48,6 +48,9 @@ export default async function DashboardPage() {
     case "custom":
       badges.sort((a, b) => (a.sortOrder ?? 9999) - (b.sortOrder ?? 9999));
       break;
+    case "custom_org":
+      badges.sort((a, b) => (a.sortOrder ?? 9999) - (b.sortOrder ?? 9999));
+      break;
     // "recent" already handled by orderBy above
   }
 

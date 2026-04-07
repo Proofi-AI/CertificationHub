@@ -14,11 +14,12 @@ interface Props {
   initialBadges: Badge[];
   onBadgesChange?: (badges: Badge[]) => void;
   initialSortStrategy?: SortOption;
+  initialBadgeGroupOrder?: string;
   externalEdit?: Badge | null;
   onExternalEditDone?: () => void;
 }
 
-type SortOption = "recent" | "oldest" | "alphabetical" | "organization" | "custom";
+type SortOption = "recent" | "oldest" | "alphabetical" | "organization" | "custom" | "custom_org";
 
 function sortBadges(badges: Badge[], sort: SortOption): Badge[] {
   const arr = [...badges];
@@ -33,20 +34,23 @@ function sortBadges(badges: Badge[], sort: SortOption): Badge[] {
       return arr.sort((a, b) => a.issuingOrganization.localeCompare(b.issuingOrganization));
     case "custom":
       return arr.sort((a, b) => (a.sortOrder ?? 9999) - (b.sortOrder ?? 9999));
+    case "custom_org":
+      return arr.sort((a, b) => (a.sortOrder ?? 9999) - (b.sortOrder ?? 9999));
     default:
       return arr;
   }
 }
 
 const SORT_OPTIONS: { value: SortOption; label: string; desc: string }[] = [
-  { value: "recent",       label: "Most recent",   desc: "Newest badges first" },
-  { value: "oldest",       label: "Oldest first",  desc: "Earliest badges first" },
-  { value: "alphabetical", label: "Alphabetical",  desc: "A – Z by badge title" },
-  { value: "organization", label: "Organization",  desc: "Grouped by issuing organization" },
-  { value: "custom",       label: "Custom order",  desc: "Drag to reorder manually" },
+  { value: "recent",       label: "Most recent",    desc: "Newest badges first" },
+  { value: "oldest",       label: "Oldest first",   desc: "Earliest badges first" },
+  { value: "alphabetical", label: "Alphabetical",   desc: "A – Z by badge title" },
+  { value: "organization", label: "Organization",   desc: "Grouped by issuing organization" },
+  { value: "custom",       label: "Custom order",   desc: "Drag to reorder manually" },
+  { value: "custom_org",   label: "By Organization", desc: "Group by org, drag to reorder" },
 ];
 
-export default function BadgesPanel({ initialBadges, onBadgesChange, initialSortStrategy, externalEdit, onExternalEditDone }: Props) {
+export default function BadgesPanel({ initialBadges, onBadgesChange, initialSortStrategy, initialBadgeGroupOrder, externalEdit, onExternalEditDone }: Props) {
   const [badges, setBadges] = useState<Badge[]>(initialBadges);
   const [modalOpen, setModalOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<Badge | null>(null);
@@ -65,6 +69,15 @@ export default function BadgesPanel({ initialBadges, onBadgesChange, initialSort
   const badgesRef = useRef<Badge[]>(initialBadges);
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [searchInput, setSearchInput] = useState("");
+
+  // custom_org state
+  const [orgGroupOrder, setOrgGroupOrder] = useState<string[]>(() => {
+    try { return JSON.parse(initialBadgeGroupOrder ?? "[]"); } catch { return []; }
+  });
+  const [draggedOrg, setDraggedOrg] = useState<string | null>(null);
+  const [dragOverOrg, setDragOverOrg] = useState<string | null>(null);
+  const [draggedBadgeInOrg, setDraggedBadgeInOrg] = useState<string | null>(null);
+  const [dragOverBadgeInOrg, setDragOverBadgeInOrg] = useState<string | null>(null);
 
   const handleSearchInput = (val: string) => {
     setSearchInput(val);
@@ -169,7 +182,65 @@ export default function BadgesPanel({ initialBadges, onBadgesChange, initialSort
     }
   };
 
-  /* ── Drag & drop ─────────────────────────────────────────────────────── */
+  const handleSortSaveWithOrder = async () => {
+    setSortSaving(true);
+    setSortError(null);
+    try {
+      const sorted = sortBadges(badgesRef.current, "custom");
+      const orderPayload = sorted.map((b, i) => ({ id: b.id, sortOrder: i }));
+      const [r1, r2] = await Promise.all([
+        fetch("/api/profile", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ badgeSortStrategy: "custom" }),
+        }),
+        fetch("/api/badges/reorder", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ order: orderPayload }),
+        }),
+      ]);
+      if (!r1.ok || !r2.ok) throw new Error("Failed to save");
+      setSortDirty(false);
+    } catch (e) {
+      setSortError(`Failed to save: ${e instanceof Error ? e.message : e}`);
+    } finally {
+      setSortSaving(false);
+    }
+  };
+
+  const handleSortSaveWithOrgOrder = async () => {
+    setSortSaving(true);
+    setSortError(null);
+    try {
+      // Compute sortOrder per badge: position within its org group
+      const orderPayload: { id: string; sortOrder: number }[] = [];
+      for (const org of allOrgsForGroups) {
+        const orgBadges = badgesByOrg[org];
+        orgBadges.forEach((b, i) => orderPayload.push({ id: b.id, sortOrder: i }));
+      }
+      const [r1, r2] = await Promise.all([
+        fetch("/api/profile", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ badgeSortStrategy: "custom_org", badgeGroupOrder: allOrgsForGroups }),
+        }),
+        fetch("/api/badges/reorder", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ order: orderPayload }),
+        }),
+      ]);
+      if (!r1.ok || !r2.ok) throw new Error("Failed to save");
+      setSortDirty(false);
+    } catch (e) {
+      setSortError(`Failed to save: ${e instanceof Error ? e.message : e}`);
+    } finally {
+      setSortSaving(false);
+    }
+  };
+
+  /* ── Drag & drop (custom flat order) ─────────────────────────────────── */
 
   const handleDragStart = (e: React.DragEvent, id: string) => {
     setDraggedId(id);
@@ -206,6 +277,65 @@ export default function BadgesPanel({ initialBadges, onBadgesChange, initialSort
 
   const handleDragEnd = () => { setDraggedId(null); setDragOverId(null); };
 
+  /* ── Drag & drop (custom_org) ─────────────────────────────────────────── */
+
+  const handleOrgDragStart = (e: React.DragEvent, org: string) => {
+    setDraggedOrg(org);
+    e.dataTransfer.effectAllowed = "move";
+  };
+  const handleOrgDragOver = (e: React.DragEvent, org: string) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    if (org !== dragOverOrg) setDragOverOrg(org);
+  };
+  const handleOrgDrop = (e: React.DragEvent, targetOrg: string) => {
+    e.preventDefault();
+    if (!draggedOrg || draggedOrg === targetOrg) { setDraggedOrg(null); setDragOverOrg(null); return; }
+    setOrgGroupOrder(() => {
+      const current = allOrgsForGroups;
+      const fromIdx = current.indexOf(draggedOrg);
+      const toIdx = current.indexOf(targetOrg);
+      const reordered = [...current];
+      const [removed] = reordered.splice(fromIdx, 1);
+      reordered.splice(toIdx, 0, removed);
+      return reordered;
+    });
+    setSortDirty(true);
+    setDraggedOrg(null);
+    setDragOverOrg(null);
+  };
+
+  const handleBadgeInOrgDragStart = (e: React.DragEvent, badgeId: string) => {
+    setDraggedBadgeInOrg(badgeId);
+    e.dataTransfer.effectAllowed = "move";
+  };
+  const handleBadgeInOrgDragOver = (e: React.DragEvent, badgeId: string) => {
+    e.preventDefault();
+    if (badgeId !== dragOverBadgeInOrg) setDragOverBadgeInOrg(badgeId);
+  };
+  const handleBadgeInOrgDrop = (e: React.DragEvent, targetId: string, org: string) => {
+    e.preventDefault();
+    if (!draggedBadgeInOrg || draggedBadgeInOrg === targetId) {
+      setDraggedBadgeInOrg(null); setDragOverBadgeInOrg(null); return;
+    }
+    const orgBadges = badgesByOrg[org];
+    const fromIdx = orgBadges.findIndex(b => b.id === draggedBadgeInOrg);
+    const toIdx = orgBadges.findIndex(b => b.id === targetId);
+    if (fromIdx === -1 || toIdx === -1) { setDraggedBadgeInOrg(null); setDragOverBadgeInOrg(null); return; }
+    const reordered = [...orgBadges];
+    const [removed] = reordered.splice(fromIdx, 1);
+    reordered.splice(toIdx, 0, removed);
+    // Update sortOrder for badges in this org
+    update(prev => prev.map(b => {
+      const idx = reordered.findIndex(r => r.id === b.id);
+      if (idx === -1) return b;
+      return { ...b, sortOrder: idx };
+    }));
+    setSortDirty(true);
+    setDraggedBadgeInOrg(null);
+    setDragOverBadgeInOrg(null);
+  };
+
   /* ── Derived state ─────────────────────────────────────────────────────── */
 
   const totalCount = badges.length;
@@ -221,15 +351,46 @@ export default function BadgesPanel({ initialBadges, onBadgesChange, initialSort
 
   const isFiltered = search.length > 0 || orgFilter !== "All";
 
+  // All unique orgs for the custom_org grouped view
+  const allOrgsForGroups = useMemo(() => {
+    const orgs = Array.from(new Set(badges.map(b => b.issuingOrganization)));
+    const ordered = orgGroupOrder.filter(o => orgs.includes(o));
+    const unordered = orgs.filter(o => !orgGroupOrder.includes(o));
+    return [...ordered, ...unordered];
+  }, [badges, orgGroupOrder]);
+
+  // Badges grouped by org (using sortOrder within each org)
+  const badgesByOrg = useMemo(() => {
+    const groups: Record<string, Badge[]> = {};
+    for (const org of allOrgsForGroups) {
+      groups[org] = badges
+        .filter(b => b.issuingOrganization === org)
+        .sort((a, b) => (a.sortOrder ?? 9999) - (b.sortOrder ?? 9999));
+    }
+    return groups;
+  }, [badges, allOrgsForGroups]);
+
   const sortedAndFiltered = useMemo(() => {
-    const sorted = sortBadges(badges, sort);
-    return sorted.filter((b) => {
+    let arr: Badge[];
+    if (sort === "custom_org") {
+      arr = [...badges].sort((a, b) => {
+        const aOrgIdx = allOrgsForGroups.indexOf(a.issuingOrganization);
+        const bOrgIdx = allOrgsForGroups.indexOf(b.issuingOrganization);
+        const aIdx = aOrgIdx === -1 ? 9999 : aOrgIdx;
+        const bIdx = bOrgIdx === -1 ? 9999 : bOrgIdx;
+        if (aIdx !== bIdx) return aIdx - bIdx;
+        return (a.sortOrder ?? 9999) - (b.sortOrder ?? 9999);
+      });
+    } else {
+      arr = sortBadges(badges, sort);
+    }
+    return arr.filter((b) => {
       const q = search.toLowerCase();
       const matchSearch = !q || b.title.toLowerCase().includes(q) || b.issuingOrganization.toLowerCase().includes(q);
       const matchOrg = orgFilter === "All" || b.issuingOrganization === orgFilter;
       return matchSearch && matchOrg;
     });
-  }, [badges, search, orgFilter, sort]);
+  }, [badges, search, orgFilter, sort, allOrgsForGroups]);
 
   const stats = [
     { label: "Total", value: totalCount, iconPath: "M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z", bg: "rgba(124,58,237,0.1)", border: "rgba(124,58,237,0.18)", icon: "#7c3aed" },
@@ -325,7 +486,7 @@ export default function BadgesPanel({ initialBadges, onBadgesChange, initialSort
             </div>
             {sortDirty && (
               <button
-                onClick={handleSortSave}
+                onClick={sort === "custom" ? handleSortSaveWithOrder : sort === "custom_org" ? handleSortSaveWithOrgOrder : handleSortSave}
                 disabled={sortSaving}
                 className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all text-white disabled:opacity-60"
                 style={{ background: "linear-gradient(135deg, #7c3aed, #4f46e5)", boxShadow: "0 2px 10px rgba(124,58,237,0.3)" }}
@@ -365,7 +526,7 @@ export default function BadgesPanel({ initialBadges, onBadgesChange, initialSort
             </button>
             {sortDirty && (
               <button
-                onClick={handleSortSave}
+                onClick={sort === "custom" ? handleSortSaveWithOrder : sort === "custom_org" ? handleSortSaveWithOrgOrder : handleSortSave}
                 disabled={sortSaving}
                 className="shrink-0 flex items-center gap-1 px-2.5 py-2 rounded-xl text-xs font-semibold text-white transition-all disabled:opacity-60"
                 style={{ background: "linear-gradient(135deg, #7c3aed, #4f46e5)" }}
@@ -540,8 +701,80 @@ export default function BadgesPanel({ initialBadges, onBadgesChange, initialSort
         </div>
       )}
 
-      {/* Grid */}
-      {sortedAndFiltered.length > 0 && (
+      {/* Custom org grouped view */}
+      {sort === "custom_org" && !isFiltered && totalCount > 0 && (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2 text-xs text-slate-400 dark:text-white/40 py-1 px-1">
+            <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 9h16.5m-16.5 6.75h16.5" />
+            </svg>
+            Drag org groups to reorder. Drag badges within a group to reorder. Click Save when done.
+          </div>
+          {allOrgsForGroups.map(org => (
+            <div
+              key={org}
+              draggable
+              onDragStart={(e) => handleOrgDragStart(e, org)}
+              onDragOver={(e) => handleOrgDragOver(e, org)}
+              onDrop={(e) => handleOrgDrop(e, org)}
+              onDragEnd={() => { setDraggedOrg(null); setDragOverOrg(null); }}
+              className="rounded-2xl p-4 transition-all"
+              style={{
+                background: "var(--surface)",
+                border: dragOverOrg === org ? "2px dashed #7c3aed" : "1px solid var(--border)",
+                boxShadow: dragOverOrg === org ? "0 0 0 4px rgba(124,58,237,0.12)" : "var(--card-shadow)",
+                opacity: draggedOrg === org ? 0.6 : 1,
+                cursor: "grab",
+              }}
+            >
+              {/* Org header */}
+              <div className="flex items-center gap-2 mb-3">
+                <svg className="w-4 h-4 text-slate-400 dark:text-white/30 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 9h16.5m-16.5 6.75h16.5" />
+                </svg>
+                <span className="text-sm font-bold text-slate-800 dark:text-white">{org}</span>
+                <span className="text-xs text-slate-400 dark:text-white/40 ml-auto">{badgesByOrg[org]?.length} badge{badgesByOrg[org]?.length !== 1 ? "s" : ""}</span>
+              </div>
+              {/* Badges mini-grid */}
+              <div className="grid grid-cols-5 sm:grid-cols-6 md:grid-cols-7 lg:grid-cols-8 gap-2">
+                {(badgesByOrg[org] ?? []).map(badge => {
+                  const isPdf = badge.imageUrl?.toLowerCase().endsWith(".pdf") ?? false;
+                  const orgInitials = (badge.issuingOrganization || "?").split(" ").map((w: string) => w[0]).join("").toUpperCase().slice(0, 2);
+                  return (
+                    <div
+                      key={badge.id}
+                      draggable
+                      onDragStart={(e) => { e.stopPropagation(); handleBadgeInOrgDragStart(e, badge.id); }}
+                      onDragOver={(e) => { e.stopPropagation(); handleBadgeInOrgDragOver(e, badge.id); }}
+                      onDrop={(e) => { e.stopPropagation(); handleBadgeInOrgDrop(e, badge.id, org); }}
+                      onDragEnd={() => { setDraggedBadgeInOrg(null); setDragOverBadgeInOrg(null); }}
+                      className="aspect-square rounded-xl overflow-hidden flex items-center justify-center cursor-grab transition-all"
+                      style={{
+                        background: "var(--surface-alt)",
+                        border: dragOverBadgeInOrg === badge.id ? "2px dashed #7c3aed" : "1px solid var(--border)",
+                        opacity: draggedBadgeInOrg === badge.id ? 0.5 : 1,
+                      }}
+                      title={badge.title}
+                    >
+                      {badge.imageUrl && !isPdf ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={badge.imageUrl} alt={badge.title} className="w-full h-full object-contain p-1.5" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-[9px] font-black text-white" style={{ background: "linear-gradient(135deg, #7c3aed, #4f46e5)" }}>
+                          {orgInitials}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Regular grid — hidden when custom_org is active and unfiltered */}
+      {(sort !== "custom_org" || isFiltered) && sortedAndFiltered.length > 0 && (
         <div
           className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3"
           onDragLeave={() => {

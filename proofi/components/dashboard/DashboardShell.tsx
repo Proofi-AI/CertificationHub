@@ -140,6 +140,7 @@ export default function DashboardShell({ profile, certificates, badges, initials
               slug: profile.slug,
               sortStrategy: profile.sortStrategy,
               badgeSortStrategy: (profile as { badgeSortStrategy?: string }).badgeSortStrategy ?? "recent",
+              badgeGroupOrder: (profile as { badgeGroupOrder?: string }).badgeGroupOrder ?? "[]",
               profileViews: profile.profileViews,
               name: profile.name,
             }}
