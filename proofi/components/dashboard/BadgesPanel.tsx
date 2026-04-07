@@ -743,16 +743,18 @@ export default function BadgesPanel({ initialBadges, onBadgesChange, initialSort
                   return (
                     <div
                       key={badge.id}
-                      draggable
-                      onDragStart={(e) => { e.stopPropagation(); handleBadgeInOrgDragStart(e, badge.id); }}
-                      onDragOver={(e) => { e.stopPropagation(); handleBadgeInOrgDragOver(e, badge.id); }}
-                      onDrop={(e) => { e.stopPropagation(); handleBadgeInOrgDrop(e, badge.id, org); }}
-                      onDragEnd={() => { setDraggedBadgeInOrg(null); setDragOverBadgeInOrg(null); }}
-                      className="aspect-square rounded-xl overflow-hidden flex items-center justify-center cursor-grab transition-all"
+                      draggable={!draggedOrg}
+                      onDragStart={(e) => { if (draggedOrg) return; e.stopPropagation(); handleBadgeInOrgDragStart(e, badge.id); }}
+                      onDragOver={(e) => { if (draggedOrg) return; e.stopPropagation(); handleBadgeInOrgDragOver(e, badge.id); }}
+                      onDrop={(e) => { if (draggedOrg) return; e.stopPropagation(); handleBadgeInOrgDrop(e, badge.id, org); }}
+                      onDragEnd={() => { if (draggedOrg) return; setDraggedBadgeInOrg(null); setDragOverBadgeInOrg(null); }}
+                      className="aspect-square rounded-xl overflow-hidden flex items-center justify-center transition-all"
                       style={{
                         background: "var(--surface-alt)",
-                        border: dragOverBadgeInOrg === badge.id ? "2px dashed #7c3aed" : "1px solid var(--border)",
+                        border: !draggedOrg && dragOverBadgeInOrg === badge.id ? "2px dashed #7c3aed" : "1px solid var(--border)",
                         opacity: draggedBadgeInOrg === badge.id ? 0.5 : 1,
+                        cursor: draggedOrg ? "grabbing" : "grab",
+                        pointerEvents: draggedOrg ? "none" : "auto",
                       }}
                       title={badge.title}
                     >
