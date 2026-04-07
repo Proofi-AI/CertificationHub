@@ -75,6 +75,9 @@ export default function BadgesPanel({ initialBadges, onBadgesChange, initialSort
   });
   const [draggedOrg, setDraggedOrg] = useState<string | null>(null);
   const [dragOverOrg, setDragOverOrg] = useState<string | null>(null);
+  // Touch drag state for org groups (mobile)
+  const orgTouchRef = useRef<{ org: string; startX: number; startY: number; active: boolean } | null>(null);
+  const orgTouchOverRef = useRef<string | null>(null);
   const [draggedBadgeInOrg, setDraggedBadgeInOrg] = useState<string | null>(null);
   const [dragOverBadgeInOrg, setDragOverBadgeInOrg] = useState<string | null>(null);
   const [selectedOrgBadge, setSelectedOrgBadge] = useState<Badge | null>(null);
@@ -303,6 +306,67 @@ export default function BadgesPanel({ initialBadges, onBadgesChange, initialSort
       return reordered;
     });
     setSortDirty(true);
+    setDraggedOrg(null);
+    setDragOverOrg(null);
+  };
+
+  /* ── Touch drag (org groups — mobile) ────────────────────────────────── */
+
+  const handleOrgTouchStart = (e: React.TouchEvent, org: string) => {
+    const t = e.touches[0];
+    orgTouchRef.current = { org, startX: t.clientX, startY: t.clientY, active: false };
+  };
+
+  const handleOrgTouchMove = (e: React.TouchEvent) => {
+    if (!orgTouchRef.current) return;
+    const t = e.touches[0];
+    const dx = t.clientX - orgTouchRef.current.startX;
+    const dy = t.clientY - orgTouchRef.current.startY;
+    // Only activate drag after 8px movement to distinguish from taps/scrolls
+    if (!orgTouchRef.current.active) {
+      if (Math.sqrt(dx * dx + dy * dy) < 8) return;
+      orgTouchRef.current.active = true;
+      setDraggedOrg(orgTouchRef.current.org);
+    }
+    // Use bounding rect detection — avoids needing pointer-events:none on the dragged card
+    let targetOrg: string | null = null;
+    document.querySelectorAll<HTMLElement>('[data-org-id]').forEach((el) => {
+      const rect = el.getBoundingClientRect();
+      if (
+        t.clientX >= rect.left && t.clientX <= rect.right &&
+        t.clientY >= rect.top  && t.clientY <= rect.bottom
+      ) {
+        const id = el.getAttribute('data-org-id');
+        if (id && id !== orgTouchRef.current!.org) targetOrg = id;
+      }
+    });
+    if (targetOrg !== orgTouchOverRef.current) {
+      setDragOverOrg(targetOrg);
+      orgTouchOverRef.current = targetOrg;
+    }
+  };
+
+  const handleOrgTouchEnd = () => {
+    if (!orgTouchRef.current?.active) {
+      orgTouchRef.current = null;
+      return;
+    }
+    const dragged = orgTouchRef.current.org;
+    const target = orgTouchOverRef.current;
+    if (dragged && target && dragged !== target) {
+      setOrgGroupOrder(() => {
+        const current = allOrgsForGroups;
+        const fromIdx = current.indexOf(dragged);
+        const toIdx = current.indexOf(target);
+        const reordered = [...current];
+        const [removed] = reordered.splice(fromIdx, 1);
+        reordered.splice(toIdx, 0, removed);
+        return reordered;
+      });
+      setSortDirty(true);
+    }
+    orgTouchRef.current = null;
+    orgTouchOverRef.current = null;
     setDraggedOrg(null);
     setDragOverOrg(null);
   };
@@ -715,11 +779,15 @@ export default function BadgesPanel({ initialBadges, onBadgesChange, initialSort
           {allOrgsForGroups.map(org => (
             <div
               key={org}
+              data-org-id={org}
               draggable
               onDragStart={(e) => handleOrgDragStart(e, org)}
               onDragOver={(e) => handleOrgDragOver(e, org)}
               onDrop={(e) => handleOrgDrop(e, org)}
               onDragEnd={() => { setDraggedOrg(null); setDragOverOrg(null); }}
+              onTouchStart={(e) => handleOrgTouchStart(e, org)}
+              onTouchMove={handleOrgTouchMove}
+              onTouchEnd={handleOrgTouchEnd}
               className="rounded-2xl p-4 transition-all"
               style={{
                 background: "var(--surface)",
@@ -727,6 +795,8 @@ export default function BadgesPanel({ initialBadges, onBadgesChange, initialSort
                 boxShadow: dragOverOrg === org ? "0 0 0 4px rgba(124,58,237,0.12)" : "var(--card-shadow)",
                 opacity: draggedOrg === org ? 0.6 : 1,
                 cursor: "grab",
+                userSelect: "none",
+                WebkitUserSelect: "none",
               }}
             >
               {/* Org header */}
