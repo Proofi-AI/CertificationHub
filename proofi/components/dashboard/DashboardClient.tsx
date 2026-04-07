@@ -13,7 +13,7 @@ interface Props {
   initialCertificates: Certificate[];
   initialBadges: Badge[];
   features: UserFeatures;
-  profile: Pick<User, "avatarUrl" | "bio" | "slug" | "sortStrategy" | "profileViews" | "name"> & { badgeSortStrategy?: string; badgeGroupOrder?: string };
+  profile: Pick<User, "avatarUrl" | "bio" | "slug" | "sortStrategy" | "profileViews" | "name"> & { badgeSortStrategy?: string; badgeGroupOrder?: string; certGroupOrder?: string };
 }
 
 export default function DashboardClient({ initialCertificates, initialBadges, features, profile }: Props) {
@@ -100,12 +100,13 @@ export default function DashboardClient({ initialCertificates, initialBadges, fe
               onCertificatesChange={setCertificates}
               externalEdit={externalEdit}
               onExternalEditDone={() => setExternalEdit(null)}
+              initialCertGroupOrder={profile.certGroupOrder ?? "[]"}
             />
           ) : (
             <BadgesPanel
               initialBadges={badges}
               onBadgesChange={setBadges}
-              initialSortStrategy={profile.badgeSortStrategy as "recent" | "oldest" | "alphabetical" | "organization" | "custom" | "custom_org" | undefined}
+              initialSortStrategy={profile.badgeSortStrategy as "recent" | "oldest" | "alphabetical" | "custom" | "custom_org" | undefined}
               initialBadgeGroupOrder={profile.badgeGroupOrder ?? "[]"}
               externalEdit={externalBadgeEdit}
               onExternalEditDone={() => setExternalBadgeEdit(null)}

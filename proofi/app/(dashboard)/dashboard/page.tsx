@@ -42,9 +42,6 @@ export default async function DashboardPage() {
     case "oldest":
       badges.sort((a, b) => new Date(a.issuedAt).getTime() - new Date(b.issuedAt).getTime());
       break;
-    case "organization":
-      badges.sort((a, b) => a.issuingOrganization.localeCompare(b.issuingOrganization));
-      break;
     case "custom":
       badges.sort((a, b) => (a.sortOrder ?? 9999) - (b.sortOrder ?? 9999));
       break;
@@ -61,6 +58,7 @@ export default async function DashboardPage() {
       certificates.sort((a, b) => a.name.localeCompare(b.name));
       break;
     case "custom":
+    case "custom_domain":
       certificates.sort((a, b) => (a.sortOrder ?? 9999) - (b.sortOrder ?? 9999));
       break;
     case "domain":

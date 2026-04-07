@@ -12,7 +12,7 @@ export async function GET(
     include: {
       certificates: {
         where: { isPublic: true },
-        orderBy: { issuedAt: "desc" },
+        orderBy: [{ sortOrder: "asc" }, { issuedAt: "desc" }],
       },
       badges: {
         where: { isPublic: true },

@@ -141,6 +141,7 @@ export default function DashboardShell({ profile, certificates, badges, initials
               sortStrategy: profile.sortStrategy,
               badgeSortStrategy: (profile as { badgeSortStrategy?: string }).badgeSortStrategy ?? "recent",
               badgeGroupOrder: (profile as { badgeGroupOrder?: string }).badgeGroupOrder ?? "[]",
+              certGroupOrder: (profile as { certGroupOrder?: string }).certGroupOrder ?? "[]",
               profileViews: profile.profileViews,
               name: profile.name,
             }}

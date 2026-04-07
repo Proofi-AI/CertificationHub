@@ -22,6 +22,7 @@ model User {
   sortStrategy        String               @default("recent")
   badgeSortStrategy   String               @default("recent")
   badgeGroupOrder     String               @default("[]")
+  certGroupOrder      String               @default("[]")
   securityQ1          String?
   securityA1          String?
   securityQ2          String?
