@@ -58,6 +58,7 @@ export default async function DashboardPage() {
       certificates.sort((a, b) => a.name.localeCompare(b.name));
       break;
     case "custom":
+    case "custom_domain":
       certificates.sort((a, b) => (a.sortOrder ?? 9999) - (b.sortOrder ?? 9999));
       break;
     case "domain":

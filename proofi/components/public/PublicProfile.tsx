@@ -210,6 +210,11 @@ export default function PublicProfile({ profile }: Props) {
     try { return JSON.parse((profile as { badgeGroupOrder?: string }).badgeGroupOrder ?? "[]"); } catch { return []; }
   })();
 
+  // Parse certGroupOrder from profile
+  const certGroupOrder: string[] = (() => {
+    try { return JSON.parse((profile as { certGroupOrder?: string }).certGroupOrder ?? "[]"); } catch { return []; }
+  })();
+
   // Orgs in preferred order (from dashboard setting), filtered to only those with public non-featured badges
   const orgsInOrder = badgeGroupOrder.length > 0
     ? [
@@ -467,14 +472,28 @@ export default function PublicProfile({ profile }: Props) {
                 onCertClick={setLightboxCert}
               />
 
-              {/* Certificate grid — non-featured only */}
-              {filteredCerts.filter((c) => !c.isFeatured).length > 0 && (
-                <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-5">
-                  {filteredCerts.filter((c) => !c.isFeatured).map((cert) => (
-                    <PublicCertCard key={cert.id} cert={cert} onImageClick={setLightboxCert} />
-                  ))}
-                </div>
-              )}
+              {/* Certificate grid — non-featured only, sorted by certGroupOrder + sortOrder */}
+              {(() => {
+                const nonFeatured = filteredCerts.filter((c) => !c.isFeatured);
+                const sorted = certGroupOrder.length > 0
+                  ? [...nonFeatured].sort((a, b) => {
+                      const aIdx = certGroupOrder.indexOf(a.domain);
+                      const bIdx = certGroupOrder.indexOf(b.domain);
+                      const aOrd = aIdx === -1 ? 9999 : aIdx;
+                      const bOrd = bIdx === -1 ? 9999 : bIdx;
+                      if (aOrd !== bOrd) return aOrd - bOrd;
+                      return (a.sortOrder ?? 9999) - (b.sortOrder ?? 9999);
+                    })
+                  : nonFeatured;
+                if (sorted.length === 0) return null;
+                return (
+                  <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-5">
+                    {sorted.map((cert) => (
+                      <PublicCertCard key={cert.id} cert={cert} onImageClick={setLightboxCert} />
+                    ))}
+                  </div>
+                );
+              })()}
             </>
           )}
 
