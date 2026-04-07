@@ -21,7 +21,7 @@ interface Props {
   onExternalEditDone?: () => void;
 }
 
-type SortOption = "recent" | "oldest" | "alphabetical" | "organization" | "custom" | "custom_org";
+type SortOption = "recent" | "oldest" | "alphabetical" | "custom" | "custom_org";
 
 function sortBadges(badges: Badge[], sort: SortOption): Badge[] {
   const arr = [...badges];
@@ -32,8 +32,6 @@ function sortBadges(badges: Badge[], sort: SortOption): Badge[] {
       return arr.sort((a, b) => new Date(a.issuedAt).getTime() - new Date(b.issuedAt).getTime());
     case "alphabetical":
       return arr.sort((a, b) => a.title.localeCompare(b.title));
-    case "organization":
-      return arr.sort((a, b) => a.issuingOrganization.localeCompare(b.issuingOrganization));
     case "custom":
       return arr.sort((a, b) => (a.sortOrder ?? 9999) - (b.sortOrder ?? 9999));
     case "custom_org":
@@ -47,9 +45,8 @@ const SORT_OPTIONS: { value: SortOption; label: string; desc: string }[] = [
   { value: "recent",       label: "Most recent",    desc: "Newest badges first" },
   { value: "oldest",       label: "Oldest first",   desc: "Earliest badges first" },
   { value: "alphabetical", label: "Alphabetical",   desc: "A – Z by badge title" },
-  { value: "organization", label: "Organization",   desc: "Grouped by issuing organization" },
+  { value: "custom_org",   label: "Organization",   desc: "Group by org, drag to reorder" },
   { value: "custom",       label: "Custom order",   desc: "Drag to reorder manually" },
-  { value: "custom_org",   label: "By Organization", desc: "Group by org, drag to reorder" },
 ];
 
 export default function BadgesPanel({ initialBadges, onBadgesChange, initialSortStrategy, initialBadgeGroupOrder, externalEdit, onExternalEditDone }: Props) {
