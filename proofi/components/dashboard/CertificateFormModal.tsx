@@ -554,7 +554,7 @@ export default function CertificateFormModal({ initialData, onSave, onClose, aut
           {/* Issuer */}
           <div>
             <label className="text-xs font-semibold mb-1.5 block text-slate-500 dark:text-white/65">
-              Issuer / Company <span className="text-red-500 dark:text-red-400">*</span>
+              Issuing Organization <span className="text-red-500 dark:text-red-400">*</span>
             </label>
             <OrganizationDropdown
               value={form.issuer}

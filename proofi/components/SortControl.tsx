@@ -17,7 +17,7 @@ const STRATEGIES: { value: SortStrategy; label: string; desc: string }[] = [
   { value: "strongest",     label: "Strongest first", desc: "Most complete certificates first" },
   { value: "domain",        label: "By domain (A-Z)", desc: "Alphabetical by domain, then by date" },
   { value: "custom_domain",  label: "Custom Domain",  desc: "Group by domain, drag to reorder" },
-  { value: "custom_issuer", label: "Custom Issuer",   desc: "Group by issuer, drag to reorder" },
+  { value: "custom_issuer", label: "Custom Organization", desc: "Group by issuing organization, drag to reorder" },
   { value: "expiring",      label: "Expiring soon",  desc: "Certificates expiring soonest first" },
   { value: "alphabetical",  label: "A – Z",          desc: "Alphabetical by certificate name" },
   { value: "custom",        label: "Custom order",   desc: "Drag to reorder manually" },

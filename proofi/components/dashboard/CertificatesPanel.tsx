@@ -773,7 +773,7 @@ export default function CertificatesPanel({
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by name or issuer…"
+              placeholder="Search by name or issuing organization…"
               className="w-full rounded-xl pl-10 pr-4 py-3 sm:py-2.5 text-sm outline-none transition-all
                 bg-black/[0.04] border border-black/[0.08] focus:border-violet-500/40 focus:ring-1 focus:ring-violet-500/20 text-slate-800 placeholder-slate-400
                 dark:bg-white/[0.06] dark:border-white/[0.11] dark:text-white dark:placeholder-white/35"

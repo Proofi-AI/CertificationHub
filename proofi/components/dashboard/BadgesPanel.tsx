@@ -47,8 +47,8 @@ const SORT_OPTIONS: { value: SortOption; label: string; desc: string }[] = [
   { value: "recent",       label: "Most recent",    desc: "Newest badges first" },
   { value: "oldest",       label: "Oldest first",   desc: "Earliest badges first" },
   { value: "alphabetical", label: "Alphabetical",   desc: "A – Z by badge title" },
-  { value: "custom_org",    label: "Organization",   desc: "Group by org, drag to reorder" },
-  { value: "custom_domain", label: "Domain",         desc: "Group by domain, drag to reorder" },
+  { value: "custom_org",    label: "Custom Organization", desc: "Group by org, drag to reorder" },
+  { value: "custom_domain", label: "Custom Domain",      desc: "Group by domain, drag to reorder" },
   { value: "custom",        label: "Custom order",   desc: "Drag to reorder manually" },
 ];
 
@@ -727,7 +727,7 @@ export default function BadgesPanel({ initialBadges, onBadgesChange, initialSort
             <input
               value={searchInput}
               onChange={(e) => handleSearchInput(e.target.value)}
-              placeholder="Search by title or organization…"
+              placeholder="Search by name or issuing organization…"
               className="w-full rounded-xl pl-10 pr-4 py-3 sm:py-2.5 text-sm outline-none transition-all
                 bg-black/[0.04] border border-black/[0.08] focus:border-violet-500/40 focus:ring-1 focus:ring-violet-500/20 text-slate-800 placeholder-slate-400
                 dark:bg-white/[0.06] dark:border-white/[0.11] dark:text-white dark:placeholder-white/35"
