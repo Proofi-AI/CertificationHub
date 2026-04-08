@@ -96,6 +96,24 @@ input[type="datetime-local"] {
   min-width: 0;
 }
 
+/* ─── Prevent iOS auto-zoom on input focus ──────────────────── */
+/* iOS Safari zooms in when a focused input has font-size < 16px.
+   Force 16px on mobile; Tailwind's sm: breakpoint restores smaller
+   sizes on desktop where zoom is not a concern.                  */
+@media (max-width: 767px) {
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="search"],
+  input[type="tel"],
+  input[type="url"],
+  input[type="number"],
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}
+
 /* ─── Autofill ──────────────────────────────────────────────── */
 input:-webkit-autofill,
 input:-webkit-autofill:hover,
