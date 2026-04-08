@@ -191,8 +191,6 @@ export default function PublicProfile({ profile }: Props) {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  // Reset org filter when domain tab changes
-  useEffect(() => { setActiveOrgFilter("All"); }, [activeTab]);
 
   const publicCerts = profile.certificates.filter((c) => c.isPublic);
   const publicBadges = profile.badges?.filter((b) => b.isPublic) ?? [];
