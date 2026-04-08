@@ -63,21 +63,28 @@ html { scroll-behavior: smooth; }
 ::-webkit-scrollbar-track { background: var(--scrollbar-bg); }
 ::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 3px; }
 
-/* Thin horizontal scrollbar for filter pill rows */
+/* Aesthetic horizontal scrollbar for filter pill rows */
 .scrollbar-thin-x {
   scrollbar-width: thin;
-  scrollbar-color: #a78bfa transparent;
+  scrollbar-color: #8b5cf6 rgba(139, 92, 246, 0.08);
 }
 .scrollbar-thin-x::-webkit-scrollbar {
-  height: 3px;
+  height: 4px;
   width: auto;
 }
 .scrollbar-thin-x::-webkit-scrollbar-track {
-  background: transparent;
+  background: rgba(139, 92, 246, 0.08);
+  border-radius: 99px;
+  margin: 0 12px;
 }
 .scrollbar-thin-x::-webkit-scrollbar-thumb {
-  background: #a78bfa;
-  border-radius: 2px;
+  background: linear-gradient(90deg, #7c3aed, #8b5cf6, #a78bfa);
+  border-radius: 99px;
+  box-shadow: 0 0 6px rgba(139, 92, 246, 0.45);
+}
+.scrollbar-thin-x::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(90deg, #6d28d9, #7c3aed, #8b5cf6);
+  box-shadow: 0 0 10px rgba(124, 58, 237, 0.65);
 }
 
 /* ─── Date inputs: prevent overflow on mobile browsers ─────── */

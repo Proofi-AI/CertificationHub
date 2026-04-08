@@ -86,9 +86,9 @@ export default function CertificatesPanel({
   const [dragOverId, setDragOverId] = useState<string | null>(null);
   const dragCancelTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const certsRef = useRef<Certificate[]>(initialCertificates);
-  const domainTouchRef = useRef<{ domain: string; startX: number; startY: number; active: boolean } | null>(null);
+  const domainTouchRef = useRef<{ domain: string; startX: number; startY: number; active: boolean; timer: ReturnType<typeof setTimeout> | null } | null>(null);
   const domainTouchOverRef = useRef<string | null>(null);
-  const issuerTouchRef = useRef<{ issuer: string; startX: number; startY: number; active: boolean } | null>(null);
+  const issuerTouchRef = useRef<{ issuer: string; startX: number; startY: number; active: boolean; timer: ReturnType<typeof setTimeout> | null } | null>(null);
   const issuerTouchOverRef = useRef<string | null>(null);
 
   // custom_domain state
@@ -480,17 +480,28 @@ export default function CertificatesPanel({
 
   const handleDomainTouchStart = (e: React.TouchEvent, domain: string) => {
     const t = e.touches[0];
-    domainTouchRef.current = { domain, startX: t.clientX, startY: t.clientY, active: false };
+    if (domainTouchRef.current?.timer) clearTimeout(domainTouchRef.current.timer);
+    const timer = setTimeout(() => {
+      if (domainTouchRef.current) {
+        domainTouchRef.current.active = true;
+        setDraggedDomain(domain);
+        navigator.vibrate?.(40);
+      }
+    }, 450);
+    domainTouchRef.current = { domain, startX: t.clientX, startY: t.clientY, active: false, timer };
   };
   const handleDomainTouchMove = (e: React.TouchEvent) => {
     if (!domainTouchRef.current) return;
     const t = e.touches[0];
     const dx = t.clientX - domainTouchRef.current.startX;
     const dy = t.clientY - domainTouchRef.current.startY;
+    // If not yet in drag mode and finger moved too far — it's a scroll, cancel
     if (!domainTouchRef.current.active) {
-      if (Math.sqrt(dx * dx + dy * dy) < 8) return;
-      domainTouchRef.current.active = true;
-      setDraggedDomain(domainTouchRef.current.domain);
+      if (Math.sqrt(dx * dx + dy * dy) > 10) {
+        if (domainTouchRef.current.timer) clearTimeout(domainTouchRef.current.timer);
+        domainTouchRef.current = null;
+      }
+      return;
     }
     let targetDomain: string | null = null;
     document.querySelectorAll<HTMLElement>("[data-cert-domain-id]").forEach((el) => {
@@ -506,6 +517,7 @@ export default function CertificatesPanel({
     }
   };
   const handleDomainTouchEnd = () => {
+    if (domainTouchRef.current?.timer) clearTimeout(domainTouchRef.current.timer);
     if (!domainTouchRef.current?.active) { domainTouchRef.current = null; return; }
     const dragged = domainTouchRef.current.domain;
     const target = domainTouchOverRef.current;
@@ -531,17 +543,28 @@ export default function CertificatesPanel({
 
   const handleIssuerTouchStart = (e: React.TouchEvent, issuer: string) => {
     const t = e.touches[0];
-    issuerTouchRef.current = { issuer, startX: t.clientX, startY: t.clientY, active: false };
+    if (issuerTouchRef.current?.timer) clearTimeout(issuerTouchRef.current.timer);
+    const timer = setTimeout(() => {
+      if (issuerTouchRef.current) {
+        issuerTouchRef.current.active = true;
+        setDraggedIssuer(issuer);
+        navigator.vibrate?.(40);
+      }
+    }, 450);
+    issuerTouchRef.current = { issuer, startX: t.clientX, startY: t.clientY, active: false, timer };
   };
   const handleIssuerTouchMove = (e: React.TouchEvent) => {
     if (!issuerTouchRef.current) return;
     const t = e.touches[0];
     const dx = t.clientX - issuerTouchRef.current.startX;
     const dy = t.clientY - issuerTouchRef.current.startY;
+    // If not yet in drag mode and finger moved too far — it's a scroll, cancel
     if (!issuerTouchRef.current.active) {
-      if (Math.sqrt(dx * dx + dy * dy) < 8) return;
-      issuerTouchRef.current.active = true;
-      setDraggedIssuer(issuerTouchRef.current.issuer);
+      if (Math.sqrt(dx * dx + dy * dy) > 10) {
+        if (issuerTouchRef.current.timer) clearTimeout(issuerTouchRef.current.timer);
+        issuerTouchRef.current = null;
+      }
+      return;
     }
     let targetIssuer: string | null = null;
     document.querySelectorAll<HTMLElement>("[data-cert-issuer-id]").forEach((el) => {
@@ -557,6 +580,7 @@ export default function CertificatesPanel({
     }
   };
   const handleIssuerTouchEnd = () => {
+    if (issuerTouchRef.current?.timer) clearTimeout(issuerTouchRef.current.timer);
     if (!issuerTouchRef.current?.active) { issuerTouchRef.current = null; return; }
     const dragged = issuerTouchRef.current.issuer;
     const target = issuerTouchOverRef.current;

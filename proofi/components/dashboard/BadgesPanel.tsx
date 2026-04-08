@@ -79,7 +79,7 @@ export default function BadgesPanel({ initialBadges, onBadgesChange, initialSort
   const [draggedOrg, setDraggedOrg] = useState<string | null>(null);
   const [dragOverOrg, setDragOverOrg] = useState<string | null>(null);
   // Touch drag state for org groups (mobile)
-  const orgTouchRef = useRef<{ org: string; startX: number; startY: number; active: boolean } | null>(null);
+  const orgTouchRef = useRef<{ org: string; startX: number; startY: number; active: boolean; timer: ReturnType<typeof setTimeout> | null } | null>(null);
   const orgTouchOverRef = useRef<string | null>(null);
   const [draggedBadgeInOrg, setDraggedBadgeInOrg] = useState<string | null>(null);
   const [dragOverBadgeInOrg, setDragOverBadgeInOrg] = useState<string | null>(null);
@@ -93,7 +93,7 @@ export default function BadgesPanel({ initialBadges, onBadgesChange, initialSort
   });
   const [draggedDomain, setDraggedDomain] = useState<string | null>(null);
   const [dragOverDomain, setDragOverDomain] = useState<string | null>(null);
-  const domainTouchRef = useRef<{ domain: string; startX: number; startY: number; active: boolean } | null>(null);
+  const domainTouchRef = useRef<{ domain: string; startX: number; startY: number; active: boolean; timer: ReturnType<typeof setTimeout> | null } | null>(null);
   const domainTouchOverRef = useRef<string | null>(null);
   const [draggedBadgeInDomain, setDraggedBadgeInDomain] = useState<string | null>(null);
   const [dragOverBadgeInDomain, setDragOverBadgeInDomain] = useState<string | null>(null);
@@ -372,7 +372,15 @@ export default function BadgesPanel({ initialBadges, onBadgesChange, initialSort
 
   const handleOrgTouchStart = (e: React.TouchEvent, org: string) => {
     const t = e.touches[0];
-    orgTouchRef.current = { org, startX: t.clientX, startY: t.clientY, active: false };
+    if (orgTouchRef.current?.timer) clearTimeout(orgTouchRef.current.timer);
+    const timer = setTimeout(() => {
+      if (orgTouchRef.current) {
+        orgTouchRef.current.active = true;
+        setDraggedOrg(org);
+        navigator.vibrate?.(40);
+      }
+    }, 450);
+    orgTouchRef.current = { org, startX: t.clientX, startY: t.clientY, active: false, timer };
   };
 
   const handleOrgTouchMove = (e: React.TouchEvent) => {
@@ -380,13 +388,15 @@ export default function BadgesPanel({ initialBadges, onBadgesChange, initialSort
     const t = e.touches[0];
     const dx = t.clientX - orgTouchRef.current.startX;
     const dy = t.clientY - orgTouchRef.current.startY;
-    // Only activate drag after 8px movement to distinguish from taps/scrolls
+    // If not yet in drag mode and finger moved too far — it's a scroll, cancel
     if (!orgTouchRef.current.active) {
-      if (Math.sqrt(dx * dx + dy * dy) < 8) return;
-      orgTouchRef.current.active = true;
-      setDraggedOrg(orgTouchRef.current.org);
+      if (Math.sqrt(dx * dx + dy * dy) > 10) {
+        if (orgTouchRef.current.timer) clearTimeout(orgTouchRef.current.timer);
+        orgTouchRef.current = null;
+      }
+      return;
     }
-    // Use bounding rect detection — avoids needing pointer-events:none on the dragged card
+    // Active drag — find target via bounding rect
     let targetOrg: string | null = null;
     document.querySelectorAll<HTMLElement>('[data-org-id]').forEach((el) => {
       const rect = el.getBoundingClientRect();
@@ -405,6 +415,7 @@ export default function BadgesPanel({ initialBadges, onBadgesChange, initialSort
   };
 
   const handleOrgTouchEnd = () => {
+    if (orgTouchRef.current?.timer) clearTimeout(orgTouchRef.current.timer);
     if (!orgTouchRef.current?.active) {
       orgTouchRef.current = null;
       return;
@@ -490,17 +501,28 @@ export default function BadgesPanel({ initialBadges, onBadgesChange, initialSort
 
   const handleDomainTouchStart = (e: React.TouchEvent, domain: string) => {
     const t = e.touches[0];
-    domainTouchRef.current = { domain, startX: t.clientX, startY: t.clientY, active: false };
+    if (domainTouchRef.current?.timer) clearTimeout(domainTouchRef.current.timer);
+    const timer = setTimeout(() => {
+      if (domainTouchRef.current) {
+        domainTouchRef.current.active = true;
+        setDraggedDomain(domain);
+        navigator.vibrate?.(40);
+      }
+    }, 450);
+    domainTouchRef.current = { domain, startX: t.clientX, startY: t.clientY, active: false, timer };
   };
   const handleDomainTouchMove = (e: React.TouchEvent) => {
     if (!domainTouchRef.current) return;
     const t = e.touches[0];
     const dx = t.clientX - domainTouchRef.current.startX;
     const dy = t.clientY - domainTouchRef.current.startY;
+    // If not yet in drag mode and finger moved too far — it's a scroll, cancel
     if (!domainTouchRef.current.active) {
-      if (Math.sqrt(dx * dx + dy * dy) < 8) return;
-      domainTouchRef.current.active = true;
-      setDraggedDomain(domainTouchRef.current.domain);
+      if (Math.sqrt(dx * dx + dy * dy) > 10) {
+        if (domainTouchRef.current.timer) clearTimeout(domainTouchRef.current.timer);
+        domainTouchRef.current = null;
+      }
+      return;
     }
     let targetDomain: string | null = null;
     document.querySelectorAll<HTMLElement>('[data-domain-id]').forEach((el) => {
@@ -516,6 +538,7 @@ export default function BadgesPanel({ initialBadges, onBadgesChange, initialSort
     }
   };
   const handleDomainTouchEnd = () => {
+    if (domainTouchRef.current?.timer) clearTimeout(domainTouchRef.current.timer);
     if (!domainTouchRef.current?.active) { domainTouchRef.current = null; return; }
     const dragged = domainTouchRef.current.domain;
     const target = domainTouchOverRef.current;

@@ -12,6 +12,111 @@ import BadgeLightbox from "@/components/BadgeLightbox";
 import CertificatePinnedShelf from "@/components/CertificatePinnedShelf";
 import { buildOrgColorMap } from "@/lib/orgColors";
 
+/* ─── Filter Dropdown ──────────────────────────────────────────── */
+function FilterDropdown({
+  label,
+  value,
+  options,
+  onChange,
+  renderOption,
+  renderSelected,
+  accentActive,
+}: {
+  label: string;
+  value: string;
+  options: string[];
+  onChange: (v: string) => void;
+  renderOption?: (opt: string) => React.ReactNode;
+  renderSelected?: (v: string) => React.ReactNode;
+  accentActive?: { bg: string; text: string; border: string };
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+
+  const isFiltered = value !== "All";
+
+  const activeStyle = accentActive
+    ? { background: accentActive.bg, color: accentActive.text, borderColor: accentActive.border }
+    : undefined;
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all whitespace-nowrap select-none ${
+          isFiltered
+            ? ""
+            : "bg-black/[0.04] text-slate-500 border-black/[0.08] hover:border-black/[0.16] hover:text-slate-700 dark:bg-white/5 dark:text-white/40 dark:border-white/10 dark:hover:border-white/20 dark:hover:text-white/60"
+        }`}
+        style={isFiltered ? activeStyle : undefined}
+      >
+        <span className="text-[9px] font-black uppercase tracking-widest opacity-50">{label}</span>
+        <span className="opacity-20 text-[10px]">|</span>
+        {renderSelected ? renderSelected(value) : <span className="max-w-[110px] truncate">{value}</span>}
+        <svg
+          className={`w-2.5 h-2.5 opacity-50 transition-transform duration-150 ${open ? "rotate-180" : ""}`}
+          fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+
+      {open && (
+        <div
+          className="absolute top-full left-0 mt-2 z-50 min-w-[180px] rounded-2xl py-1.5 overflow-hidden"
+          style={{
+            background: "var(--surface)",
+            border: "1px solid var(--border-hover)",
+            boxShadow: "0 12px 40px rgba(0,0,0,0.18), 0 2px 8px rgba(0,0,0,0.08)",
+          }}
+        >
+          <button
+            onClick={() => { onChange("All"); setOpen(false); }}
+            className={`w-full text-left px-4 py-2 text-xs font-medium transition-colors flex items-center gap-2 ${
+              value === "All"
+                ? "text-violet-600 dark:text-violet-300 bg-violet-500/[0.08]"
+                : "text-slate-500 dark:text-white/50 hover:bg-black/[0.04] dark:hover:bg-white/[0.05]"
+            }`}
+          >
+            <span className="w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0"
+              style={{ borderColor: value === "All" ? "#7c3aed" : "var(--border)" }}>
+              {value === "All" && <span className="w-1.5 h-1.5 rounded-full bg-violet-500" />}
+            </span>
+            All {label}s
+          </button>
+          <div className="h-px mx-3 my-1" style={{ background: "var(--border)" }} />
+          {options.map((opt) => (
+            <button
+              key={opt}
+              onClick={() => { onChange(opt); setOpen(false); }}
+              className={`w-full text-left px-4 py-2 text-xs font-medium transition-colors flex items-center gap-2 ${
+                value === opt
+                  ? "text-violet-600 dark:text-violet-300 bg-violet-500/[0.08]"
+                  : "text-slate-600 dark:text-white/60 hover:bg-black/[0.04] dark:hover:bg-white/[0.05]"
+              }`}
+            >
+              <span className="w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0"
+                style={{ borderColor: value === opt ? "#7c3aed" : "var(--border)" }}>
+                {value === opt && <span className="w-1.5 h-1.5 rounded-full bg-violet-500" />}
+              </span>
+              {renderOption ? renderOption(opt) : <span className="truncate">{opt}</span>}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 type PublicUser = Omit<User, "email"> & { certificates: Certificate[]; badges: Badge[] };
 
 interface Props {
@@ -398,72 +503,102 @@ export default function PublicProfile({ profile }: Props) {
             </div>
           </div>
 
-          {/* Filter section: domain + org pills */}
+          {/* Filter bar: domain + issuer dropdowns — always one line */}
           {(allDomains.length > 1 || allPublicOrgs.length > 0) && (
-            <div className="mb-6 space-y-3">
-              {/* Domain filter pills */}
+            <div className="mb-6 flex items-center gap-2 flex-wrap">
               {allDomains.length > 1 && (
-                <div className="flex gap-2 items-center overflow-x-auto pb-2 -mx-4 sm:mx-0 px-4 sm:px-0 scrollbar-thin-x">
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-white/30 shrink-0">Domain</span>
-                  {allDomains.map((domain) => (
-                    <button
-                      key={domain}
-                      onClick={() => setActiveTab(domain)}
-                      className={`text-xs px-3.5 py-1.5 rounded-full border transition-all font-medium whitespace-nowrap shrink-0 ${activeTab === domain
-                          ? "bg-violet-500/10 text-violet-600 border-violet-500/30 dark:bg-violet-600/25 dark:text-violet-300 dark:border-violet-500/40"
-                          : "bg-black/[0.04] text-slate-500 border-black/[0.08] hover:border-black/[0.16] hover:text-slate-700 dark:bg-white/5 dark:text-white/40 dark:border-white/10 dark:hover:border-white/20 dark:hover:text-white/60"
-                        }`}
-                    >
-                      {domain}
-                    </button>
-                  ))}
-                </div>
+                <FilterDropdown
+                  label="Domain"
+                  value={activeTab}
+                  options={allDomains.filter((d) => d !== "All")}
+                  onChange={setActiveTab}
+                  accentActive={{
+                    bg: "rgba(124,58,237,0.10)",
+                    text: "#7c3aed",
+                    border: "rgba(124,58,237,0.35)",
+                  }}
+                  renderSelected={(v) => {
+                    if (v === "All") return <span>All</span>;
+                    const accent = DOMAIN_ACCENT[v] ?? DOMAIN_ACCENT["Other"];
+                    return (
+                      <span className="flex items-center gap-1.5">
+                        <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: accent.from }} />
+                        <span className="max-w-[90px] truncate">{v}</span>
+                      </span>
+                    );
+                  }}
+                  renderOption={(opt) => {
+                    const accent = DOMAIN_ACCENT[opt] ?? DOMAIN_ACCENT["Other"];
+                    return (
+                      <span className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full shrink-0" style={{ background: `linear-gradient(135deg, ${accent.from}, ${accent.to})` }} />
+                        <span className="truncate">{opt}</span>
+                      </span>
+                    );
+                  }}
+                />
               )}
 
-              {/* Org / Issuer filter pills */}
               {allPublicOrgs.length > 0 && (
-                <div className="flex gap-2 items-center overflow-x-auto pb-2 -mx-4 sm:mx-0 px-4 sm:px-0 scrollbar-thin-x">
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-white/30 shrink-0">Issuer</span>
-                  <button
-                    onClick={() => setActiveOrgFilter("All")}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap border transition-all shrink-0 ${
-                      activeOrgFilter === "All"
-                        ? "bg-teal-500/10 text-teal-600 border-teal-500/30 dark:bg-teal-600/20 dark:text-teal-300 dark:border-teal-500/40"
-                        : "text-slate-500 border-black/[0.08] bg-black/[0.03] hover:border-black/[0.14] dark:text-white/50 dark:border-white/[0.10] dark:bg-white/[0.03] dark:hover:border-white/[0.18]"
-                    }`}
-                  >
-                    All
-                  </button>
-                  {allPublicOrgs.map(org => {
-                    const isActive = activeOrgFilter === org;
-                    const c = orgColorMap.get(org) ?? { border: "#14b8a6", pill: "rgba(20,184,166,0.12)", pillText: "#14b8a6", pillBorder: "rgba(20,184,166,0.40)" };
-                    const orgInitials = org.split(" ").map((w: string) => w[0]).join("").toUpperCase().slice(0, 2);
+                <FilterDropdown
+                  label="Issuer"
+                  value={activeOrgFilter}
+                  options={allPublicOrgs}
+                  onChange={setActiveOrgFilter}
+                  accentActive={{
+                    bg: "rgba(20,184,166,0.10)",
+                    text: "#0d9488",
+                    border: "rgba(20,184,166,0.35)",
+                  }}
+                  renderSelected={(v) => {
+                    if (v === "All") return <span>All</span>;
+                    const c = orgColorMap.get(v);
+                    const initials = v.split(" ").map((w: string) => w[0]).join("").toUpperCase().slice(0, 2);
                     return (
-                      <button
-                        key={org}
-                        onClick={() => setActiveOrgFilter(org)}
-                        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap border transition-all shrink-0"
-                        style={isActive ? {
-                          background: c.pill,
-                          color: c.pillText,
-                          borderColor: c.pillBorder,
-                        } : {
-                          background: "transparent",
-                          color: "var(--foreground-muted, #64748b)",
-                          borderColor: "var(--border)",
-                        }}
-                      >
-                        <span
-                          className="w-4 h-4 rounded-full text-[7px] font-black text-white flex items-center justify-center shrink-0"
-                          style={{ background: `linear-gradient(135deg, ${c.border}, ${c.border}cc)` }}
-                        >
-                          {orgInitials}
-                        </span>
-                        {org}
-                      </button>
+                      <span className="flex items-center gap-1.5">
+                        {c && (
+                          <span className="w-4 h-4 rounded-full text-[7px] font-black text-white flex items-center justify-center shrink-0"
+                            style={{ background: `linear-gradient(135deg, ${c.border}, ${c.border}cc)` }}>
+                            {initials}
+                          </span>
+                        )}
+                        <span className="max-w-[90px] truncate">{v}</span>
+                      </span>
                     );
-                  })}
-                </div>
+                  }}
+                  renderOption={(opt) => {
+                    const c = orgColorMap.get(opt);
+                    const initials = opt.split(" ").map((w: string) => w[0]).join("").toUpperCase().slice(0, 2);
+                    return (
+                      <span className="flex items-center gap-2">
+                        {c ? (
+                          <span className="w-4 h-4 rounded-full text-[7px] font-black text-white flex items-center justify-center shrink-0"
+                            style={{ background: `linear-gradient(135deg, ${c.border}, ${c.border}cc)` }}>
+                            {initials}
+                          </span>
+                        ) : (
+                          <span className="w-4 h-4 rounded-full bg-slate-200 dark:bg-white/10 shrink-0" />
+                        )}
+                        <span className="truncate">{opt}</span>
+                      </span>
+                    );
+                  }}
+                />
+              )}
+
+              {/* Clear active filters */}
+              {(activeTab !== "All" || activeOrgFilter !== "All") && (
+                <button
+                  onClick={() => { setActiveTab("All"); setActiveOrgFilter("All"); }}
+                  className="flex items-center gap-1 text-[11px] font-medium px-2.5 py-1.5 rounded-full border transition-all
+                    text-slate-400 border-black/[0.06] hover:text-slate-600 hover:border-black/[0.14]
+                    dark:text-white/30 dark:border-white/[0.08] dark:hover:text-white/60 dark:hover:border-white/[0.18]"
+                >
+                  <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                  Clear
+                </button>
               )}
             </div>
           )}
