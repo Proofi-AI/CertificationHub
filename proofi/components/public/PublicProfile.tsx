@@ -389,13 +389,13 @@ export default function PublicProfile({ profile }: Props) {
             <div className="mb-6 space-y-3">
               {/* Domain filter pills */}
               {allDomains.length > 1 && (
-                <div className="flex gap-2 flex-wrap items-center">
+                <div className="flex gap-2 items-center overflow-x-auto pb-2 -mx-4 sm:mx-0 px-4 sm:px-0 scrollbar-thin-x">
                   <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-white/30 shrink-0">Domain</span>
                   {allDomains.map((domain) => (
                     <button
                       key={domain}
                       onClick={() => setActiveTab(domain)}
-                      className={`text-xs px-3.5 py-1.5 rounded-full border transition-all font-medium ${activeTab === domain
+                      className={`text-xs px-3.5 py-1.5 rounded-full border transition-all font-medium whitespace-nowrap shrink-0 ${activeTab === domain
                           ? "bg-violet-500/10 text-violet-600 border-violet-500/30 dark:bg-violet-600/25 dark:text-violet-300 dark:border-violet-500/40"
                           : "bg-black/[0.04] text-slate-500 border-black/[0.08] hover:border-black/[0.16] hover:text-slate-700 dark:bg-white/5 dark:text-white/40 dark:border-white/10 dark:hover:border-white/20 dark:hover:text-white/60"
                         }`}
@@ -408,7 +408,7 @@ export default function PublicProfile({ profile }: Props) {
 
               {/* Org / Issuer filter pills */}
               {allPublicOrgs.length > 0 && (
-                <div className="flex gap-2 flex-wrap items-center overflow-x-auto pb-1 scrollbar-hide">
+                <div className="flex gap-2 items-center overflow-x-auto pb-2 -mx-4 sm:mx-0 px-4 sm:px-0 scrollbar-thin-x">
                   <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-white/30 shrink-0">Issuer</span>
                   <button
                     onClick={() => setActiveOrgFilter("All")}

@@ -101,6 +101,17 @@ export default function BadgesPanel({ initialBadges, onBadgesChange, initialSort
   const [domainBadgeDeleteConfirm, setDomainBadgeDeleteConfirm] = useState(false);
   const [domainBadgePinLimit, setDomainBadgePinLimit] = useState(false);
 
+  // Prevent page scroll during active touch drag (non-passive listener required)
+  useEffect(() => {
+    const handler = (e: TouchEvent) => {
+      if (orgTouchRef.current?.active || domainTouchRef.current?.active) {
+        e.preventDefault();
+      }
+    };
+    document.addEventListener("touchmove", handler, { passive: false });
+    return () => document.removeEventListener("touchmove", handler);
+  }, []);
+
   const handleSearchInput = (val: string) => {
     setSearchInput(val);
     if (searchTimer.current) clearTimeout(searchTimer.current);

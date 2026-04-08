@@ -86,6 +86,10 @@ export default function CertificatesPanel({
   const [dragOverId, setDragOverId] = useState<string | null>(null);
   const dragCancelTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const certsRef = useRef<Certificate[]>(initialCertificates);
+  const domainTouchRef = useRef<{ domain: string; startX: number; startY: number; active: boolean } | null>(null);
+  const domainTouchOverRef = useRef<string | null>(null);
+  const issuerTouchRef = useRef<{ issuer: string; startX: number; startY: number; active: boolean } | null>(null);
+  const issuerTouchOverRef = useRef<string | null>(null);
 
   // custom_domain state
   const [certGroupOrder, setCertGroupOrder] = useState<string[]>(() => {
@@ -118,6 +122,17 @@ export default function CertificatesPanel({
       setModalOpen(true);
     }
   }, [externalEdit]);
+
+  // Prevent page scroll during active touch drag (non-passive listener required)
+  useEffect(() => {
+    const handler = (e: TouchEvent) => {
+      if (domainTouchRef.current?.active || issuerTouchRef.current?.active) {
+        e.preventDefault();
+      }
+    };
+    document.addEventListener("touchmove", handler, { passive: false });
+    return () => document.removeEventListener("touchmove", handler);
+  }, []);
 
   const openAdd = () => { setEditTarget(null); setModalOpen(true); };
   const openEdit = (cert: Certificate) => { setEditTarget(cert); setModalOpen(true); };
@@ -459,6 +474,108 @@ export default function CertificatesPanel({
     setSortDirty(true);
     setDraggedCertInIssuer(null);
     setDragOverCertInIssuer(null);
+  };
+
+  /* ── Touch drag (domain groups — mobile) ────────────────────────────── */
+
+  const handleDomainTouchStart = (e: React.TouchEvent, domain: string) => {
+    const t = e.touches[0];
+    domainTouchRef.current = { domain, startX: t.clientX, startY: t.clientY, active: false };
+  };
+  const handleDomainTouchMove = (e: React.TouchEvent) => {
+    if (!domainTouchRef.current) return;
+    const t = e.touches[0];
+    const dx = t.clientX - domainTouchRef.current.startX;
+    const dy = t.clientY - domainTouchRef.current.startY;
+    if (!domainTouchRef.current.active) {
+      if (Math.sqrt(dx * dx + dy * dy) < 8) return;
+      domainTouchRef.current.active = true;
+      setDraggedDomain(domainTouchRef.current.domain);
+    }
+    let targetDomain: string | null = null;
+    document.querySelectorAll<HTMLElement>("[data-cert-domain-id]").forEach((el) => {
+      const rect = el.getBoundingClientRect();
+      if (t.clientX >= rect.left && t.clientX <= rect.right && t.clientY >= rect.top && t.clientY <= rect.bottom) {
+        const id = el.getAttribute("data-cert-domain-id");
+        if (id && id !== domainTouchRef.current!.domain) targetDomain = id;
+      }
+    });
+    if (targetDomain !== domainTouchOverRef.current) {
+      setDragOverDomain(targetDomain);
+      domainTouchOverRef.current = targetDomain;
+    }
+  };
+  const handleDomainTouchEnd = () => {
+    if (!domainTouchRef.current?.active) { domainTouchRef.current = null; return; }
+    const dragged = domainTouchRef.current.domain;
+    const target = domainTouchOverRef.current;
+    if (dragged && target && dragged !== target) {
+      setCertGroupOrder(() => {
+        const current = allDomainsForGroups;
+        const fromIdx = current.indexOf(dragged);
+        const toIdx = current.indexOf(target);
+        const reordered = [...current];
+        const [removed] = reordered.splice(fromIdx, 1);
+        reordered.splice(toIdx, 0, removed);
+        return reordered;
+      });
+      setSortDirty(true);
+    }
+    domainTouchRef.current = null;
+    domainTouchOverRef.current = null;
+    setDraggedDomain(null);
+    setDragOverDomain(null);
+  };
+
+  /* ── Touch drag (issuer groups — mobile) ─────────────────────────────── */
+
+  const handleIssuerTouchStart = (e: React.TouchEvent, issuer: string) => {
+    const t = e.touches[0];
+    issuerTouchRef.current = { issuer, startX: t.clientX, startY: t.clientY, active: false };
+  };
+  const handleIssuerTouchMove = (e: React.TouchEvent) => {
+    if (!issuerTouchRef.current) return;
+    const t = e.touches[0];
+    const dx = t.clientX - issuerTouchRef.current.startX;
+    const dy = t.clientY - issuerTouchRef.current.startY;
+    if (!issuerTouchRef.current.active) {
+      if (Math.sqrt(dx * dx + dy * dy) < 8) return;
+      issuerTouchRef.current.active = true;
+      setDraggedIssuer(issuerTouchRef.current.issuer);
+    }
+    let targetIssuer: string | null = null;
+    document.querySelectorAll<HTMLElement>("[data-cert-issuer-id]").forEach((el) => {
+      const rect = el.getBoundingClientRect();
+      if (t.clientX >= rect.left && t.clientX <= rect.right && t.clientY >= rect.top && t.clientY <= rect.bottom) {
+        const id = el.getAttribute("data-cert-issuer-id");
+        if (id && id !== issuerTouchRef.current!.issuer) targetIssuer = id;
+      }
+    });
+    if (targetIssuer !== issuerTouchOverRef.current) {
+      setDragOverIssuer(targetIssuer);
+      issuerTouchOverRef.current = targetIssuer;
+    }
+  };
+  const handleIssuerTouchEnd = () => {
+    if (!issuerTouchRef.current?.active) { issuerTouchRef.current = null; return; }
+    const dragged = issuerTouchRef.current.issuer;
+    const target = issuerTouchOverRef.current;
+    if (dragged && target && dragged !== target) {
+      setCertIssuerGroupOrder(() => {
+        const current = allIssuersForGroups;
+        const fromIdx = current.indexOf(dragged);
+        const toIdx = current.indexOf(target);
+        const reordered = [...current];
+        const [removed] = reordered.splice(fromIdx, 1);
+        reordered.splice(toIdx, 0, removed);
+        return reordered;
+      });
+      setSortDirty(true);
+    }
+    issuerTouchRef.current = null;
+    issuerTouchOverRef.current = null;
+    setDraggedIssuer(null);
+    setDragOverIssuer(null);
   };
 
   /* ── Derived state ────────────────────────────────────────────────────── */
@@ -843,11 +960,15 @@ export default function CertificatesPanel({
             return (
               <div
                 key={domain}
+                data-cert-domain-id={domain}
                 draggable
                 onDragStart={(e) => handleDomainDragStart(e, domain)}
                 onDragOver={(e) => handleDomainDragOver(e, domain)}
                 onDrop={(e) => handleDomainDrop(e, domain)}
                 onDragEnd={() => { setDraggedDomain(null); setDragOverDomain(null); }}
+                onTouchStart={(e) => handleDomainTouchStart(e, domain)}
+                onTouchMove={handleDomainTouchMove}
+                onTouchEnd={handleDomainTouchEnd}
                 className="rounded-2xl p-4 transition-all"
                 style={{
                   background: "var(--surface)",
@@ -855,6 +976,8 @@ export default function CertificatesPanel({
                   boxShadow: dragOverDomain === domain ? "0 0 0 4px rgba(124,58,237,0.12)" : "var(--card-shadow)",
                   opacity: draggedDomain === domain ? 0.6 : 1,
                   cursor: "grab",
+                  userSelect: "none",
+                  WebkitUserSelect: "none",
                 }}
               >
                 {/* Domain header */}
@@ -981,11 +1104,15 @@ export default function CertificatesPanel({
             return (
               <div
                 key={issuer}
+                data-cert-issuer-id={issuer}
                 draggable
                 onDragStart={(e) => handleIssuerDragStart(e, issuer)}
                 onDragOver={(e) => handleIssuerDragOver(e, issuer)}
                 onDrop={(e) => handleIssuerDrop(e, issuer)}
                 onDragEnd={() => { setDraggedIssuer(null); setDragOverIssuer(null); }}
+                onTouchStart={(e) => handleIssuerTouchStart(e, issuer)}
+                onTouchMove={handleIssuerTouchMove}
+                onTouchEnd={handleIssuerTouchEnd}
                 className="rounded-2xl p-4 transition-all"
                 style={{
                   background: "var(--surface)",
@@ -993,6 +1120,8 @@ export default function CertificatesPanel({
                   boxShadow: dragOverIssuer === issuer ? "0 0 0 4px rgba(124,58,237,0.12)" : "var(--card-shadow)",
                   opacity: draggedIssuer === issuer ? 0.6 : 1,
                   cursor: "grab",
+                  userSelect: "none",
+                  WebkitUserSelect: "none",
                 }}
               >
                 {/* Issuer header */}
