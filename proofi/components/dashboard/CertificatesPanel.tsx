@@ -99,6 +99,8 @@ export default function CertificatesPanel({
   const [dragOverDomain, setDragOverDomain] = useState<string | null>(null);
   const [draggedCertInDomain, setDraggedCertInDomain] = useState<string | null>(null);
   const [dragOverCertInDomain, setDragOverCertInDomain] = useState<string | null>(null);
+  const certInDomainTouchRef = useRef<{ id: string; domain: string; startX: number; startY: number; active: boolean; timer: ReturnType<typeof setTimeout> | null } | null>(null);
+  const certInDomainTouchOverRef = useRef<string | null>(null);
   const [selectedDomainCert, setSelectedDomainCert] = useState<Certificate | null>(null);
   const [domainCertDeleteConfirm, setDomainCertDeleteConfirm] = useState(false);
   const [domainCertPinLimit, setDomainCertPinLimit] = useState(false);
@@ -111,6 +113,8 @@ export default function CertificatesPanel({
   const [dragOverIssuer, setDragOverIssuer] = useState<string | null>(null);
   const [draggedCertInIssuer, setDraggedCertInIssuer] = useState<string | null>(null);
   const [dragOverCertInIssuer, setDragOverCertInIssuer] = useState<string | null>(null);
+  const certInIssuerTouchRef = useRef<{ id: string; issuer: string; startX: number; startY: number; active: boolean; timer: ReturnType<typeof setTimeout> | null } | null>(null);
+  const certInIssuerTouchOverRef = useRef<string | null>(null);
   const [selectedIssuerCert, setSelectedIssuerCert] = useState<Certificate | null>(null);
   const [issuerCertDeleteConfirm, setIssuerCertDeleteConfirm] = useState(false);
   const [issuerCertPinLimit, setIssuerCertPinLimit] = useState(false);
@@ -126,7 +130,12 @@ export default function CertificatesPanel({
   // Prevent page scroll during active touch drag (non-passive listener required)
   useEffect(() => {
     const handler = (e: TouchEvent) => {
-      if (domainTouchRef.current?.active || issuerTouchRef.current?.active) {
+      if (
+        domainTouchRef.current?.active ||
+        issuerTouchRef.current?.active ||
+        certInDomainTouchRef.current?.active ||
+        certInIssuerTouchRef.current?.active
+      ) {
         e.preventDefault();
       }
     };
@@ -472,6 +481,140 @@ export default function CertificatesPanel({
       return { ...c, sortOrder: idx };
     }));
     setSortDirty(true);
+    setDraggedCertInIssuer(null);
+    setDragOverCertInIssuer(null);
+  };
+
+  /* ── Touch drag (cert items within domain groups — mobile) ─────────── */
+
+  const handleCertInDomainTouchStart = (e: React.TouchEvent, certId: string, domain: string) => {
+    if (domainTouchRef.current?.active) return;
+    const t = e.touches[0];
+    if (certInDomainTouchRef.current?.timer) clearTimeout(certInDomainTouchRef.current.timer);
+    const timer = setTimeout(() => {
+      if (certInDomainTouchRef.current) {
+        certInDomainTouchRef.current.active = true;
+        setDraggedCertInDomain(certId);
+        navigator.vibrate?.(40);
+      }
+    }, 450);
+    certInDomainTouchRef.current = { id: certId, domain, startX: t.clientX, startY: t.clientY, active: false, timer };
+  };
+  const handleCertInDomainTouchMove = (e: React.TouchEvent) => {
+    if (!certInDomainTouchRef.current) return;
+    const t = e.touches[0];
+    const dx = t.clientX - certInDomainTouchRef.current.startX;
+    const dy = t.clientY - certInDomainTouchRef.current.startY;
+    if (!certInDomainTouchRef.current.active) {
+      if (Math.sqrt(dx * dx + dy * dy) > 10) {
+        if (certInDomainTouchRef.current.timer) clearTimeout(certInDomainTouchRef.current.timer);
+        certInDomainTouchRef.current = null;
+      }
+      return;
+    }
+    let targetId: string | null = null;
+    document.querySelectorAll<HTMLElement>("[data-cert-domain-item-id]").forEach((el) => {
+      const rect = el.getBoundingClientRect();
+      if (t.clientX >= rect.left && t.clientX <= rect.right && t.clientY >= rect.top && t.clientY <= rect.bottom) {
+        const id = el.getAttribute("data-cert-domain-item-id");
+        if (id && id !== certInDomainTouchRef.current!.id) targetId = id;
+      }
+    });
+    if (targetId !== certInDomainTouchOverRef.current) {
+      setDragOverCertInDomain(targetId);
+      certInDomainTouchOverRef.current = targetId;
+    }
+  };
+  const handleCertInDomainTouchEnd = (domain: string) => {
+    if (certInDomainTouchRef.current?.timer) clearTimeout(certInDomainTouchRef.current.timer);
+    if (!certInDomainTouchRef.current?.active) { certInDomainTouchRef.current = null; return; }
+    const dragged = certInDomainTouchRef.current.id;
+    const target = certInDomainTouchOverRef.current;
+    if (dragged && target && dragged !== target) {
+      const domainCerts = certsByDomain[domain] ?? [];
+      const fromIdx = domainCerts.findIndex(c => c.id === dragged);
+      const toIdx = domainCerts.findIndex(c => c.id === target);
+      if (fromIdx !== -1 && toIdx !== -1) {
+        const reordered = [...domainCerts];
+        const [removed] = reordered.splice(fromIdx, 1);
+        reordered.splice(toIdx, 0, removed);
+        update(prev => prev.map(c => {
+          const idx = reordered.findIndex(r => r.id === c.id);
+          if (idx === -1) return c;
+          return { ...c, sortOrder: idx };
+        }));
+        setSortDirty(true);
+      }
+    }
+    certInDomainTouchRef.current = null;
+    certInDomainTouchOverRef.current = null;
+    setDraggedCertInDomain(null);
+    setDragOverCertInDomain(null);
+  };
+
+  /* ── Touch drag (cert items within issuer groups — mobile) ──────────── */
+
+  const handleCertInIssuerTouchStart = (e: React.TouchEvent, certId: string, issuer: string) => {
+    if (issuerTouchRef.current?.active) return;
+    const t = e.touches[0];
+    if (certInIssuerTouchRef.current?.timer) clearTimeout(certInIssuerTouchRef.current.timer);
+    const timer = setTimeout(() => {
+      if (certInIssuerTouchRef.current) {
+        certInIssuerTouchRef.current.active = true;
+        setDraggedCertInIssuer(certId);
+        navigator.vibrate?.(40);
+      }
+    }, 450);
+    certInIssuerTouchRef.current = { id: certId, issuer, startX: t.clientX, startY: t.clientY, active: false, timer };
+  };
+  const handleCertInIssuerTouchMove = (e: React.TouchEvent) => {
+    if (!certInIssuerTouchRef.current) return;
+    const t = e.touches[0];
+    const dx = t.clientX - certInIssuerTouchRef.current.startX;
+    const dy = t.clientY - certInIssuerTouchRef.current.startY;
+    if (!certInIssuerTouchRef.current.active) {
+      if (Math.sqrt(dx * dx + dy * dy) > 10) {
+        if (certInIssuerTouchRef.current.timer) clearTimeout(certInIssuerTouchRef.current.timer);
+        certInIssuerTouchRef.current = null;
+      }
+      return;
+    }
+    let targetId: string | null = null;
+    document.querySelectorAll<HTMLElement>("[data-cert-issuer-item-id]").forEach((el) => {
+      const rect = el.getBoundingClientRect();
+      if (t.clientX >= rect.left && t.clientX <= rect.right && t.clientY >= rect.top && t.clientY <= rect.bottom) {
+        const id = el.getAttribute("data-cert-issuer-item-id");
+        if (id && id !== certInIssuerTouchRef.current!.id) targetId = id;
+      }
+    });
+    if (targetId !== certInIssuerTouchOverRef.current) {
+      setDragOverCertInIssuer(targetId);
+      certInIssuerTouchOverRef.current = targetId;
+    }
+  };
+  const handleCertInIssuerTouchEnd = (issuer: string) => {
+    if (certInIssuerTouchRef.current?.timer) clearTimeout(certInIssuerTouchRef.current.timer);
+    if (!certInIssuerTouchRef.current?.active) { certInIssuerTouchRef.current = null; return; }
+    const dragged = certInIssuerTouchRef.current.id;
+    const target = certInIssuerTouchOverRef.current;
+    if (dragged && target && dragged !== target) {
+      const issuerCerts = certsByIssuer[issuer] ?? [];
+      const fromIdx = issuerCerts.findIndex(c => c.id === dragged);
+      const toIdx = issuerCerts.findIndex(c => c.id === target);
+      if (fromIdx !== -1 && toIdx !== -1) {
+        const reordered = [...issuerCerts];
+        const [removed] = reordered.splice(fromIdx, 1);
+        reordered.splice(toIdx, 0, removed);
+        update(prev => prev.map(c => {
+          const idx = reordered.findIndex(r => r.id === c.id);
+          if (idx === -1) return c;
+          return { ...c, sortOrder: idx };
+        }));
+        setSortDirty(true);
+      }
+    }
+    certInIssuerTouchRef.current = null;
+    certInIssuerTouchOverRef.current = null;
     setDraggedCertInIssuer(null);
     setDragOverCertInIssuer(null);
   };
@@ -1028,11 +1171,15 @@ export default function CertificatesPanel({
                     return (
                       <div
                         key={cert.id}
+                        data-cert-domain-item-id={cert.id}
                         draggable={!draggedDomain}
                         onDragStart={(e) => { if (draggedDomain) return; e.stopPropagation(); handleCertInDomainDragStart(e, cert.id); }}
                         onDragOver={(e) => { if (draggedDomain) return; e.stopPropagation(); handleCertInDomainDragOver(e, cert.id); }}
                         onDrop={(e) => { if (draggedDomain) return; e.stopPropagation(); handleCertInDomainDrop(e, cert.id, domain); }}
                         onDragEnd={() => { if (draggedDomain) return; setDraggedCertInDomain(null); setDragOverCertInDomain(null); }}
+                        onTouchStart={(e) => { if (!draggedDomain) { e.stopPropagation(); handleCertInDomainTouchStart(e, cert.id, domain); } }}
+                        onTouchMove={(e) => { if (!draggedDomain) handleCertInDomainTouchMove(e); }}
+                        onTouchEnd={(e) => { if (!draggedDomain) { e.stopPropagation(); handleCertInDomainTouchEnd(domain); } }}
                         onClick={() => { if (!draggedCertInDomain) setSelectedDomainCert(cert); }}
                         className="relative rounded-xl overflow-hidden flex flex-col transition-all"
                         style={{
@@ -1043,6 +1190,8 @@ export default function CertificatesPanel({
                           cursor: draggedDomain ? "grabbing" : "pointer",
                           pointerEvents: draggedDomain ? "none" : "auto",
                           filter: !cert.isPublic ? "grayscale(0.65)" : "none",
+                          userSelect: "none",
+                          WebkitUserSelect: "none",
                         }}
                         title={cert.name}
                       >
@@ -1174,11 +1323,15 @@ export default function CertificatesPanel({
                     return (
                       <div
                         key={cert.id}
+                        data-cert-issuer-item-id={cert.id}
                         draggable={!draggedIssuer}
                         onDragStart={(e) => { if (draggedIssuer) return; e.stopPropagation(); handleCertInIssuerDragStart(e, cert.id); }}
                         onDragOver={(e) => { if (draggedIssuer) return; e.stopPropagation(); handleCertInIssuerDragOver(e, cert.id); }}
                         onDrop={(e) => { if (draggedIssuer) return; e.stopPropagation(); handleCertInIssuerDrop(e, cert.id, issuer); }}
                         onDragEnd={() => { if (draggedIssuer) return; setDraggedCertInIssuer(null); setDragOverCertInIssuer(null); }}
+                        onTouchStart={(e) => { if (!draggedIssuer) { e.stopPropagation(); handleCertInIssuerTouchStart(e, cert.id, issuer); } }}
+                        onTouchMove={(e) => { if (!draggedIssuer) handleCertInIssuerTouchMove(e); }}
+                        onTouchEnd={(e) => { if (!draggedIssuer) { e.stopPropagation(); handleCertInIssuerTouchEnd(issuer); } }}
                         onClick={() => { if (!draggedCertInIssuer) setSelectedIssuerCert(cert); }}
                         className="relative rounded-xl overflow-hidden flex flex-col transition-all"
                         style={{
@@ -1189,6 +1342,8 @@ export default function CertificatesPanel({
                           cursor: draggedIssuer ? "grabbing" : "pointer",
                           pointerEvents: draggedIssuer ? "none" : "auto",
                           filter: !cert.isPublic ? "grayscale(0.65)" : "none",
+                          userSelect: "none",
+                          WebkitUserSelect: "none",
                         }}
                         title={cert.name}
                       >

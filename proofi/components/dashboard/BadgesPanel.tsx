@@ -83,6 +83,8 @@ export default function BadgesPanel({ initialBadges, onBadgesChange, initialSort
   const orgTouchOverRef = useRef<string | null>(null);
   const [draggedBadgeInOrg, setDraggedBadgeInOrg] = useState<string | null>(null);
   const [dragOverBadgeInOrg, setDragOverBadgeInOrg] = useState<string | null>(null);
+  const badgeInOrgTouchRef = useRef<{ id: string; org: string; startX: number; startY: number; active: boolean; timer: ReturnType<typeof setTimeout> | null } | null>(null);
+  const badgeInOrgTouchOverRef = useRef<string | null>(null);
   const [selectedOrgBadge, setSelectedOrgBadge] = useState<Badge | null>(null);
   const [orgBadgeDeleteConfirm, setOrgBadgeDeleteConfirm] = useState(false);
   const [orgBadgePinLimit, setOrgBadgePinLimit] = useState(false);
@@ -97,6 +99,8 @@ export default function BadgesPanel({ initialBadges, onBadgesChange, initialSort
   const domainTouchOverRef = useRef<string | null>(null);
   const [draggedBadgeInDomain, setDraggedBadgeInDomain] = useState<string | null>(null);
   const [dragOverBadgeInDomain, setDragOverBadgeInDomain] = useState<string | null>(null);
+  const badgeInDomainTouchRef = useRef<{ id: string; domain: string; startX: number; startY: number; active: boolean; timer: ReturnType<typeof setTimeout> | null } | null>(null);
+  const badgeInDomainTouchOverRef = useRef<string | null>(null);
   const [selectedDomainBadge, setSelectedDomainBadge] = useState<Badge | null>(null);
   const [domainBadgeDeleteConfirm, setDomainBadgeDeleteConfirm] = useState(false);
   const [domainBadgePinLimit, setDomainBadgePinLimit] = useState(false);
@@ -104,7 +108,12 @@ export default function BadgesPanel({ initialBadges, onBadgesChange, initialSort
   // Prevent page scroll during active touch drag (non-passive listener required)
   useEffect(() => {
     const handler = (e: TouchEvent) => {
-      if (orgTouchRef.current?.active || domainTouchRef.current?.active) {
+      if (
+        orgTouchRef.current?.active ||
+        domainTouchRef.current?.active ||
+        badgeInOrgTouchRef.current?.active ||
+        badgeInDomainTouchRef.current?.active
+      ) {
         e.preventDefault();
       }
     };
@@ -469,6 +478,140 @@ export default function BadgesPanel({ initialBadges, onBadgesChange, initialSort
     setSortDirty(true);
     setDraggedBadgeInOrg(null);
     setDragOverBadgeInOrg(null);
+  };
+
+  /* ── Touch drag (badge items within org groups — mobile) ─────────────── */
+
+  const handleBadgeInOrgTouchStart = (e: React.TouchEvent, badgeId: string, org: string) => {
+    if (orgTouchRef.current?.active) return; // group drag takes priority
+    const t = e.touches[0];
+    if (badgeInOrgTouchRef.current?.timer) clearTimeout(badgeInOrgTouchRef.current.timer);
+    const timer = setTimeout(() => {
+      if (badgeInOrgTouchRef.current) {
+        badgeInOrgTouchRef.current.active = true;
+        setDraggedBadgeInOrg(badgeId);
+        navigator.vibrate?.(40);
+      }
+    }, 450);
+    badgeInOrgTouchRef.current = { id: badgeId, org, startX: t.clientX, startY: t.clientY, active: false, timer };
+  };
+  const handleBadgeInOrgTouchMove = (e: React.TouchEvent) => {
+    if (!badgeInOrgTouchRef.current) return;
+    const t = e.touches[0];
+    const dx = t.clientX - badgeInOrgTouchRef.current.startX;
+    const dy = t.clientY - badgeInOrgTouchRef.current.startY;
+    if (!badgeInOrgTouchRef.current.active) {
+      if (Math.sqrt(dx * dx + dy * dy) > 10) {
+        if (badgeInOrgTouchRef.current.timer) clearTimeout(badgeInOrgTouchRef.current.timer);
+        badgeInOrgTouchRef.current = null;
+      }
+      return;
+    }
+    let targetId: string | null = null;
+    document.querySelectorAll<HTMLElement>('[data-org-badge-id]').forEach((el) => {
+      const rect = el.getBoundingClientRect();
+      if (t.clientX >= rect.left && t.clientX <= rect.right && t.clientY >= rect.top && t.clientY <= rect.bottom) {
+        const id = el.getAttribute('data-org-badge-id');
+        if (id && id !== badgeInOrgTouchRef.current!.id) targetId = id;
+      }
+    });
+    if (targetId !== badgeInOrgTouchOverRef.current) {
+      setDragOverBadgeInOrg(targetId);
+      badgeInOrgTouchOverRef.current = targetId;
+    }
+  };
+  const handleBadgeInOrgTouchEnd = (org: string) => {
+    if (badgeInOrgTouchRef.current?.timer) clearTimeout(badgeInOrgTouchRef.current.timer);
+    if (!badgeInOrgTouchRef.current?.active) { badgeInOrgTouchRef.current = null; return; }
+    const dragged = badgeInOrgTouchRef.current.id;
+    const target = badgeInOrgTouchOverRef.current;
+    if (dragged && target && dragged !== target) {
+      const orgBadges = badgesByOrg[org] ?? [];
+      const fromIdx = orgBadges.findIndex(b => b.id === dragged);
+      const toIdx = orgBadges.findIndex(b => b.id === target);
+      if (fromIdx !== -1 && toIdx !== -1) {
+        const reordered = [...orgBadges];
+        const [removed] = reordered.splice(fromIdx, 1);
+        reordered.splice(toIdx, 0, removed);
+        update(prev => prev.map(b => {
+          const idx = reordered.findIndex(r => r.id === b.id);
+          if (idx === -1) return b;
+          return { ...b, sortOrder: idx };
+        }));
+        setSortDirty(true);
+      }
+    }
+    badgeInOrgTouchRef.current = null;
+    badgeInOrgTouchOverRef.current = null;
+    setDraggedBadgeInOrg(null);
+    setDragOverBadgeInOrg(null);
+  };
+
+  /* ── Touch drag (badge items within domain groups — mobile) ───────────── */
+
+  const handleBadgeInDomainTouchStart = (e: React.TouchEvent, badgeId: string, domain: string) => {
+    if (domainTouchRef.current?.active) return; // group drag takes priority
+    const t = e.touches[0];
+    if (badgeInDomainTouchRef.current?.timer) clearTimeout(badgeInDomainTouchRef.current.timer);
+    const timer = setTimeout(() => {
+      if (badgeInDomainTouchRef.current) {
+        badgeInDomainTouchRef.current.active = true;
+        setDraggedBadgeInDomain(badgeId);
+        navigator.vibrate?.(40);
+      }
+    }, 450);
+    badgeInDomainTouchRef.current = { id: badgeId, domain, startX: t.clientX, startY: t.clientY, active: false, timer };
+  };
+  const handleBadgeInDomainTouchMove = (e: React.TouchEvent) => {
+    if (!badgeInDomainTouchRef.current) return;
+    const t = e.touches[0];
+    const dx = t.clientX - badgeInDomainTouchRef.current.startX;
+    const dy = t.clientY - badgeInDomainTouchRef.current.startY;
+    if (!badgeInDomainTouchRef.current.active) {
+      if (Math.sqrt(dx * dx + dy * dy) > 10) {
+        if (badgeInDomainTouchRef.current.timer) clearTimeout(badgeInDomainTouchRef.current.timer);
+        badgeInDomainTouchRef.current = null;
+      }
+      return;
+    }
+    let targetId: string | null = null;
+    document.querySelectorAll<HTMLElement>('[data-domain-badge-id]').forEach((el) => {
+      const rect = el.getBoundingClientRect();
+      if (t.clientX >= rect.left && t.clientX <= rect.right && t.clientY >= rect.top && t.clientY <= rect.bottom) {
+        const id = el.getAttribute('data-domain-badge-id');
+        if (id && id !== badgeInDomainTouchRef.current!.id) targetId = id;
+      }
+    });
+    if (targetId !== badgeInDomainTouchOverRef.current) {
+      setDragOverBadgeInDomain(targetId);
+      badgeInDomainTouchOverRef.current = targetId;
+    }
+  };
+  const handleBadgeInDomainTouchEnd = (domain: string) => {
+    if (badgeInDomainTouchRef.current?.timer) clearTimeout(badgeInDomainTouchRef.current.timer);
+    if (!badgeInDomainTouchRef.current?.active) { badgeInDomainTouchRef.current = null; return; }
+    const dragged = badgeInDomainTouchRef.current.id;
+    const target = badgeInDomainTouchOverRef.current;
+    if (dragged && target && dragged !== target) {
+      const domainBadges = badgesByDomain[domain] ?? [];
+      const fromIdx = domainBadges.findIndex(b => b.id === dragged);
+      const toIdx = domainBadges.findIndex(b => b.id === target);
+      if (fromIdx !== -1 && toIdx !== -1) {
+        const reordered = [...domainBadges];
+        const [removed] = reordered.splice(fromIdx, 1);
+        reordered.splice(toIdx, 0, removed);
+        update(prev => prev.map(b => {
+          const idx = reordered.findIndex(r => r.id === b.id);
+          if (idx === -1) return b;
+          return { ...b, sortOrder: idx };
+        }));
+        setSortDirty(true);
+      }
+    }
+    badgeInDomainTouchRef.current = null;
+    badgeInDomainTouchOverRef.current = null;
+    setDraggedBadgeInDomain(null);
+    setDragOverBadgeInDomain(null);
   };
 
   /* ── Drag & drop (custom_domain) ────────────────────────────────────── */
@@ -1027,11 +1170,15 @@ export default function BadgesPanel({ initialBadges, onBadgesChange, initialSort
                   return (
                     <div
                       key={badge.id}
+                      data-org-badge-id={badge.id}
                       draggable={!draggedOrg}
                       onDragStart={(e) => { if (draggedOrg) return; e.stopPropagation(); handleBadgeInOrgDragStart(e, badge.id); }}
                       onDragOver={(e) => { if (draggedOrg) return; e.stopPropagation(); handleBadgeInOrgDragOver(e, badge.id); }}
                       onDrop={(e) => { if (draggedOrg) return; e.stopPropagation(); handleBadgeInOrgDrop(e, badge.id, org); }}
                       onDragEnd={() => { if (draggedOrg) return; setDraggedBadgeInOrg(null); setDragOverBadgeInOrg(null); }}
+                      onTouchStart={(e) => { if (!draggedOrg) { e.stopPropagation(); handleBadgeInOrgTouchStart(e, badge.id, org); } }}
+                      onTouchMove={(e) => { if (!draggedOrg) handleBadgeInOrgTouchMove(e); }}
+                      onTouchEnd={(e) => { if (!draggedOrg) { e.stopPropagation(); handleBadgeInOrgTouchEnd(org); } }}
                       onClick={() => { if (!draggedBadgeInOrg) setSelectedOrgBadge(badge); }}
                       className="relative aspect-square rounded-xl overflow-hidden flex items-center justify-center transition-all"
                       style={{
@@ -1041,6 +1188,8 @@ export default function BadgesPanel({ initialBadges, onBadgesChange, initialSort
                         cursor: draggedOrg ? "grabbing" : "pointer",
                         pointerEvents: draggedOrg ? "none" : "auto",
                         filter: !badge.isPublic ? "grayscale(1)" : "none",
+                        userSelect: "none",
+                        WebkitUserSelect: "none",
                       }}
                       title={badge.title}
                     >
@@ -1130,11 +1279,15 @@ export default function BadgesPanel({ initialBadges, onBadgesChange, initialSort
                   return (
                     <div
                       key={badge.id}
+                      data-domain-badge-id={badge.id}
                       draggable={!draggedDomain}
                       onDragStart={(e) => { if (draggedDomain) return; e.stopPropagation(); handleBadgeInDomainDragStart(e, badge.id); }}
                       onDragOver={(e) => { if (draggedDomain) return; e.stopPropagation(); handleBadgeInDomainDragOver(e, badge.id); }}
                       onDrop={(e) => { if (draggedDomain) return; e.stopPropagation(); handleBadgeInDomainDrop(e, badge.id, domain); }}
                       onDragEnd={() => { if (draggedDomain) return; setDraggedBadgeInDomain(null); setDragOverBadgeInDomain(null); }}
+                      onTouchStart={(e) => { if (!draggedDomain) { e.stopPropagation(); handleBadgeInDomainTouchStart(e, badge.id, domain); } }}
+                      onTouchMove={(e) => { if (!draggedDomain) handleBadgeInDomainTouchMove(e); }}
+                      onTouchEnd={(e) => { if (!draggedDomain) { e.stopPropagation(); handleBadgeInDomainTouchEnd(domain); } }}
                       onClick={() => { if (!draggedBadgeInDomain) setSelectedDomainBadge(badge); }}
                       className="relative aspect-square rounded-xl overflow-hidden flex items-center justify-center transition-all"
                       style={{
@@ -1144,6 +1297,8 @@ export default function BadgesPanel({ initialBadges, onBadgesChange, initialSort
                         cursor: draggedDomain ? "grabbing" : "pointer",
                         pointerEvents: draggedDomain ? "none" : "auto",
                         filter: !badge.isPublic ? "grayscale(1)" : "none",
+                        userSelect: "none",
+                        WebkitUserSelect: "none",
                       }}
                       title={badge.title}
                     >
