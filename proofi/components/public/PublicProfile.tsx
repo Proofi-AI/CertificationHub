@@ -191,6 +191,18 @@ export default function PublicProfile({ profile }: Props) {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
+  // When domain changes, reset org filter if the selected org no longer exists in the new domain
+  useEffect(() => {
+    setActiveOrgFilter(prev => {
+      if (prev === "All") return prev;
+      const domainCerts = activeTab === "All" ? publicCerts : publicCerts.filter(c => c.domain === activeTab);
+      const domainBadges = activeTab === "All" ? publicBadges : publicBadges.filter(b => b.domain === activeTab);
+      const stillExists = domainCerts.some(c => c.issuer === prev) || domainBadges.some(b => b.issuingOrganization === prev);
+      return stillExists ? prev : "All";
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]);
+
 
   const publicCerts = profile.certificates.filter((c) => c.isPublic);
   const publicBadges = profile.badges?.filter((b) => b.isPublic) ?? [];
@@ -224,11 +236,13 @@ export default function PublicProfile({ profile }: Props) {
   })();
 
   // All unique orgs from all public certs + badges (for top-level org filter)
+  // Issuers visible for the current domain filter — only those with content in the selected domain
   const allPublicOrgs = (() => {
-    const certIssuers = publicCerts.map(c => c.issuer).filter(Boolean);
-    const badgeOrgs = publicBadges.map(b => b.issuingOrganization).filter(Boolean);
+    const domainCerts = activeTab === "All" ? publicCerts : publicCerts.filter(c => c.domain === activeTab);
+    const domainBadges = activeTab === "All" ? publicBadges : publicBadges.filter(b => b.domain === activeTab);
+    const certIssuers = domainCerts.map(c => c.issuer).filter(Boolean);
+    const badgeOrgs = domainBadges.map(b => b.issuingOrganization).filter(Boolean);
     const unique = Array.from(new Set([...certIssuers, ...badgeOrgs]));
-    // Keep preferred order from badgeGroupOrder if available
     if (badgeGroupOrder.length > 0) {
       const ordered = badgeGroupOrder.filter(o => unique.includes(o));
       const rest = unique.filter(o => !badgeGroupOrder.includes(o));
