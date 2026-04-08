@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import type { Certificate } from "@prisma/client";
 import { MAX_FILE_SIZE_BYTES, ACCEPTED_FILE_TYPES, ACCEPTED_FILE_ACCEPT } from "@/lib/constants";
 import DomainDropdown from "@/components/DomainDropdown";
+import OrganizationDropdown from "@/components/OrganizationDropdown";
 import { uploadCertificateImage } from "@/lib/utils/storage";
 import { compressImage } from "@/lib/compressImage";
 import { pdfToJpeg } from "@/lib/utils/pdfToImage";
@@ -42,6 +43,7 @@ export default function CertificateFormModal({ initialData, onSave, onClose, aut
     description: initialData?.description ?? "",
   });
   const [customDomains, setCustomDomains] = useState<{ id: string; name: string }[]>([]);
+  const [customOrgs, setCustomOrgs] = useState<{ id: string; name: string }[]>([]);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(
     initialData?.imageUrl && !initialData.imageUrl.endsWith(".pdf") ? initialData.imageUrl : null
@@ -69,6 +71,14 @@ export default function CertificateFormModal({ initialData, onSave, onClose, aut
     fetch("/api/domains")
       .then((r) => r.json())
       .then((j) => { if (j.data) setCustomDomains(j.data); })
+      .catch(() => {});
+  }, []);
+
+  // Load custom organizations
+  useEffect(() => {
+    fetch("/api/organizations")
+      .then((r) => r.json())
+      .then((j) => { if (j.data) setCustomOrgs(j.data); })
       .catch(() => {});
   }, []);
 
@@ -546,13 +556,11 @@ export default function CertificateFormModal({ initialData, onSave, onClose, aut
             <label className="text-xs font-semibold mb-1.5 block text-slate-500 dark:text-white/65">
               Issuer / Company <span className="text-red-500 dark:text-red-400">*</span>
             </label>
-            <input
+            <OrganizationDropdown
               value={form.issuer}
-              onChange={(e) => handleField("issuer", e.target.value)}
-              placeholder="Amazon Web Services"
-              required
-              disabled={isDisabled}
-              className="w-full rounded-xl px-4 py-2.5 text-sm outline-none transition-all bg-black/[0.04] border border-black/[0.09] focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20 text-slate-800 placeholder-slate-400 dark:bg-white/[0.07] dark:border-white/[0.13] dark:text-white dark:placeholder-white/40 disabled:opacity-50 disabled:cursor-not-allowed"
+              onChange={(v) => handleField("issuer", v)}
+              customOrgs={customOrgs}
+              onCustomOrgsChange={setCustomOrgs}
             />
           </div>
 

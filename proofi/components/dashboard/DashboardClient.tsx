@@ -13,7 +13,7 @@ interface Props {
   initialCertificates: Certificate[];
   initialBadges: Badge[];
   features: UserFeatures;
-  profile: Pick<User, "avatarUrl" | "bio" | "slug" | "sortStrategy" | "profileViews" | "name"> & { badgeSortStrategy?: string; badgeGroupOrder?: string; certGroupOrder?: string };
+  profile: Pick<User, "avatarUrl" | "bio" | "slug" | "sortStrategy" | "profileViews" | "name"> & { badgeSortStrategy?: string; badgeGroupOrder?: string; badgeDomainGroupOrder?: string; certGroupOrder?: string; certIssuerGroupOrder?: string };
 }
 
 export default function DashboardClient({ initialCertificates, initialBadges, features, profile }: Props) {
@@ -101,13 +101,15 @@ export default function DashboardClient({ initialCertificates, initialBadges, fe
               externalEdit={externalEdit}
               onExternalEditDone={() => setExternalEdit(null)}
               initialCertGroupOrder={profile.certGroupOrder ?? "[]"}
+              initialCertIssuerGroupOrder={profile.certIssuerGroupOrder ?? "[]"}
             />
           ) : (
             <BadgesPanel
               initialBadges={badges}
               onBadgesChange={setBadges}
-              initialSortStrategy={profile.badgeSortStrategy as "recent" | "oldest" | "alphabetical" | "custom" | "custom_org" | undefined}
+              initialSortStrategy={profile.badgeSortStrategy as "recent" | "oldest" | "alphabetical" | "custom" | "custom_org" | "custom_domain" | undefined}
               initialBadgeGroupOrder={profile.badgeGroupOrder ?? "[]"}
+              initialBadgeDomainGroupOrder={profile.badgeDomainGroupOrder ?? "[]"}
               externalEdit={externalBadgeEdit}
               onExternalEditDone={() => setExternalBadgeEdit(null)}
             />

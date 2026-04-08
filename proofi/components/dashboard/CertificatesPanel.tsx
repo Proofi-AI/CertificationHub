@@ -22,6 +22,7 @@ interface Props {
   externalEdit?: Certificate | null;
   onExternalEditDone?: () => void;
   initialCertGroupOrder?: string;
+  initialCertIssuerGroupOrder?: string;
 }
 
 /* ── Sort helpers ──────────────────────────────────────────────────────── */
@@ -50,6 +51,7 @@ function sortCerts(certs: Certificate[], strategy: SortStrategy): Certificate[] 
       return arr.sort((a, b) => a.name.localeCompare(b.name));
     case "custom":
     case "custom_domain":
+    case "custom_issuer":
       return arr.sort((a, b) => (a.sortOrder ?? 9999) - (b.sortOrder ?? 9999));
     default:
       return arr;
@@ -66,6 +68,7 @@ export default function CertificatesPanel({
   externalEdit,
   onExternalEditDone,
   initialCertGroupOrder,
+  initialCertIssuerGroupOrder,
 }: Props) {
   const [certificates, setCertificates] = useState<Certificate[]>(initialCertificates);
   const [modalOpen, setModalOpen] = useState(false);
@@ -95,6 +98,18 @@ export default function CertificatesPanel({
   const [selectedDomainCert, setSelectedDomainCert] = useState<Certificate | null>(null);
   const [domainCertDeleteConfirm, setDomainCertDeleteConfirm] = useState(false);
   const [domainCertPinLimit, setDomainCertPinLimit] = useState(false);
+
+  // custom_issuer state
+  const [certIssuerGroupOrder, setCertIssuerGroupOrder] = useState<string[]>(() => {
+    try { return JSON.parse(initialCertIssuerGroupOrder ?? "[]"); } catch { return []; }
+  });
+  const [draggedIssuer, setDraggedIssuer] = useState<string | null>(null);
+  const [dragOverIssuer, setDragOverIssuer] = useState<string | null>(null);
+  const [draggedCertInIssuer, setDraggedCertInIssuer] = useState<string | null>(null);
+  const [dragOverCertInIssuer, setDragOverCertInIssuer] = useState<string | null>(null);
+  const [selectedIssuerCert, setSelectedIssuerCert] = useState<Certificate | null>(null);
+  const [issuerCertDeleteConfirm, setIssuerCertDeleteConfirm] = useState(false);
+  const [issuerCertPinLimit, setIssuerCertPinLimit] = useState(false);
 
   // Open edit modal when parent requests editing a specific cert
   useEffect(() => {
@@ -246,6 +261,37 @@ export default function CertificatesPanel({
     }
   };
 
+  const handleSortSaveWithIssuerOrder = async () => {
+    setSortSaving(true);
+    setSortError(null);
+    try {
+      const orderPayload: { id: string; sortOrder: number }[] = [];
+      for (const issuer of allIssuersForGroups) {
+        const issuerCerts = certsByIssuer[issuer] ?? [];
+        issuerCerts.forEach((c, i) => orderPayload.push({ id: c.id, sortOrder: i }));
+      }
+      const [r1, r2] = await Promise.all([
+        fetch("/api/profile", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sortStrategy: "custom_issuer", certIssuerGroupOrder: allIssuersForGroups }),
+        }),
+        fetch("/api/certificates/reorder", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ order: orderPayload }),
+        }),
+      ]);
+      if (!r1.ok || !r2.ok) throw new Error("Failed to save");
+      setSortDirty(false);
+    } catch (e) {
+      console.error("[Sort save error]", e);
+      setSortError(`Failed to save: ${e instanceof Error ? e.message : e}`);
+    } finally {
+      setSortSaving(false);
+    }
+  };
+
   /* ── Drag & drop (custom flat order) ─────────────────────────────────── */
 
   const handleDragStart = (e: React.DragEvent, id: string) => {
@@ -355,6 +401,66 @@ export default function CertificatesPanel({
     setDragOverCertInDomain(null);
   };
 
+  /* ── Drag & drop (custom_issuer) ────────────────────────────────────── */
+
+  const handleIssuerDragStart = (e: React.DragEvent, issuer: string) => {
+    setDraggedIssuer(issuer);
+    e.dataTransfer.effectAllowed = "move";
+  };
+  const handleIssuerDragOver = (e: React.DragEvent, issuer: string) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    if (issuer !== dragOverIssuer) setDragOverIssuer(issuer);
+  };
+  const handleIssuerDrop = (e: React.DragEvent, targetIssuer: string) => {
+    e.preventDefault();
+    if (!draggedIssuer || draggedIssuer === targetIssuer) {
+      setDraggedIssuer(null); setDragOverIssuer(null); return;
+    }
+    setCertIssuerGroupOrder(() => {
+      const current = allIssuersForGroups;
+      const fromIdx = current.indexOf(draggedIssuer);
+      const toIdx = current.indexOf(targetIssuer);
+      const reordered = [...current];
+      const [removed] = reordered.splice(fromIdx, 1);
+      reordered.splice(toIdx, 0, removed);
+      return reordered;
+    });
+    setSortDirty(true);
+    setDraggedIssuer(null);
+    setDragOverIssuer(null);
+  };
+
+  const handleCertInIssuerDragStart = (e: React.DragEvent, certId: string) => {
+    setDraggedCertInIssuer(certId);
+    e.dataTransfer.effectAllowed = "move";
+  };
+  const handleCertInIssuerDragOver = (e: React.DragEvent, certId: string) => {
+    e.preventDefault();
+    if (certId !== dragOverCertInIssuer) setDragOverCertInIssuer(certId);
+  };
+  const handleCertInIssuerDrop = (e: React.DragEvent, targetId: string, issuer: string) => {
+    e.preventDefault();
+    if (!draggedCertInIssuer || draggedCertInIssuer === targetId) {
+      setDraggedCertInIssuer(null); setDragOverCertInIssuer(null); return;
+    }
+    const issuerCerts = certsByIssuer[issuer] ?? [];
+    const fromIdx = issuerCerts.findIndex(c => c.id === draggedCertInIssuer);
+    const toIdx = issuerCerts.findIndex(c => c.id === targetId);
+    if (fromIdx === -1 || toIdx === -1) { setDraggedCertInIssuer(null); setDragOverCertInIssuer(null); return; }
+    const reordered = [...issuerCerts];
+    const [removed] = reordered.splice(fromIdx, 1);
+    reordered.splice(toIdx, 0, removed);
+    update(prev => prev.map(c => {
+      const idx = reordered.findIndex(r => r.id === c.id);
+      if (idx === -1) return c;
+      return { ...c, sortOrder: idx };
+    }));
+    setSortDirty(true);
+    setDraggedCertInIssuer(null);
+    setDragOverCertInIssuer(null);
+  };
+
   /* ── Derived state ────────────────────────────────────────────────────── */
 
   const totalCount = certificates.length;
@@ -381,6 +487,23 @@ export default function CertificatesPanel({
     return groups;
   }, [certificates, allDomainsForGroups]);
 
+  const allIssuersForGroups = useMemo(() => {
+    const issuers = Array.from(new Set(certificates.map(c => c.issuer).filter(Boolean)));
+    const ordered = certIssuerGroupOrder.filter(i => issuers.includes(i));
+    const unordered = issuers.filter(i => !certIssuerGroupOrder.includes(i));
+    return [...ordered, ...unordered];
+  }, [certificates, certIssuerGroupOrder]);
+
+  const certsByIssuer = useMemo(() => {
+    const groups: Record<string, Certificate[]> = {};
+    for (const issuer of allIssuersForGroups) {
+      groups[issuer] = certificates
+        .filter(c => c.issuer === issuer)
+        .sort((a, b) => (a.sortOrder ?? 9999) - (b.sortOrder ?? 9999));
+    }
+    return groups;
+  }, [certificates, allIssuersForGroups]);
+
   const sortedAndFiltered = useMemo(() => {
     let sorted: Certificate[];
     if (sortStrategy === "custom_domain") {
@@ -389,6 +512,15 @@ export default function CertificatesPanel({
         const bDomainIdx = allDomainsForGroups.indexOf(b.domain);
         const aIdx = aDomainIdx === -1 ? 9999 : aDomainIdx;
         const bIdx = bDomainIdx === -1 ? 9999 : bDomainIdx;
+        if (aIdx !== bIdx) return aIdx - bIdx;
+        return (a.sortOrder ?? 9999) - (b.sortOrder ?? 9999);
+      });
+    } else if (sortStrategy === "custom_issuer") {
+      sorted = [...certificates].sort((a, b) => {
+        const aIssuerIdx = allIssuersForGroups.indexOf(a.issuer);
+        const bIssuerIdx = allIssuersForGroups.indexOf(b.issuer);
+        const aIdx = aIssuerIdx === -1 ? 9999 : aIssuerIdx;
+        const bIdx = bIssuerIdx === -1 ? 9999 : bIssuerIdx;
         if (aIdx !== bIdx) return aIdx - bIdx;
         return (a.sortOrder ?? 9999) - (b.sortOrder ?? 9999);
       });
@@ -541,6 +673,8 @@ export default function CertificatesPanel({
                   ? handleSortSaveWithOrder
                   : sortStrategy === "custom_domain"
                   ? handleSortSaveWithDomainOrder
+                  : sortStrategy === "custom_issuer"
+                  ? handleSortSaveWithIssuerOrder
                   : handleSortSave
               }
               saving={sortSaving}
@@ -635,6 +769,19 @@ export default function CertificatesPanel({
       {sortStrategy === "custom_domain" && totalCount > 0 && isFiltered && (
         <div className="text-xs text-slate-400 dark:text-white/40 text-center py-2">
           Clear search and filters to use domain grouping.
+        </div>
+      )}
+      {sortStrategy === "custom_issuer" && totalCount > 0 && !isFiltered && (
+        <div className="flex items-center gap-2 text-xs text-slate-400 dark:text-white/40 py-1 px-1">
+          <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 9h16.5m-16.5 6.75h16.5" />
+          </svg>
+          Drag issuer groups to reorder. Drag certificates within a group to reorder. Click Save when done.
+        </div>
+      )}
+      {sortStrategy === "custom_issuer" && totalCount > 0 && isFiltered && (
+        <div className="text-xs text-slate-400 dark:text-white/40 text-center py-2">
+          Clear search and filters to use issuer grouping.
         </div>
       )}
 
@@ -826,8 +973,137 @@ export default function CertificatesPanel({
         </div>
       )}
 
-      {/* Regular grid — hidden when custom_domain is active and unfiltered */}
-      {(sortStrategy !== "custom_domain" || isFiltered) && sortedAndFiltered.length > 0 && (
+      {/* Issuer grouped view */}
+      {sortStrategy === "custom_issuer" && !isFiltered && totalCount > 0 && (
+        <div className="space-y-3">
+          {allIssuersForGroups.map(issuer => {
+            const issuerInitials = (issuer || "?").split(" ").map((w: string) => w[0]).join("").toUpperCase().slice(0, 2);
+            return (
+              <div
+                key={issuer}
+                draggable
+                onDragStart={(e) => handleIssuerDragStart(e, issuer)}
+                onDragOver={(e) => handleIssuerDragOver(e, issuer)}
+                onDrop={(e) => handleIssuerDrop(e, issuer)}
+                onDragEnd={() => { setDraggedIssuer(null); setDragOverIssuer(null); }}
+                className="rounded-2xl p-4 transition-all"
+                style={{
+                  background: "var(--surface)",
+                  border: dragOverIssuer === issuer ? "2px dashed #7c3aed" : "1px solid var(--border)",
+                  boxShadow: dragOverIssuer === issuer ? "0 0 0 4px rgba(124,58,237,0.12)" : "var(--card-shadow)",
+                  opacity: draggedIssuer === issuer ? 0.6 : 1,
+                  cursor: "grab",
+                }}
+              >
+                {/* Issuer header */}
+                <div className="flex items-center gap-2 mb-3">
+                  <svg className="w-4 h-4 text-slate-400 dark:text-white/30 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 9h16.5m-16.5 6.75h16.5" />
+                  </svg>
+                  <div className="w-6 h-6 rounded-lg flex items-center justify-center shrink-0 text-[9px] font-black text-white"
+                    style={{ background: "linear-gradient(135deg, #7c3aed, #4f46e5)" }}>
+                    {issuerInitials}
+                  </div>
+                  <span className="text-sm font-bold text-slate-800 dark:text-white">{issuer}</span>
+                  <span className="text-xs text-slate-400 dark:text-white/40 ml-auto">
+                    {certsByIssuer[issuer]?.length ?? 0} cert{(certsByIssuer[issuer]?.length ?? 0) !== 1 ? "s" : ""}
+                  </span>
+                </div>
+
+                {/* Certificates grid */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                  {(certsByIssuer[issuer] ?? []).map(cert => {
+                    const certAccent = DOMAIN_ACCENT[cert.domain] ?? DOMAIN_ACCENT["Other"];
+                    const isPdf = cert.imageUrl?.toLowerCase().endsWith(".pdf") ?? false;
+                    const certInitials = (cert.issuer || "?").split(" ").map((w: string) => w[0]).join("").toUpperCase().slice(0, 2);
+                    const isDragOverCert = !draggedIssuer && dragOverCertInIssuer === cert.id;
+
+                    return (
+                      <div
+                        key={cert.id}
+                        draggable={!draggedIssuer}
+                        onDragStart={(e) => { if (draggedIssuer) return; e.stopPropagation(); handleCertInIssuerDragStart(e, cert.id); }}
+                        onDragOver={(e) => { if (draggedIssuer) return; e.stopPropagation(); handleCertInIssuerDragOver(e, cert.id); }}
+                        onDrop={(e) => { if (draggedIssuer) return; e.stopPropagation(); handleCertInIssuerDrop(e, cert.id, issuer); }}
+                        onDragEnd={() => { if (draggedIssuer) return; setDraggedCertInIssuer(null); setDragOverCertInIssuer(null); }}
+                        onClick={() => { if (!draggedCertInIssuer) setSelectedIssuerCert(cert); }}
+                        className="relative rounded-xl overflow-hidden flex flex-col transition-all"
+                        style={{
+                          background: "var(--surface)",
+                          border: isDragOverCert ? "2px dashed #7c3aed" : `1.5px solid ${certAccent.from}33`,
+                          boxShadow: isDragOverCert ? "0 0 0 3px rgba(124,58,237,0.12)" : "var(--card-shadow)",
+                          opacity: draggedCertInIssuer === cert.id ? 0.5 : 1,
+                          cursor: draggedIssuer ? "grabbing" : "pointer",
+                          pointerEvents: draggedIssuer ? "none" : "auto",
+                          filter: !cert.isPublic ? "grayscale(0.65)" : "none",
+                        }}
+                        title={cert.name}
+                      >
+                        {/* Domain accent bar */}
+                        <div className="h-[3px] w-full shrink-0" style={{ background: `linear-gradient(90deg, ${certAccent.from}, ${certAccent.to})` }} />
+
+                        {/* Certificate image */}
+                        <div
+                          className="relative h-32 sm:h-36 overflow-hidden shrink-0"
+                          style={{ background: "var(--surface-alt)", borderBottom: "1px solid var(--border)" }}
+                        >
+                          {cert.imageUrl && !isPdf ? (
+                            <>
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img src={cert.imageUrl} alt="" aria-hidden className="absolute inset-0 w-full h-full object-cover scale-110 blur-xl opacity-30 pointer-events-none" />
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img src={cert.imageUrl} alt={cert.name} className="absolute inset-0 w-full h-full object-contain" />
+                            </>
+                          ) : cert.imageUrl && isPdf ? (
+                            <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 text-slate-400 dark:text-white/30">
+                              <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+                              </svg>
+                              <span className="text-[10px] font-medium">PDF</span>
+                            </div>
+                          ) : (
+                            <div className="absolute inset-0 flex items-center justify-center text-lg font-black text-white"
+                              style={{ background: `linear-gradient(135deg, ${certAccent.from}, ${certAccent.to})` }}>
+                              {certInitials}
+                            </div>
+                          )}
+
+                          {/* Private overlay */}
+                          {!cert.isPublic && (
+                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                              <svg className="w-6 h-6 text-white/60 drop-shadow" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88" />
+                              </svg>
+                            </div>
+                          )}
+
+                          {/* Featured star */}
+                          {cert.isFeatured && (
+                            <div className="absolute top-1.5 left-1.5 w-5 h-5 flex items-center justify-center rounded-full" style={{ background: "rgba(245,158,11,0.25)" }}>
+                              <svg className="w-3 h-3 text-amber-400 drop-shadow" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z" />
+                              </svg>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Text */}
+                        <div className="px-2.5 py-2.5 flex-1">
+                          <p className="text-[11px] font-bold text-slate-900 dark:text-white line-clamp-2 leading-tight">{cert.name}</p>
+                          <p className="text-[10px] text-slate-400 dark:text-white/40 truncate mt-0.5">{cert.domain}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Regular grid — hidden when custom_domain or custom_issuer is active and unfiltered */}
+      {(sortStrategy !== "custom_domain" && sortStrategy !== "custom_issuer" || isFiltered) && sortedAndFiltered.length > 0 && (
         <div
           className="grid grid-cols-2 sm:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-5"
           onDragLeave={() => {
@@ -1015,6 +1291,166 @@ export default function CertificatesPanel({
           title="Pin limit reached"
           message="You can only pin up to 3 certificates. Unpin one first to pin another."
           onClose={() => setDomainCertPinLimit(false)}
+        />
+      )}
+
+      {/* Issuer-view certificate action sheet */}
+      {selectedIssuerCert && (
+        <div
+          className="fixed inset-0 z-50 flex flex-col justify-end"
+          style={{ background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)" }}
+          onClick={() => setSelectedIssuerCert(null)}
+        >
+          <div
+            className="rounded-t-2xl overflow-hidden w-full"
+            style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center gap-3 px-5 py-4" style={{ borderBottom: "1px solid var(--border)" }}>
+              <div
+                className="w-12 h-12 rounded-xl overflow-hidden shrink-0 flex items-center justify-center"
+                style={{ background: "var(--surface-alt)", border: "1px solid var(--border)" }}
+              >
+                {selectedIssuerCert.imageUrl && !selectedIssuerCert.imageUrl.toLowerCase().endsWith(".pdf") ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={selectedIssuerCert.imageUrl} alt={selectedIssuerCert.name} className="w-full h-full object-contain p-1" />
+                ) : (
+                  <div
+                    className="w-full h-full flex items-center justify-center text-xs font-black text-white"
+                    style={{ background: `linear-gradient(135deg, ${(DOMAIN_ACCENT[selectedIssuerCert.domain] ?? DOMAIN_ACCENT["Other"]).from}, ${(DOMAIN_ACCENT[selectedIssuerCert.domain] ?? DOMAIN_ACCENT["Other"]).to})` }}
+                  >
+                    {selectedIssuerCert.issuer.split(" ").map(w => w[0]).join("").toUpperCase().slice(0, 2)}
+                  </div>
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-bold text-slate-900 dark:text-white truncate">{selectedIssuerCert.name}</p>
+                <p className="text-xs text-slate-400 dark:text-white/40 truncate">{selectedIssuerCert.issuer} · {selectedIssuerCert.domain}</p>
+              </div>
+              <button onClick={() => setSelectedIssuerCert(null)} className="text-slate-400 dark:text-white/40 hover:text-slate-700 dark:hover:text-white transition-colors">
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Actions */}
+            <div className="px-5 py-4 flex flex-col gap-3">
+              {/* Visibility toggle */}
+              <div className="flex items-center justify-between py-2">
+                <div>
+                  <p className="text-sm font-semibold text-slate-800 dark:text-white">Public visibility</p>
+                  <p className="text-xs text-slate-400 dark:text-white/40">
+                    {selectedIssuerCert.isPublic ? "Visible on your public profile" : "Hidden from your public profile"}
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    handleVisibilityToggle(selectedIssuerCert.id, !selectedIssuerCert.isPublic);
+                    setSelectedIssuerCert({ ...selectedIssuerCert, isPublic: !selectedIssuerCert.isPublic });
+                  }}
+                  className={`relative w-11 h-6 rounded-full transition-colors duration-200 shrink-0 ${selectedIssuerCert.isPublic ? "bg-emerald-500" : "bg-slate-300 dark:bg-white/15"}`}
+                >
+                  <span className={`absolute top-[3px] left-[3px] w-[18px] h-[18px] bg-white rounded-full shadow-sm transition-transform duration-200 ${selectedIssuerCert.isPublic ? "translate-x-[20px]" : "translate-x-0"}`} />
+                </button>
+              </div>
+
+              {/* Edit */}
+              <button
+                onClick={() => { setSelectedIssuerCert(null); openEdit(selectedIssuerCert); }}
+                className="flex items-center gap-3 w-full py-3 px-4 rounded-xl transition-all text-left"
+                style={{ background: "var(--surface-alt)", border: "1px solid var(--border)" }}
+              >
+                <svg className="w-4 h-4 shrink-0 text-slate-500 dark:text-white/50" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z" />
+                </svg>
+                <div>
+                  <p className="text-sm font-semibold text-slate-700 dark:text-white/80">Edit certificate</p>
+                  <p className="text-xs text-slate-400 dark:text-white/40">Update name, image, dates and more</p>
+                </div>
+              </button>
+
+              {/* Pin / unpin */}
+              <button
+                onClick={() => {
+                  if (!selectedIssuerCert.isFeatured && featuredCount >= 3) {
+                    setIssuerCertPinLimit(true);
+                    return;
+                  }
+                  const next = !selectedIssuerCert.isFeatured;
+                  handleFeatureToggle(selectedIssuerCert.id, next);
+                  setSelectedIssuerCert({ ...selectedIssuerCert, isFeatured: next });
+                }}
+                className="flex items-center gap-3 w-full py-3 px-4 rounded-xl transition-all text-left"
+                style={{
+                  background: selectedIssuerCert.isFeatured ? "rgba(245,158,11,0.08)" : "var(--surface-alt)",
+                  border: selectedIssuerCert.isFeatured ? "1px solid rgba(245,158,11,0.25)" : "1px solid var(--border)",
+                }}
+              >
+                <svg
+                  className={`w-4 h-4 shrink-0 ${selectedIssuerCert.isFeatured ? "text-amber-500" : "text-slate-400 dark:text-white/40"}`}
+                  fill={selectedIssuerCert.isFeatured ? "currentColor" : "none"}
+                  viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z" />
+                </svg>
+                <div>
+                  <p className={`text-sm font-semibold ${selectedIssuerCert.isFeatured ? "text-amber-600 dark:text-amber-400" : "text-slate-700 dark:text-white/80"}`}>
+                    {selectedIssuerCert.isFeatured ? "Unpin from profile" : "Pin to profile"}
+                  </p>
+                  <p className="text-xs text-slate-400 dark:text-white/40">
+                    {selectedIssuerCert.isFeatured ? "Remove from pinned shelf" : "Show in pinned shelf (max 3)"}
+                  </p>
+                </div>
+              </button>
+
+              {/* Delete */}
+              <button
+                onClick={() => setIssuerCertDeleteConfirm(true)}
+                className="flex items-center gap-3 w-full py-3 px-4 rounded-xl transition-all text-left"
+                style={{ background: "rgba(239,68,68,0.06)", border: "1px solid rgba(239,68,68,0.15)" }}
+              >
+                <svg className="w-4 h-4 shrink-0 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+                </svg>
+                <div>
+                  <p className="text-sm font-semibold text-red-600 dark:text-red-400">Delete certificate</p>
+                  <p className="text-xs text-slate-400 dark:text-white/40">Permanently remove this certificate</p>
+                </div>
+              </button>
+            </div>
+
+            <div className="px-5 pb-6">
+              <button
+                onClick={() => setSelectedIssuerCert(null)}
+                className="w-full py-3 rounded-xl text-sm font-semibold transition-all text-slate-600 dark:text-white/65 bg-black/[0.04] dark:bg-white/[0.06] border border-black/[0.08] dark:border-white/[0.11]"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {issuerCertDeleteConfirm && selectedIssuerCert && (
+        <DeleteConfirmModal
+          title="Delete this certificate?"
+          message="This will permanently remove the certificate and its image. This cannot be undone."
+          onConfirm={() => {
+            handleDelete(selectedIssuerCert.id);
+            setIssuerCertDeleteConfirm(false);
+            setSelectedIssuerCert(null);
+          }}
+          onCancel={() => setIssuerCertDeleteConfirm(false)}
+        />
+      )}
+
+      {issuerCertPinLimit && (
+        <InfoModal
+          title="Pin limit reached"
+          message="You can only pin up to 3 certificates. Unpin one first to pin another."
+          onClose={() => setIssuerCertPinLimit(false)}
         />
       )}
     </div>

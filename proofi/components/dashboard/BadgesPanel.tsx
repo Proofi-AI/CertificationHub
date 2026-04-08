@@ -17,11 +17,12 @@ interface Props {
   onBadgesChange?: (badges: Badge[]) => void;
   initialSortStrategy?: SortOption;
   initialBadgeGroupOrder?: string;
+  initialBadgeDomainGroupOrder?: string;
   externalEdit?: Badge | null;
   onExternalEditDone?: () => void;
 }
 
-type SortOption = "recent" | "oldest" | "alphabetical" | "custom" | "custom_org";
+type SortOption = "recent" | "oldest" | "alphabetical" | "custom" | "custom_org" | "custom_domain";
 
 function sortBadges(badges: Badge[], sort: SortOption): Badge[] {
   const arr = [...badges];
@@ -35,6 +36,7 @@ function sortBadges(badges: Badge[], sort: SortOption): Badge[] {
     case "custom":
       return arr.sort((a, b) => (a.sortOrder ?? 9999) - (b.sortOrder ?? 9999));
     case "custom_org":
+    case "custom_domain":
       return arr.sort((a, b) => (a.sortOrder ?? 9999) - (b.sortOrder ?? 9999));
     default:
       return arr;
@@ -45,11 +47,12 @@ const SORT_OPTIONS: { value: SortOption; label: string; desc: string }[] = [
   { value: "recent",       label: "Most recent",    desc: "Newest badges first" },
   { value: "oldest",       label: "Oldest first",   desc: "Earliest badges first" },
   { value: "alphabetical", label: "Alphabetical",   desc: "A – Z by badge title" },
-  { value: "custom_org",   label: "Organization",   desc: "Group by org, drag to reorder" },
-  { value: "custom",       label: "Custom order",   desc: "Drag to reorder manually" },
+  { value: "custom_org",    label: "Organization",   desc: "Group by org, drag to reorder" },
+  { value: "custom_domain", label: "Domain",         desc: "Group by domain, drag to reorder" },
+  { value: "custom",        label: "Custom order",   desc: "Drag to reorder manually" },
 ];
 
-export default function BadgesPanel({ initialBadges, onBadgesChange, initialSortStrategy, initialBadgeGroupOrder, externalEdit, onExternalEditDone }: Props) {
+export default function BadgesPanel({ initialBadges, onBadgesChange, initialSortStrategy, initialBadgeGroupOrder, initialBadgeDomainGroupOrder, externalEdit, onExternalEditDone }: Props) {
   const [badges, setBadges] = useState<Badge[]>(initialBadges);
   const [modalOpen, setModalOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<Badge | null>(null);
@@ -83,6 +86,20 @@ export default function BadgesPanel({ initialBadges, onBadgesChange, initialSort
   const [selectedOrgBadge, setSelectedOrgBadge] = useState<Badge | null>(null);
   const [orgBadgeDeleteConfirm, setOrgBadgeDeleteConfirm] = useState(false);
   const [orgBadgePinLimit, setOrgBadgePinLimit] = useState(false);
+
+  // custom_domain state
+  const [domainGroupOrder, setDomainGroupOrder] = useState<string[]>(() => {
+    try { return JSON.parse(initialBadgeDomainGroupOrder ?? "[]"); } catch { return []; }
+  });
+  const [draggedDomain, setDraggedDomain] = useState<string | null>(null);
+  const [dragOverDomain, setDragOverDomain] = useState<string | null>(null);
+  const domainTouchRef = useRef<{ domain: string; startX: number; startY: number; active: boolean } | null>(null);
+  const domainTouchOverRef = useRef<string | null>(null);
+  const [draggedBadgeInDomain, setDraggedBadgeInDomain] = useState<string | null>(null);
+  const [dragOverBadgeInDomain, setDragOverBadgeInDomain] = useState<string | null>(null);
+  const [selectedDomainBadge, setSelectedDomainBadge] = useState<Badge | null>(null);
+  const [domainBadgeDeleteConfirm, setDomainBadgeDeleteConfirm] = useState(false);
+  const [domainBadgePinLimit, setDomainBadgePinLimit] = useState(false);
 
   const handleSearchInput = (val: string) => {
     setSearchInput(val);
@@ -229,6 +246,36 @@ export default function BadgesPanel({ initialBadges, onBadgesChange, initialSort
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ badgeSortStrategy: "custom_org", badgeGroupOrder: allOrgsForGroups }),
+        }),
+        fetch("/api/badges/reorder", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ order: orderPayload }),
+        }),
+      ]);
+      if (!r1.ok || !r2.ok) throw new Error("Failed to save");
+      setSortDirty(false);
+    } catch (e) {
+      setSortError(`Failed to save: ${e instanceof Error ? e.message : e}`);
+    } finally {
+      setSortSaving(false);
+    }
+  };
+
+  const handleSortSaveWithDomainOrder = async () => {
+    setSortSaving(true);
+    setSortError(null);
+    try {
+      const orderPayload: { id: string; sortOrder: number }[] = [];
+      for (const domain of allDomainsForGroups) {
+        const domainBadges = badgesByDomain[domain] ?? [];
+        domainBadges.forEach((b, i) => orderPayload.push({ id: b.id, sortOrder: i }));
+      }
+      const [r1, r2] = await Promise.all([
+        fetch("/api/profile", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ badgeSortStrategy: "custom_domain", badgeDomainGroupOrder: allDomainsForGroups }),
         }),
         fetch("/api/badges/reorder", {
           method: "PATCH",
@@ -402,6 +449,111 @@ export default function BadgesPanel({ initialBadges, onBadgesChange, initialSort
     setDragOverBadgeInOrg(null);
   };
 
+  /* ── Drag & drop (custom_domain) ────────────────────────────────────── */
+
+  const handleDomainDragStart = (e: React.DragEvent, domain: string) => {
+    setDraggedDomain(domain);
+    e.dataTransfer.effectAllowed = "move";
+  };
+  const handleDomainDragOver = (e: React.DragEvent, domain: string) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    if (domain !== dragOverDomain) setDragOverDomain(domain);
+  };
+  const handleDomainDrop = (e: React.DragEvent, targetDomain: string) => {
+    e.preventDefault();
+    if (!draggedDomain || draggedDomain === targetDomain) { setDraggedDomain(null); setDragOverDomain(null); return; }
+    setDomainGroupOrder(() => {
+      const current = allDomainsForGroups;
+      const fromIdx = current.indexOf(draggedDomain);
+      const toIdx = current.indexOf(targetDomain);
+      const reordered = [...current];
+      const [removed] = reordered.splice(fromIdx, 1);
+      reordered.splice(toIdx, 0, removed);
+      return reordered;
+    });
+    setSortDirty(true);
+    setDraggedDomain(null);
+    setDragOverDomain(null);
+  };
+
+  const handleDomainTouchStart = (e: React.TouchEvent, domain: string) => {
+    const t = e.touches[0];
+    domainTouchRef.current = { domain, startX: t.clientX, startY: t.clientY, active: false };
+  };
+  const handleDomainTouchMove = (e: React.TouchEvent) => {
+    if (!domainTouchRef.current) return;
+    const t = e.touches[0];
+    const dx = t.clientX - domainTouchRef.current.startX;
+    const dy = t.clientY - domainTouchRef.current.startY;
+    if (!domainTouchRef.current.active) {
+      if (Math.sqrt(dx * dx + dy * dy) < 8) return;
+      domainTouchRef.current.active = true;
+      setDraggedDomain(domainTouchRef.current.domain);
+    }
+    let targetDomain: string | null = null;
+    document.querySelectorAll<HTMLElement>('[data-domain-id]').forEach((el) => {
+      const rect = el.getBoundingClientRect();
+      if (t.clientX >= rect.left && t.clientX <= rect.right && t.clientY >= rect.top && t.clientY <= rect.bottom) {
+        const id = el.getAttribute('data-domain-id');
+        if (id && id !== domainTouchRef.current!.domain) targetDomain = id;
+      }
+    });
+    if (targetDomain !== domainTouchOverRef.current) {
+      setDragOverDomain(targetDomain);
+      domainTouchOverRef.current = targetDomain;
+    }
+  };
+  const handleDomainTouchEnd = () => {
+    if (!domainTouchRef.current?.active) { domainTouchRef.current = null; return; }
+    const dragged = domainTouchRef.current.domain;
+    const target = domainTouchOverRef.current;
+    if (dragged && target && dragged !== target) {
+      setDomainGroupOrder(() => {
+        const current = allDomainsForGroups;
+        const fromIdx = current.indexOf(dragged);
+        const toIdx = current.indexOf(target);
+        const reordered = [...current];
+        const [removed] = reordered.splice(fromIdx, 1);
+        reordered.splice(toIdx, 0, removed);
+        return reordered;
+      });
+      setSortDirty(true);
+    }
+    domainTouchRef.current = null;
+    domainTouchOverRef.current = null;
+    setDraggedDomain(null);
+    setDragOverDomain(null);
+  };
+
+  const handleBadgeInDomainDragStart = (e: React.DragEvent, badgeId: string) => {
+    setDraggedBadgeInDomain(badgeId);
+    e.dataTransfer.effectAllowed = "move";
+  };
+  const handleBadgeInDomainDragOver = (e: React.DragEvent, badgeId: string) => {
+    e.preventDefault();
+    if (badgeId !== dragOverBadgeInDomain) setDragOverBadgeInDomain(badgeId);
+  };
+  const handleBadgeInDomainDrop = (e: React.DragEvent, targetId: string, domain: string) => {
+    e.preventDefault();
+    if (!draggedBadgeInDomain || draggedBadgeInDomain === targetId) { setDraggedBadgeInDomain(null); setDragOverBadgeInDomain(null); return; }
+    const domainBadges = badgesByDomain[domain] ?? [];
+    const fromIdx = domainBadges.findIndex(b => b.id === draggedBadgeInDomain);
+    const toIdx = domainBadges.findIndex(b => b.id === targetId);
+    if (fromIdx === -1 || toIdx === -1) { setDraggedBadgeInDomain(null); setDragOverBadgeInDomain(null); return; }
+    const reordered = [...domainBadges];
+    const [removed] = reordered.splice(fromIdx, 1);
+    reordered.splice(toIdx, 0, removed);
+    update(prev => prev.map(b => {
+      const idx = reordered.findIndex(r => r.id === b.id);
+      if (idx === -1) return b;
+      return { ...b, sortOrder: idx };
+    }));
+    setSortDirty(true);
+    setDraggedBadgeInDomain(null);
+    setDragOverBadgeInDomain(null);
+  };
+
   /* ── Derived state ─────────────────────────────────────────────────────── */
 
   const totalCount = badges.length;
@@ -436,6 +588,23 @@ export default function BadgesPanel({ initialBadges, onBadgesChange, initialSort
     return groups;
   }, [badges, allOrgsForGroups]);
 
+  const allDomainsForGroups = useMemo(() => {
+    const domains = Array.from(new Set(badges.map(b => b.domain).filter(Boolean))) as string[];
+    const ordered = domainGroupOrder.filter(d => domains.includes(d));
+    const unordered = domains.filter(d => !domainGroupOrder.includes(d));
+    return [...ordered, ...unordered];
+  }, [badges, domainGroupOrder]);
+
+  const badgesByDomain = useMemo(() => {
+    const groups: Record<string, Badge[]> = {};
+    for (const domain of allDomainsForGroups) {
+      groups[domain] = badges
+        .filter(b => b.domain === domain)
+        .sort((a, b) => (a.sortOrder ?? 9999) - (b.sortOrder ?? 9999));
+    }
+    return groups;
+  }, [badges, allDomainsForGroups]);
+
   const sortedAndFiltered = useMemo(() => {
     let arr: Badge[];
     if (sort === "custom_org") {
@@ -444,6 +613,15 @@ export default function BadgesPanel({ initialBadges, onBadgesChange, initialSort
         const bOrgIdx = allOrgsForGroups.indexOf(b.issuingOrganization);
         const aIdx = aOrgIdx === -1 ? 9999 : aOrgIdx;
         const bIdx = bOrgIdx === -1 ? 9999 : bOrgIdx;
+        if (aIdx !== bIdx) return aIdx - bIdx;
+        return (a.sortOrder ?? 9999) - (b.sortOrder ?? 9999);
+      });
+    } else if (sort === "custom_domain") {
+      arr = [...badges].sort((a, b) => {
+        const aDomainIdx = allDomainsForGroups.indexOf(a.domain ?? "");
+        const bDomainIdx = allDomainsForGroups.indexOf(b.domain ?? "");
+        const aIdx = aDomainIdx === -1 ? 9999 : aDomainIdx;
+        const bIdx = bDomainIdx === -1 ? 9999 : bDomainIdx;
         if (aIdx !== bIdx) return aIdx - bIdx;
         return (a.sortOrder ?? 9999) - (b.sortOrder ?? 9999);
       });
@@ -456,7 +634,7 @@ export default function BadgesPanel({ initialBadges, onBadgesChange, initialSort
       const matchOrg = orgFilter === "All" || b.issuingOrganization === orgFilter;
       return matchSearch && matchOrg;
     });
-  }, [badges, search, orgFilter, sort, allOrgsForGroups]);
+  }, [badges, search, orgFilter, sort, allOrgsForGroups, allDomainsForGroups]);
 
   const stats = [
     { label: "Total", value: totalCount, iconPath: "M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z", bg: "rgba(124,58,237,0.1)", border: "rgba(124,58,237,0.18)", icon: "#7c3aed" },
@@ -552,7 +730,7 @@ export default function BadgesPanel({ initialBadges, onBadgesChange, initialSort
             </div>
             {sortDirty && (
               <button
-                onClick={sort === "custom" ? handleSortSaveWithOrder : sort === "custom_org" ? handleSortSaveWithOrgOrder : handleSortSave}
+                onClick={sort === "custom" ? handleSortSaveWithOrder : sort === "custom_org" ? handleSortSaveWithOrgOrder : sort === "custom_domain" ? handleSortSaveWithDomainOrder : handleSortSave}
                 disabled={sortSaving}
                 className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all text-white disabled:opacity-60"
                 style={{ background: "linear-gradient(135deg, #7c3aed, #4f46e5)", boxShadow: "0 2px 10px rgba(124,58,237,0.3)" }}
@@ -592,7 +770,7 @@ export default function BadgesPanel({ initialBadges, onBadgesChange, initialSort
             </button>
             {sortDirty && (
               <button
-                onClick={sort === "custom" ? handleSortSaveWithOrder : sort === "custom_org" ? handleSortSaveWithOrgOrder : handleSortSave}
+                onClick={sort === "custom" ? handleSortSaveWithOrder : sort === "custom_org" ? handleSortSaveWithOrgOrder : sort === "custom_domain" ? handleSortSaveWithDomainOrder : handleSortSave}
                 disabled={sortSaving}
                 className="shrink-0 flex items-center gap-1 px-2.5 py-2 rounded-xl text-xs font-semibold text-white transition-all disabled:opacity-60"
                 style={{ background: "linear-gradient(135deg, #7c3aed, #4f46e5)" }}
@@ -870,8 +1048,104 @@ export default function BadgesPanel({ initialBadges, onBadgesChange, initialSort
         </div>
       )}
 
-      {/* Regular grid — hidden when custom_org is active and unfiltered */}
-      {(sort !== "custom_org" || isFiltered) && sortedAndFiltered.length > 0 && (
+      {/* Domain grouped view */}
+      {sort === "custom_domain" && !isFiltered && totalCount > 0 && (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2 text-xs text-slate-400 dark:text-white/40 py-1 px-1">
+            <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 9h16.5m-16.5 6.75h16.5" />
+            </svg>
+            Drag domain groups to reorder. Drag badges within a group to reorder. Click Save when done.
+          </div>
+          {allDomainsForGroups.map(domain => (
+            <div
+              key={domain}
+              data-domain-id={domain}
+              draggable
+              onDragStart={(e) => handleDomainDragStart(e, domain)}
+              onDragOver={(e) => handleDomainDragOver(e, domain)}
+              onDrop={(e) => handleDomainDrop(e, domain)}
+              onDragEnd={() => { setDraggedDomain(null); setDragOverDomain(null); }}
+              onTouchStart={(e) => handleDomainTouchStart(e, domain)}
+              onTouchMove={handleDomainTouchMove}
+              onTouchEnd={handleDomainTouchEnd}
+              className="rounded-2xl p-4 transition-all"
+              style={{
+                background: "var(--surface)",
+                border: dragOverDomain === domain ? "2px dashed #7c3aed" : "1px solid var(--border)",
+                boxShadow: dragOverDomain === domain ? "0 0 0 4px rgba(124,58,237,0.12)" : "var(--card-shadow)",
+                opacity: draggedDomain === domain ? 0.6 : 1,
+                cursor: "grab",
+                userSelect: "none",
+                WebkitUserSelect: "none",
+              }}
+            >
+              {/* Domain header */}
+              <div className="flex items-center gap-2 mb-3">
+                <svg className="w-4 h-4 text-slate-400 dark:text-white/30 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 9h16.5m-16.5 6.75h16.5" />
+                </svg>
+                <span className="text-sm font-bold text-slate-800 dark:text-white">{domain}</span>
+                <span className="text-xs text-slate-400 dark:text-white/40 ml-auto">{badgesByDomain[domain]?.length} badge{badgesByDomain[domain]?.length !== 1 ? "s" : ""}</span>
+              </div>
+              {/* Badges mini-grid */}
+              <div className="grid grid-cols-5 sm:grid-cols-6 md:grid-cols-7 lg:grid-cols-8 gap-2">
+                {(badgesByDomain[domain] ?? []).map(badge => {
+                  const isPdf = badge.imageUrl?.toLowerCase().endsWith(".pdf") ?? false;
+                  const domainInitials = (badge.issuingOrganization || "?").split(" ").map((w: string) => w[0]).join("").toUpperCase().slice(0, 2);
+                  return (
+                    <div
+                      key={badge.id}
+                      draggable={!draggedDomain}
+                      onDragStart={(e) => { if (draggedDomain) return; e.stopPropagation(); handleBadgeInDomainDragStart(e, badge.id); }}
+                      onDragOver={(e) => { if (draggedDomain) return; e.stopPropagation(); handleBadgeInDomainDragOver(e, badge.id); }}
+                      onDrop={(e) => { if (draggedDomain) return; e.stopPropagation(); handleBadgeInDomainDrop(e, badge.id, domain); }}
+                      onDragEnd={() => { if (draggedDomain) return; setDraggedBadgeInDomain(null); setDragOverBadgeInDomain(null); }}
+                      onClick={() => { if (!draggedBadgeInDomain) setSelectedDomainBadge(badge); }}
+                      className="relative aspect-square rounded-xl overflow-hidden flex items-center justify-center transition-all"
+                      style={{
+                        background: "var(--surface-alt)",
+                        border: !draggedDomain && dragOverBadgeInDomain === badge.id ? "2px dashed #7c3aed" : "1px solid var(--border)",
+                        opacity: draggedBadgeInDomain === badge.id ? 0.5 : 1,
+                        cursor: draggedDomain ? "grabbing" : "pointer",
+                        pointerEvents: draggedDomain ? "none" : "auto",
+                        filter: !badge.isPublic ? "grayscale(1)" : "none",
+                      }}
+                      title={badge.title}
+                    >
+                      {badge.imageUrl && !isPdf ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={badge.imageUrl} alt={badge.title} className="w-full h-full object-contain p-1.5" style={{ opacity: badge.isPublic ? 1 : 0.5 }} />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-[9px] font-black text-white" style={{ background: "linear-gradient(135deg, #7c3aed, #4f46e5)" }}>
+                          {domainInitials}
+                        </div>
+                      )}
+                      {!badge.isPublic && (
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <svg className="w-4 h-4 text-white/70 drop-shadow" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88" />
+                          </svg>
+                        </div>
+                      )}
+                      {badge.isFeatured && (
+                        <div className="absolute top-1 left-1 w-3.5 h-3.5 flex items-center justify-center">
+                          <svg className="w-3 h-3 text-amber-400 drop-shadow" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z" />
+                          </svg>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Regular grid — hidden when custom_org or custom_domain is active and unfiltered */}
+      {(sort !== "custom_org" && sort !== "custom_domain" || isFiltered) && sortedAndFiltered.length > 0 && (
         <div
           className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3"
           onDragLeave={() => {
@@ -1054,6 +1328,137 @@ export default function BadgesPanel({ initialBadges, onBadgesChange, initialSort
           title="Pin limit reached"
           message="You can only pin up to 3 badges. Unpin one first to pin another."
           onClose={() => setOrgBadgePinLimit(false)}
+        />
+      )}
+
+      {/* Domain-view badge action sheet */}
+      {selectedDomainBadge && (
+        <div
+          className="fixed inset-0 z-50 flex flex-col justify-end"
+          style={{ background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)" }}
+          onClick={() => setSelectedDomainBadge(null)}
+        >
+          <div
+            className="rounded-t-2xl overflow-hidden w-full"
+            style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-3 px-5 py-4" style={{ borderBottom: "1px solid var(--border)" }}>
+              <div className="w-10 h-10 rounded-xl overflow-hidden shrink-0 flex items-center justify-center" style={{ background: "var(--surface-alt)", border: "1px solid var(--border)" }}>
+                {selectedDomainBadge.imageUrl && !selectedDomainBadge.imageUrl.toLowerCase().endsWith(".pdf") ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={selectedDomainBadge.imageUrl} alt={selectedDomainBadge.title} className="w-full h-full object-contain p-1" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-[9px] font-black text-white" style={{ background: "linear-gradient(135deg, #7c3aed, #4f46e5)" }}>
+                    {selectedDomainBadge.issuingOrganization.split(" ").map(w => w[0]).join("").toUpperCase().slice(0, 2)}
+                  </div>
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-bold text-slate-900 dark:text-white truncate">{selectedDomainBadge.title}</p>
+                <p className="text-xs text-slate-400 dark:text-white/40 truncate">{selectedDomainBadge.issuingOrganization}{selectedDomainBadge.domain ? ` · ${selectedDomainBadge.domain}` : ""}</p>
+              </div>
+              <button onClick={() => setSelectedDomainBadge(null)} className="text-slate-400 dark:text-white/40 hover:text-slate-700 dark:hover:text-white transition-colors">
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="px-5 py-4 flex flex-col gap-3">
+              <div className="flex items-center justify-between py-2">
+                <div>
+                  <p className="text-sm font-semibold text-slate-800 dark:text-white">Public visibility</p>
+                  <p className="text-xs text-slate-400 dark:text-white/40">{selectedDomainBadge.isPublic ? "Visible on your public profile" : "Hidden from your public profile"}</p>
+                </div>
+                <button
+                  onClick={() => {
+                    handleVisibilityToggle(selectedDomainBadge.id, !selectedDomainBadge.isPublic);
+                    setSelectedDomainBadge({ ...selectedDomainBadge, isPublic: !selectedDomainBadge.isPublic });
+                  }}
+                  className={`relative w-11 h-6 rounded-full transition-colors duration-200 shrink-0 ${selectedDomainBadge.isPublic ? "bg-emerald-500" : "bg-slate-300 dark:bg-white/15"}`}
+                >
+                  <span className={`absolute top-[3px] left-[3px] w-[18px] h-[18px] bg-white rounded-full shadow-sm transition-transform duration-200 ${selectedDomainBadge.isPublic ? "translate-x-[20px]" : "translate-x-0"}`} />
+                </button>
+              </div>
+              <button
+                onClick={() => { setSelectedDomainBadge(null); openEdit(selectedDomainBadge); }}
+                className="flex items-center gap-3 w-full py-3 px-4 rounded-xl transition-all text-left"
+                style={{ background: "var(--surface-alt)", border: "1px solid var(--border)" }}
+              >
+                <svg className="w-4 h-4 shrink-0 text-slate-500 dark:text-white/50" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z" />
+                </svg>
+                <div>
+                  <p className="text-sm font-semibold text-slate-700 dark:text-white/80">Edit badge</p>
+                  <p className="text-xs text-slate-400 dark:text-white/40">Update title, image, dates and more</p>
+                </div>
+              </button>
+              <button
+                onClick={() => {
+                  if (!selectedDomainBadge.isFeatured && featuredCount >= 3) { setDomainBadgePinLimit(true); return; }
+                  const next = !selectedDomainBadge.isFeatured;
+                  handleFeatureToggle(selectedDomainBadge.id, next);
+                  setSelectedDomainBadge({ ...selectedDomainBadge, isFeatured: next });
+                }}
+                className="flex items-center gap-3 w-full py-3 px-4 rounded-xl transition-all text-left"
+                style={{
+                  background: selectedDomainBadge.isFeatured ? "rgba(245,158,11,0.08)" : "var(--surface-alt)",
+                  border: selectedDomainBadge.isFeatured ? "1px solid rgba(245,158,11,0.25)" : "1px solid var(--border)",
+                }}
+              >
+                <svg className={`w-4 h-4 shrink-0 ${selectedDomainBadge.isFeatured ? "text-amber-500" : "text-slate-400 dark:text-white/40"}`} fill={selectedDomainBadge.isFeatured ? "currentColor" : "none"} viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z" />
+                </svg>
+                <div>
+                  <p className={`text-sm font-semibold ${selectedDomainBadge.isFeatured ? "text-amber-600 dark:text-amber-400" : "text-slate-700 dark:text-white/80"}`}>
+                    {selectedDomainBadge.isFeatured ? "Unpin from profile" : "Pin to profile"}
+                  </p>
+                  <p className="text-xs text-slate-400 dark:text-white/40">{selectedDomainBadge.isFeatured ? "Remove from pinned shelf" : "Show in pinned shelf (max 3)"}</p>
+                </div>
+              </button>
+              <button
+                onClick={() => setDomainBadgeDeleteConfirm(true)}
+                className="flex items-center gap-3 w-full py-3 px-4 rounded-xl transition-all text-left"
+                style={{ background: "rgba(239,68,68,0.06)", border: "1px solid rgba(239,68,68,0.15)" }}
+              >
+                <svg className="w-4 h-4 shrink-0 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+                </svg>
+                <div>
+                  <p className="text-sm font-semibold text-red-600 dark:text-red-400">Delete badge</p>
+                  <p className="text-xs text-slate-400 dark:text-white/40">Permanently remove this badge</p>
+                </div>
+              </button>
+            </div>
+
+            <div className="px-5 pb-6">
+              <button onClick={() => setSelectedDomainBadge(null)} className="w-full py-3 rounded-xl text-sm font-semibold transition-all text-slate-600 dark:text-white/65 bg-black/[0.04] dark:bg-white/[0.06] border border-black/[0.08] dark:border-white/[0.11]">
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {domainBadgeDeleteConfirm && selectedDomainBadge && (
+        <DeleteConfirmModal
+          title="Delete this badge?"
+          message="This will permanently remove the badge and its image. This cannot be undone."
+          onConfirm={() => {
+            handleDelete(selectedDomainBadge.id);
+            setDomainBadgeDeleteConfirm(false);
+            setSelectedDomainBadge(null);
+          }}
+          onCancel={() => setDomainBadgeDeleteConfirm(false)}
+        />
+      )}
+
+      {domainBadgePinLimit && (
+        <InfoModal
+          title="Pin limit reached"
+          message="You can only pin up to 3 badges. Unpin one first to pin another."
+          onClose={() => setDomainBadgePinLimit(false)}
         />
       )}
     </div>

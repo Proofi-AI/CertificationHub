@@ -46,6 +46,7 @@ export default async function DashboardPage() {
       badges.sort((a, b) => (a.sortOrder ?? 9999) - (b.sortOrder ?? 9999));
       break;
     case "custom_org":
+    case "custom_domain":
       badges.sort((a, b) => (a.sortOrder ?? 9999) - (b.sortOrder ?? 9999));
       break;
     // "recent" already handled by orderBy above
@@ -59,6 +60,7 @@ export default async function DashboardPage() {
       break;
     case "custom":
     case "custom_domain":
+    case "custom_issuer":
       certificates.sort((a, b) => (a.sortOrder ?? 9999) - (b.sortOrder ?? 9999));
       break;
     case "domain":

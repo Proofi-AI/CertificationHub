@@ -23,5 +23,11 @@ export async function DELETE(
     data: { issuingOrganization: "" },
   });
 
+  // Clear issuer on any certificates that used this organization
+  await prisma.certificate.updateMany({
+    where: { userId: user.id, issuer: orgName },
+    data: { issuer: "" },
+  });
+
   return Response.json({ data: { id } });
 }
