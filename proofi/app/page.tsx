@@ -50,14 +50,14 @@ export default function LandingPage() {
 
         {/* Headline */}
         <h1 className="relative text-center text-5xl md:text-7xl font-bold tracking-tight leading-tight mb-6 max-w-4xl">
-          Your certificates,{" "}
+          Your credentials,{" "}
           <span className="gradient-text">beautifully showcased</span>
         </h1>
 
         {/* Subheadline */}
         <p className="relative text-center text-lg md:text-xl text-white/50 max-w-2xl mb-10 leading-relaxed">
-          Upload your professional certificates, organise them by domain, and share a
-          clean public profile with anyone — no login required to view.
+          Upload certificates and import badges from Credly, LeetCode, and GitHub.
+          Organise by domain or issuer, and share a clean public profile with anyone — no login required.
         </p>
 
         {/* CTA Buttons */}
@@ -109,26 +109,54 @@ export default function LandingPage() {
                 <h3 className="font-semibold text-lg">Sarah Johnson</h3>
                 <p className="text-white/50 text-sm">Full-Stack Engineer · Cloud Enthusiast</p>
               </div>
-              <div className="ml-auto">
-                <span className="text-xs px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                  7 certificates
+              <div className="ml-auto flex items-center gap-2">
+                <span className="text-xs px-3 py-1 rounded-full bg-violet-500/10 text-violet-400 border border-violet-500/20">
+                  7 certs
+                </span>
+                <span className="text-xs px-3 py-1 rounded-full bg-teal-500/10 text-teal-400 border border-teal-500/20">
+                  12 badges
                 </span>
               </div>
             </div>
 
-            {/* Domain tabs */}
-            <div className="flex gap-2 mb-4 flex-wrap">
-              {["All", "Software Engineering", "Cloud Computing", "Machine Learning"].map((tab, i) => (
-                <span
-                  key={tab}
-                  className={`text-xs px-3 py-1 rounded-full cursor-pointer transition-all ${i === 0
-                      ? "bg-violet-600/30 text-violet-300 border border-violet-500/30"
-                      : "bg-white/5 text-white/40 border border-white/10 hover:border-white/20"
-                    }`}
-                >
-                  {tab}
-                </span>
-              ))}
+            {/* Filter bar */}
+            <div className="flex items-center gap-2 mb-4">
+              <span className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full bg-violet-600/20 text-violet-300 border border-violet-500/30 cursor-pointer">
+                <span className="text-[9px] font-black uppercase tracking-widest opacity-60">Domain</span>
+                <span className="opacity-20">|</span>
+                All
+                <svg className="w-2.5 h-2.5 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
+              </span>
+              <span className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full bg-white/5 text-white/40 border border-white/10 cursor-pointer">
+                <span className="text-[9px] font-black uppercase tracking-widest opacity-60">Issuer</span>
+                <span className="opacity-20">|</span>
+                All
+                <svg className="w-2.5 h-2.5 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
+              </span>
+            </div>
+
+            {/* Badge row */}
+            <div className="mb-4">
+              <p className="text-xs font-semibold text-white/40 mb-2 uppercase tracking-wider">Badges &amp; Credentials</p>
+              <div className="flex gap-2 flex-wrap">
+                {[
+                  { label: "AWS", color: "from-orange-500 to-yellow-500" },
+                  { label: "GH", color: "from-slate-500 to-slate-400" },
+                  { label: "LC", color: "from-amber-500 to-orange-500" },
+                  { label: "GCP", color: "from-blue-500 to-cyan-500" },
+                  { label: "K8s", color: "from-sky-500 to-blue-600" },
+                  { label: "TF", color: "from-violet-500 to-purple-600" },
+                ].map((b) => (
+                  <div
+                    key={b.label}
+                    className="w-10 h-10 rounded-xl flex items-center justify-center text-[10px] font-black text-white shadow-md"
+                    style={{ background: `linear-gradient(135deg, var(--tw-gradient-stops))` }}
+                  >
+                    <span className={`w-full h-full rounded-xl flex items-center justify-center bg-gradient-to-br ${b.color}`}>{b.label}</span>
+                  </div>
+                ))}
+                <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-[10px] text-white/30">+6</div>
+              </div>
             </div>
 
             {/* Certificate cards */}
@@ -190,12 +218,36 @@ export default function LandingPage() {
               {
                 icon: (
                   <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244" />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 01-1.043 3.296 3.745 3.745 0 01-3.296 1.043A3.745 3.745 0 0112 21c-1.268 0-2.39-.63-3.068-1.593a3.745 3.745 0 01-3.296-1.043 3.745 3.745 0 01-1.043-3.296A3.745 3.745 0 013 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 011.043-3.296 3.745 3.745 0 013.296-1.043A3.745 3.745 0 0112 3c1.268 0 2.39.63 3.068 1.593a3.745 3.745 0 013.296 1.043 3.745 3.745 0 011.043 3.296A3.745 3.745 0 0121 12z" />
+                  </svg>
+                ),
+                color: "from-teal-500/20 to-emerald-500/20",
+                accent: "text-teal-400",
+                border: "border-teal-500/20",
+                title: "Badges & credentials",
+                desc: "Showcase digital badges alongside certificates. Import directly from Credly, LeetCode, and GitHub — or add your own. Featured badges appear in a trophy shelf; the rest form a sleek hex wall.",
+              },
+              {
+                icon: (
+                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456z" />
                   </svg>
                 ),
                 color: "from-violet-500/20 to-purple-500/20",
                 accent: "text-violet-400",
                 border: "border-violet-500/20",
+                title: "AI-powered auto-fill",
+                desc: "Paste a credential ID or URL and AI fills in the certificate name, issuer, domain, and dates automatically. One-click description generation for each certificate too.",
+              },
+              {
+                icon: (
+                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244" />
+                  </svg>
+                ),
+                color: "from-blue-500/20 to-indigo-500/20",
+                accent: "text-blue-400",
+                border: "border-blue-500/20",
                 title: "Your personal profile URL",
                 desc: "Get a clean, memorable link at proofihub.vercel.app/yourname. Share it on LinkedIn, your CV, or anywhere. Anyone can view your profile — no account required.",
               },
@@ -205,11 +257,35 @@ export default function LandingPage() {
                     <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
                   </svg>
                 ),
-                color: "from-blue-500/20 to-cyan-500/20",
-                accent: "text-blue-400",
-                border: "border-blue-500/20",
-                title: "Upload images and PDFs",
-                desc: "Upload certificate images (JPG, PNG, WebP) or PDF documents. Attach an issuer, date, domain, and an optional description. All stored securely.",
+                color: "from-cyan-500/20 to-blue-500/20",
+                accent: "text-cyan-400",
+                border: "border-cyan-500/20",
+                title: "Images, PDFs & auto-preview",
+                desc: "Upload JPG, PNG, WebP, or PDF certificates. PDFs are automatically converted to a JPEG preview so they look great on every device. All files stored securely.",
+              },
+              {
+                icon: (
+                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 5.25h16.5m-16.5 4.5h16.5m-16.5 4.5h16.5m-16.5 4.5h16.5" />
+                  </svg>
+                ),
+                color: "from-rose-500/20 to-pink-500/20",
+                accent: "text-rose-400",
+                border: "border-rose-500/20",
+                title: "Grouped sorting & drag-to-reorder",
+                desc: "Group certificates and badges by domain or issuing organization. Drag whole groups — or individual items within a group — to set the exact order you want. Works on mobile with a long-press.",
+              },
+              {
+                icon: (
+                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 3c2.755 0 5.455.232 8.083.678.533.09.917.556.917 1.096v1.044a2.25 2.25 0 01-.659 1.591l-5.432 5.432a2.25 2.25 0 00-.659 1.591v2.927a2.25 2.25 0 01-1.244 2.013L9.75 21v-6.568a2.25 2.25 0 00-.659-1.591L3.659 7.409A2.25 2.25 0 013 5.818V4.774c0-.54.384-1.006.917-1.096A48.32 48.32 0 0112 3z" />
+                  </svg>
+                ),
+                color: "from-amber-500/20 to-orange-500/20",
+                accent: "text-amber-400",
+                border: "border-amber-500/20",
+                title: "Smart filtering on public profile",
+                desc: "Visitors filter by domain and issuing organization simultaneously. The issuer list narrows to only those with content in the selected domain — so results are always relevant.",
               },
               {
                 icon: (
@@ -222,31 +298,7 @@ export default function LandingPage() {
                 accent: "text-emerald-400",
                 border: "border-emerald-500/20",
                 title: "Full control over visibility",
-                desc: "Toggle any certificate public or private instantly with a single switch. Show recruiters exactly what you want — nothing more, nothing less.",
-              },
-              {
-                icon: (
-                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 5.25h16.5m-16.5 4.5h16.5m-16.5 4.5h16.5m-16.5 4.5h16.5" />
-                  </svg>
-                ),
-                color: "from-rose-500/20 to-pink-500/20",
-                accent: "text-rose-400",
-                border: "border-rose-500/20",
-                title: "Smart sorting & filtering",
-                desc: "Sort by date, domain, name, or strength. Drag to reorder manually. Visitors can filter by domain — making it easy to find the credentials they care about.",
-              },
-              {
-                icon: (
-                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
-                  </svg>
-                ),
-                color: "from-amber-500/20 to-orange-500/20",
-                accent: "text-amber-400",
-                border: "border-amber-500/20",
-                title: "Certificate completeness score",
-                desc: "A visual strength bar shows how complete each certificate entry is. Add a credential ID, upload a file, and fill in all dates to reach a full score.",
+                desc: "Toggle any certificate or badge public or private with a single switch. Pin your best credentials to feature them at the top. Show recruiters exactly what you want.",
               },
               {
                 icon: (
@@ -258,7 +310,7 @@ export default function LandingPage() {
                 accent: "text-slate-400",
                 border: "border-slate-500/20",
                 title: "Light & dark public profile",
-                desc: "Choose whether your public profile is displayed in light or dark mode by default. A clean, professional look in either theme.",
+                desc: "Choose whether your public profile appears in light or dark mode by default. A polished, professional look in either theme — no extra effort needed.",
               },
             ].map((feature) => (
               <div
@@ -297,14 +349,14 @@ export default function LandingPage() {
               },
               {
                 step: "02",
-                title: "Upload your certificates",
-                desc: "Add certificate images or PDFs. Fill in the issuer, date, and domain. Add an optional description for context.",
-                icon: "📄",
+                title: "Add certificates & badges",
+                desc: "Upload certificate images or PDFs. Import badges from Credly, LeetCode, or GitHub. Let AI auto-fill the details — or fill them in yourself.",
+                icon: "✦",
               },
               {
                 step: "03",
                 title: "Share your profile",
-                desc: "Copy your unique proofihub.vercel.app link and share it anywhere. Your profile is live and viewable by anyone instantly.",
+                desc: "Copy your unique proofihub.vercel.app link and share it anywhere. Visitors can filter by domain and issuer to find exactly what they need.",
                 icon: "🚀",
               },
             ].map((step, i) => (
@@ -338,7 +390,7 @@ export default function LandingPage() {
                 <span className="gradient-text">credentials?</span>
               </h2>
               <p className="text-white/50 mb-8 text-base">
-                Create your profile in minutes and share a link that speaks for itself.
+                Certificates, badges, imports, AI fill — everything in one profile. Free to create, instant to share.
               </p>
               <Link
                 href="/signup"
