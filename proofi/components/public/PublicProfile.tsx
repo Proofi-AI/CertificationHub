@@ -11,6 +11,7 @@ import BadgeTrophyShelf from "@/components/BadgeTrophyShelf";
 import BadgeLightbox from "@/components/BadgeLightbox";
 import CertificatePinnedShelf from "@/components/CertificatePinnedShelf";
 import { buildOrgColorMap } from "@/lib/orgColors";
+import { scoreCertificate } from "@/lib/certStrength";
 
 /* ─── Filter Dropdown ──────────────────────────────────────────── */
 function FilterDropdown({
@@ -370,26 +371,43 @@ export default function PublicProfile({ profile }: Props) {
 
   const nonFeaturedBadges = filteredBadges.filter(b => !b.isFeatured);
 
-  // Sort badges: prefer domain order if badgeDomainGroupOrder, then org order if badgeGroupOrder
-  const sortedNonFeaturedBadges = badgeDomainGroupOrder.length > 0
-    ? [...nonFeaturedBadges].sort((a, b) => {
-        const aIdx = badgeDomainGroupOrder.indexOf(a.domain ?? "");
-        const bIdx = badgeDomainGroupOrder.indexOf(b.domain ?? "");
-        const aOrd = aIdx === -1 ? 9999 : aIdx;
-        const bOrd = bIdx === -1 ? 9999 : bIdx;
-        if (aOrd !== bOrd) return aOrd - bOrd;
-        return (a.sortOrder ?? 9999) - (b.sortOrder ?? 9999);
-      })
-    : badgeGroupOrder.length > 0
-    ? [...nonFeaturedBadges].sort((a, b) => {
-        const aIdx = badgeGroupOrder.indexOf(a.issuingOrganization);
-        const bIdx = badgeGroupOrder.indexOf(b.issuingOrganization);
-        const aOrd = aIdx === -1 ? 9999 : aIdx;
-        const bOrd = bIdx === -1 ? 9999 : bIdx;
-        if (aOrd !== bOrd) return aOrd - bOrd;
-        return (a.sortOrder ?? 9999) - (b.sortOrder ?? 9999);
-      })
-    : nonFeaturedBadges;
+  // Sort badges: mirror the dashboard sort strategy exactly
+  const sortedNonFeaturedBadges = (() => {
+    switch (profile.badgeSortStrategy) {
+      case "recent":
+        return [...nonFeaturedBadges].sort((a, b) => new Date(b.issuedAt).getTime() - new Date(a.issuedAt).getTime());
+      case "oldest":
+        return [...nonFeaturedBadges].sort((a, b) => new Date(a.issuedAt).getTime() - new Date(b.issuedAt).getTime());
+      case "alphabetical":
+        return [...nonFeaturedBadges].sort((a, b) => a.title.localeCompare(b.title));
+      case "custom":
+        return [...nonFeaturedBadges].sort((a, b) => (a.sortOrder ?? 9999) - (b.sortOrder ?? 9999));
+      case "custom_org":
+        return badgeGroupOrder.length > 0
+          ? [...nonFeaturedBadges].sort((a, b) => {
+              const aIdx = badgeGroupOrder.indexOf(a.issuingOrganization);
+              const bIdx = badgeGroupOrder.indexOf(b.issuingOrganization);
+              const aOrd = aIdx === -1 ? 9999 : aIdx;
+              const bOrd = bIdx === -1 ? 9999 : bIdx;
+              if (aOrd !== bOrd) return aOrd - bOrd;
+              return (a.sortOrder ?? 9999) - (b.sortOrder ?? 9999);
+            })
+          : nonFeaturedBadges;
+      case "custom_domain":
+        return badgeDomainGroupOrder.length > 0
+          ? [...nonFeaturedBadges].sort((a, b) => {
+              const aIdx = badgeDomainGroupOrder.indexOf(a.domain ?? "");
+              const bIdx = badgeDomainGroupOrder.indexOf(b.domain ?? "");
+              const aOrd = aIdx === -1 ? 9999 : aIdx;
+              const bOrd = bIdx === -1 ? 9999 : bIdx;
+              if (aOrd !== bOrd) return aOrd - bOrd;
+              return (a.sortOrder ?? 9999) - (b.sortOrder ?? 9999);
+            })
+          : nonFeaturedBadges;
+      default:
+        return nonFeaturedBadges;
+    }
+  })();
 
   const badgesForWall = sortedNonFeaturedBadges;
 
@@ -648,28 +666,58 @@ export default function PublicProfile({ profile }: Props) {
                 onCertClick={setLightboxCert}
               />
 
-              {/* Certificate grid — non-featured only, sorted by certGroupOrder/certIssuerGroupOrder + sortOrder */}
+              {/* Certificate grid — non-featured only, sorted to mirror the dashboard sort strategy */}
               {(() => {
                 const nonFeatured = filteredCerts.filter((c) => !c.isFeatured);
-                const sorted = certIssuerGroupOrder.length > 0
-                  ? [...nonFeatured].sort((a, b) => {
-                      const aIdx = certIssuerGroupOrder.indexOf(a.issuer);
-                      const bIdx = certIssuerGroupOrder.indexOf(b.issuer);
-                      const aOrd = aIdx === -1 ? 9999 : aIdx;
-                      const bOrd = bIdx === -1 ? 9999 : bIdx;
-                      if (aOrd !== bOrd) return aOrd - bOrd;
-                      return (a.sortOrder ?? 9999) - (b.sortOrder ?? 9999);
-                    })
-                  : certGroupOrder.length > 0
-                  ? [...nonFeatured].sort((a, b) => {
-                      const aIdx = certGroupOrder.indexOf(a.domain);
-                      const bIdx = certGroupOrder.indexOf(b.domain);
-                      const aOrd = aIdx === -1 ? 9999 : aIdx;
-                      const bOrd = bIdx === -1 ? 9999 : bIdx;
-                      if (aOrd !== bOrd) return aOrd - bOrd;
-                      return (a.sortOrder ?? 9999) - (b.sortOrder ?? 9999);
-                    })
-                  : nonFeatured;
+                const sorted = (() => {
+                  switch (profile.sortStrategy) {
+                    case "recent":
+                      return [...nonFeatured].sort((a, b) => new Date(b.issuedAt).getTime() - new Date(a.issuedAt).getTime());
+                    case "strongest":
+                      return [...nonFeatured].sort((a, b) => scoreCertificate(b).score - scoreCertificate(a).score);
+                    case "domain":
+                      return [...nonFeatured].sort((a, b) => {
+                        const dc = a.domain.localeCompare(b.domain);
+                        if (dc !== 0) return dc;
+                        return new Date(b.issuedAt).getTime() - new Date(a.issuedAt).getTime();
+                      });
+                    case "expiring":
+                      return [...nonFeatured].sort((a, b) => {
+                        if (!a.expiresAt && !b.expiresAt) return 0;
+                        if (!a.expiresAt) return 1;
+                        if (!b.expiresAt) return -1;
+                        return new Date(a.expiresAt).getTime() - new Date(b.expiresAt).getTime();
+                      });
+                    case "alphabetical":
+                      return [...nonFeatured].sort((a, b) => a.name.localeCompare(b.name));
+                    case "custom":
+                      return [...nonFeatured].sort((a, b) => (a.sortOrder ?? 9999) - (b.sortOrder ?? 9999));
+                    case "custom_issuer":
+                      return certIssuerGroupOrder.length > 0
+                        ? [...nonFeatured].sort((a, b) => {
+                            const aIdx = certIssuerGroupOrder.indexOf(a.issuer);
+                            const bIdx = certIssuerGroupOrder.indexOf(b.issuer);
+                            const aOrd = aIdx === -1 ? 9999 : aIdx;
+                            const bOrd = bIdx === -1 ? 9999 : bIdx;
+                            if (aOrd !== bOrd) return aOrd - bOrd;
+                            return (a.sortOrder ?? 9999) - (b.sortOrder ?? 9999);
+                          })
+                        : nonFeatured;
+                    case "custom_domain":
+                      return certGroupOrder.length > 0
+                        ? [...nonFeatured].sort((a, b) => {
+                            const aIdx = certGroupOrder.indexOf(a.domain);
+                            const bIdx = certGroupOrder.indexOf(b.domain);
+                            const aOrd = aIdx === -1 ? 9999 : aIdx;
+                            const bOrd = bIdx === -1 ? 9999 : bIdx;
+                            if (aOrd !== bOrd) return aOrd - bOrd;
+                            return (a.sortOrder ?? 9999) - (b.sortOrder ?? 9999);
+                          })
+                        : nonFeatured;
+                    default:
+                      return nonFeatured;
+                  }
+                })();
                 if (sorted.length === 0) return null;
                 return (
                   <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-5">
