@@ -105,6 +105,17 @@ export default function BadgesPanel({ initialBadges, onBadgesChange, initialSort
   const [domainBadgeDeleteConfirm, setDomainBadgeDeleteConfirm] = useState(false);
   const [domainBadgePinLimit, setDomainBadgePinLimit] = useState(false);
 
+  // custom (flat) sort state
+  const customTouchRef = useRef<{ id: string; startX: number; startY: number; active: boolean; timer: ReturnType<typeof setTimeout> | null } | null>(null);
+  const customTouchOverRef = useRef<string | null>(null);
+  const [selectedCustomBadge, setSelectedCustomBadge] = useState<Badge | null>(null);
+  const [customBadgeDeleteConfirm, setCustomBadgeDeleteConfirm] = useState(false);
+  const [customBadgePinLimit, setCustomBadgePinLimit] = useState(false);
+
+  // touch auto-scroll
+  const touchClientYRef = useRef(0);
+  const touchAutoScrollRafRef = useRef<number | null>(null);
+
   // Prevent page scroll during active touch drag (non-passive listener required)
   useEffect(() => {
     const handler = (e: TouchEvent) => {
@@ -112,13 +123,30 @@ export default function BadgesPanel({ initialBadges, onBadgesChange, initialSort
         orgTouchRef.current?.active ||
         domainTouchRef.current?.active ||
         badgeInOrgTouchRef.current?.active ||
-        badgeInDomainTouchRef.current?.active
+        badgeInDomainTouchRef.current?.active ||
+        customTouchRef.current?.active
       ) {
         e.preventDefault();
       }
     };
     document.addEventListener("touchmove", handler, { passive: false });
     return () => document.removeEventListener("touchmove", handler);
+  }, []);
+
+  // Auto-scroll during mouse drag
+  useEffect(() => {
+    const ZONE = 100;
+    const MAX_SPEED = 15;
+    const onDrag = (e: DragEvent) => {
+      if (e.clientY === 0 && e.clientX === 0) return;
+      const vh = window.innerHeight;
+      let speed = 0;
+      if (e.clientY < ZONE) speed = -Math.round(MAX_SPEED * (1 - e.clientY / ZONE));
+      else if (e.clientY > vh - ZONE) speed = Math.round(MAX_SPEED * (1 - (vh - e.clientY) / ZONE));
+      if (speed !== 0) window.scrollBy(0, speed);
+    };
+    window.addEventListener("drag", onDrag);
+    return () => window.removeEventListener("drag", onDrag);
   }, []);
 
   const handleSearchInput = (val: string) => {
@@ -148,6 +176,29 @@ export default function BadgesPanel({ initialBadges, onBadgesChange, initialSort
     badgesRef.current = next;
     setBadges(next);
     onBadgesChange?.(next);
+  };
+
+  const stopTouchAutoScroll = () => {
+    if (touchAutoScrollRafRef.current !== null) {
+      cancelAnimationFrame(touchAutoScrollRafRef.current);
+      touchAutoScrollRafRef.current = null;
+    }
+  };
+  const updateTouchAutoScroll = (clientY: number) => {
+    touchClientYRef.current = clientY;
+    if (touchAutoScrollRafRef.current !== null) return;
+    const ZONE = 100;
+    const MAX_SPEED = 12;
+    const tick = () => {
+      const y = touchClientYRef.current;
+      const vh = window.innerHeight;
+      let speed = 0;
+      if (y < ZONE) speed = -Math.round(MAX_SPEED * (1 - y / ZONE));
+      else if (y > vh - ZONE) speed = Math.round(MAX_SPEED * (1 - (vh - y) / ZONE));
+      if (speed !== 0) window.scrollBy(0, speed);
+      touchAutoScrollRafRef.current = requestAnimationFrame(tick);
+    };
+    touchAutoScrollRafRef.current = requestAnimationFrame(tick);
   };
 
   const openAdd = () => { setEditTarget(null); setModalOpen(true); };
@@ -406,6 +457,7 @@ export default function BadgesPanel({ initialBadges, onBadgesChange, initialSort
       return;
     }
     // Active drag — find target via bounding rect
+    updateTouchAutoScroll(t.clientY);
     let targetOrg: string | null = null;
     document.querySelectorAll<HTMLElement>('[data-org-id]').forEach((el) => {
       const rect = el.getBoundingClientRect();
@@ -425,6 +477,7 @@ export default function BadgesPanel({ initialBadges, onBadgesChange, initialSort
 
   const handleOrgTouchEnd = () => {
     if (orgTouchRef.current?.timer) clearTimeout(orgTouchRef.current.timer);
+    stopTouchAutoScroll();
     if (!orgTouchRef.current?.active) {
       orgTouchRef.current = null;
       return;
@@ -507,6 +560,7 @@ export default function BadgesPanel({ initialBadges, onBadgesChange, initialSort
       }
       return;
     }
+    updateTouchAutoScroll(t.clientY);
     let targetId: string | null = null;
     document.querySelectorAll<HTMLElement>('[data-org-badge-id]').forEach((el) => {
       const rect = el.getBoundingClientRect();
@@ -522,6 +576,7 @@ export default function BadgesPanel({ initialBadges, onBadgesChange, initialSort
   };
   const handleBadgeInOrgTouchEnd = (org: string) => {
     if (badgeInOrgTouchRef.current?.timer) clearTimeout(badgeInOrgTouchRef.current.timer);
+    stopTouchAutoScroll();
     if (!badgeInOrgTouchRef.current?.active) { badgeInOrgTouchRef.current = null; return; }
     const dragged = badgeInOrgTouchRef.current.id;
     const target = badgeInOrgTouchOverRef.current;
@@ -574,6 +629,7 @@ export default function BadgesPanel({ initialBadges, onBadgesChange, initialSort
       }
       return;
     }
+    updateTouchAutoScroll(t.clientY);
     let targetId: string | null = null;
     document.querySelectorAll<HTMLElement>('[data-domain-badge-id]').forEach((el) => {
       const rect = el.getBoundingClientRect();
@@ -589,6 +645,7 @@ export default function BadgesPanel({ initialBadges, onBadgesChange, initialSort
   };
   const handleBadgeInDomainTouchEnd = (domain: string) => {
     if (badgeInDomainTouchRef.current?.timer) clearTimeout(badgeInDomainTouchRef.current.timer);
+    stopTouchAutoScroll();
     if (!badgeInDomainTouchRef.current?.active) { badgeInDomainTouchRef.current = null; return; }
     const dragged = badgeInDomainTouchRef.current.id;
     const target = badgeInDomainTouchOverRef.current;
@@ -667,6 +724,7 @@ export default function BadgesPanel({ initialBadges, onBadgesChange, initialSort
       }
       return;
     }
+    updateTouchAutoScroll(t.clientY);
     let targetDomain: string | null = null;
     document.querySelectorAll<HTMLElement>('[data-domain-id]').forEach((el) => {
       const rect = el.getBoundingClientRect();
@@ -682,6 +740,7 @@ export default function BadgesPanel({ initialBadges, onBadgesChange, initialSort
   };
   const handleDomainTouchEnd = () => {
     if (domainTouchRef.current?.timer) clearTimeout(domainTouchRef.current.timer);
+    stopTouchAutoScroll();
     if (!domainTouchRef.current?.active) { domainTouchRef.current = null; return; }
     const dragged = domainTouchRef.current.domain;
     const target = domainTouchOverRef.current;
@@ -701,6 +760,71 @@ export default function BadgesPanel({ initialBadges, onBadgesChange, initialSort
     domainTouchOverRef.current = null;
     setDraggedDomain(null);
     setDragOverDomain(null);
+  };
+
+  /* ── Touch drag (flat custom order — mobile) ─────────────────────────── */
+
+  const handleCustomTouchStart = (e: React.TouchEvent, badgeId: string) => {
+    const t = e.touches[0];
+    if (customTouchRef.current?.timer) clearTimeout(customTouchRef.current.timer);
+    const timer = setTimeout(() => {
+      if (customTouchRef.current) {
+        customTouchRef.current.active = true;
+        setDraggedId(badgeId);
+        navigator.vibrate?.(40);
+      }
+    }, 450);
+    customTouchRef.current = { id: badgeId, startX: t.clientX, startY: t.clientY, active: false, timer };
+  };
+  const handleCustomTouchMove = (e: React.TouchEvent) => {
+    if (!customTouchRef.current) return;
+    const t = e.touches[0];
+    const dx = t.clientX - customTouchRef.current.startX;
+    const dy = t.clientY - customTouchRef.current.startY;
+    if (!customTouchRef.current.active) {
+      if (Math.sqrt(dx * dx + dy * dy) > 10) {
+        if (customTouchRef.current.timer) clearTimeout(customTouchRef.current.timer);
+        customTouchRef.current = null;
+      }
+      return;
+    }
+    updateTouchAutoScroll(t.clientY);
+    let targetId: string | null = null;
+    document.querySelectorAll<HTMLElement>("[data-badge-custom-id]").forEach((el) => {
+      const rect = el.getBoundingClientRect();
+      if (t.clientX >= rect.left && t.clientX <= rect.right && t.clientY >= rect.top && t.clientY <= rect.bottom) {
+        const id = el.getAttribute("data-badge-custom-id");
+        if (id && id !== customTouchRef.current!.id) targetId = id;
+      }
+    });
+    if (targetId !== customTouchOverRef.current) {
+      setDragOverId(targetId);
+      customTouchOverRef.current = targetId;
+    }
+  };
+  const handleCustomTouchEnd = () => {
+    if (customTouchRef.current?.timer) clearTimeout(customTouchRef.current.timer);
+    stopTouchAutoScroll();
+    if (!customTouchRef.current?.active) { customTouchRef.current = null; return; }
+    const dragged = customTouchRef.current.id;
+    const target = customTouchOverRef.current;
+    if (dragged && target && dragged !== target) {
+      update(prev => {
+        const sorted = sortBadges(prev, "custom");
+        const fromIdx = sorted.findIndex(b => b.id === dragged);
+        const toIdx = sorted.findIndex(b => b.id === target);
+        if (fromIdx === -1 || toIdx === -1) return prev;
+        const reordered = [...sorted];
+        const [removed] = reordered.splice(fromIdx, 1);
+        reordered.splice(toIdx, 0, removed);
+        return prev.map(b => ({ ...b, sortOrder: reordered.findIndex(r => r.id === b.id) }));
+      });
+      setSortDirty(true);
+    }
+    customTouchRef.current = null;
+    customTouchOverRef.current = null;
+    setDraggedId(null);
+    setDragOverId(null);
   };
 
   const handleBadgeInDomainDragStart = (e: React.DragEvent, badgeId: string) => {
@@ -1333,8 +1457,82 @@ export default function BadgesPanel({ initialBadges, onBadgesChange, initialSort
         </div>
       )}
 
-      {/* Regular grid — hidden when custom_org or custom_domain is active and unfiltered */}
-      {(sort !== "custom_org" && sort !== "custom_domain" || isFiltered) && sortedAndFiltered.length > 0 && (
+      {/* Custom flat sort — same compact grid cards as inside custom_org / custom_domain groups */}
+      {sort === "custom" && !isFiltered && sortedAndFiltered.length > 0 && (
+        <>
+          <div className="flex items-center gap-2 text-xs text-slate-400 dark:text-white/40 py-1 px-1">
+            <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 9h16.5m-16.5 6.75h16.5" />
+            </svg>
+            Drag to reorder. Click a badge to manage it.
+          </div>
+          <div
+            className="grid grid-cols-5 sm:grid-cols-6 md:grid-cols-7 lg:grid-cols-8 gap-2"
+            onDragLeave={() => {
+              if (dragCancelTimer.current) clearTimeout(dragCancelTimer.current);
+              dragCancelTimer.current = setTimeout(() => setDragOverId(null), 80);
+            }}
+          >
+            {sortedAndFiltered.map((badge) => {
+              const isDragOverBadge = dragOverId === badge.id;
+              const isPdf = badge.imageUrl?.toLowerCase().endsWith(".pdf") ?? false;
+              const orgInitials = (badge.issuingOrganization || "?").split(" ").map((w: string) => w[0]).join("").toUpperCase().slice(0, 2);
+              return (
+                <div
+                  key={badge.id}
+                  data-badge-custom-id={badge.id}
+                  draggable
+                  onDragStart={(e) => handleDragStart(e, badge.id)}
+                  onDragOver={(e) => { e.preventDefault(); if (dragCancelTimer.current) clearTimeout(dragCancelTimer.current); setDragOverId(badge.id); }}
+                  onDrop={(e) => handleDrop(e, badge.id)}
+                  onDragEnd={handleDragEnd}
+                  onTouchStart={(e) => handleCustomTouchStart(e, badge.id)}
+                  onTouchMove={handleCustomTouchMove}
+                  onTouchEnd={handleCustomTouchEnd}
+                  onClick={() => { if (!draggedId) setSelectedCustomBadge(badge); }}
+                  className="relative aspect-square rounded-xl overflow-hidden flex items-center justify-center transition-all"
+                  style={{
+                    background: "var(--surface-alt)",
+                    border: isDragOverBadge ? "2px dashed #7c3aed" : "1px solid var(--border)",
+                    opacity: draggedId === badge.id ? 0.35 : 1,
+                    filter: draggedId === badge.id ? "grayscale(0.7)" : (!badge.isPublic ? "grayscale(1)" : "none"),
+                    cursor: "pointer",
+                    userSelect: "none",
+                    WebkitUserSelect: "none",
+                  }}
+                  title={badge.title}
+                >
+                  {badge.imageUrl && !isPdf ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={badge.imageUrl} alt={badge.title} className="w-full h-full object-contain p-1.5" style={{ opacity: badge.isPublic ? 1 : 0.5 }} />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-[9px] font-black text-white" style={{ background: "linear-gradient(135deg, #7c3aed, #4f46e5)" }}>{orgInitials}</div>
+                  )}
+                  {/* Hidden indicator */}
+                  {!badge.isPublic && (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <svg className="w-4 h-4 text-white/70 drop-shadow" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88" />
+                      </svg>
+                    </div>
+                  )}
+                  {/* Featured indicator */}
+                  {badge.isFeatured && (
+                    <div className="absolute top-1 left-1 w-3.5 h-3.5 flex items-center justify-center">
+                      <svg className="w-3 h-3 text-amber-400 drop-shadow" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z" />
+                      </svg>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
+
+      {/* Regular grid — for non-custom sort modes (recent, oldest, alphabetical, etc.) */}
+      {(sort !== "custom_org" && sort !== "custom_domain" && sort !== "custom" || isFiltered) && sortedAndFiltered.length > 0 && (
         <div
           className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3"
           onDragLeave={() => {
@@ -1351,7 +1549,7 @@ export default function BadgesPanel({ initialBadges, onBadgesChange, initialSort
               onVisibilityToggle={handleVisibilityToggle}
               onFeatureToggle={handleFeatureToggle}
               featuredCount={featuredCount}
-              isDraggable={sort === "custom" && !isFiltered}
+              isDraggable={false}
               onDragStart={handleDragStart}
               onDragOver={handleDragOver}
               onDrop={handleDrop}
@@ -1360,6 +1558,79 @@ export default function BadgesPanel({ initialBadges, onBadgesChange, initialSort
             />
           ))}
         </div>
+      )}
+
+      {/* Custom flat sort — badge action sheet */}
+      {selectedCustomBadge && (
+        <div className="fixed inset-0 z-50 flex flex-col justify-end" style={{ background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)" }} onClick={() => setSelectedCustomBadge(null)}>
+          <div className="rounded-t-2xl overflow-hidden w-full" style={{ background: "var(--surface)", border: "1px solid var(--border)" }} onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center gap-3 px-5 py-4" style={{ borderBottom: "1px solid var(--border)" }}>
+              <div className="w-10 h-10 rounded-xl overflow-hidden shrink-0 flex items-center justify-center" style={{ background: "var(--surface-alt)", border: "1px solid var(--border)" }}>
+                {selectedCustomBadge.imageUrl && !selectedCustomBadge.imageUrl.toLowerCase().endsWith(".pdf") ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={selectedCustomBadge.imageUrl} alt={selectedCustomBadge.title} className="w-full h-full object-contain p-1" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-[9px] font-black text-white" style={{ background: "linear-gradient(135deg, #7c3aed, #4f46e5)" }}>
+                    {selectedCustomBadge.issuingOrganization.split(" ").map(w => w[0]).join("").toUpperCase().slice(0, 2)}
+                  </div>
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-bold text-slate-900 dark:text-white truncate">{selectedCustomBadge.title}</p>
+                <p className="text-xs text-slate-400 dark:text-white/40 truncate">{selectedCustomBadge.issuingOrganization}</p>
+              </div>
+              <button onClick={() => setSelectedCustomBadge(null)} className="text-slate-400 dark:text-white/40 hover:text-slate-700 dark:hover:text-white transition-colors">
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+            <div className="px-5 py-4 flex flex-col gap-3">
+              <div className="flex items-center justify-between py-2">
+                <div>
+                  <p className="text-sm font-semibold text-slate-800 dark:text-white">Public visibility</p>
+                  <p className="text-xs text-slate-400 dark:text-white/40">{selectedCustomBadge.isPublic ? "Visible on your public profile" : "Hidden from your public profile"}</p>
+                </div>
+                <button onClick={() => { handleVisibilityToggle(selectedCustomBadge.id, !selectedCustomBadge.isPublic); setSelectedCustomBadge({ ...selectedCustomBadge, isPublic: !selectedCustomBadge.isPublic }); }} className={`relative w-11 h-6 rounded-full transition-colors duration-200 shrink-0 ${selectedCustomBadge.isPublic ? "bg-emerald-500" : "bg-slate-300 dark:bg-white/15"}`}>
+                  <span className={`absolute top-[3px] left-[3px] w-[18px] h-[18px] bg-white rounded-full shadow-sm transition-transform duration-200 ${selectedCustomBadge.isPublic ? "translate-x-[20px]" : "translate-x-0"}`} />
+                </button>
+              </div>
+              <button onClick={() => { setSelectedCustomBadge(null); openEdit(selectedCustomBadge); }} className="flex items-center gap-3 w-full py-3 px-4 rounded-xl transition-all text-left" style={{ background: "var(--surface-alt)", border: "1px solid var(--border)" }}>
+                <svg className="w-4 h-4 shrink-0 text-slate-500 dark:text-white/50" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z" /></svg>
+                <div><p className="text-sm font-semibold text-slate-700 dark:text-white/80">Edit badge</p><p className="text-xs text-slate-400 dark:text-white/40">Update title, image, dates and more</p></div>
+              </button>
+              <button
+                onClick={() => {
+                  if (!selectedCustomBadge.isFeatured && featuredCount >= 3) { setCustomBadgePinLimit(true); return; }
+                  const next = !selectedCustomBadge.isFeatured;
+                  handleFeatureToggle(selectedCustomBadge.id, next);
+                  setSelectedCustomBadge({ ...selectedCustomBadge, isFeatured: next });
+                }}
+                className="flex items-center gap-3 w-full py-3 px-4 rounded-xl transition-all text-left"
+                style={{ background: selectedCustomBadge.isFeatured ? "rgba(245,158,11,0.08)" : "var(--surface-alt)", border: selectedCustomBadge.isFeatured ? "1px solid rgba(245,158,11,0.25)" : "1px solid var(--border)" }}
+              >
+                <svg className={`w-4 h-4 shrink-0 ${selectedCustomBadge.isFeatured ? "text-amber-500" : "text-slate-400 dark:text-white/40"}`} fill={selectedCustomBadge.isFeatured ? "currentColor" : "none"} viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z" /></svg>
+                <div><p className={`text-sm font-semibold ${selectedCustomBadge.isFeatured ? "text-amber-600 dark:text-amber-400" : "text-slate-700 dark:text-white/80"}`}>{selectedCustomBadge.isFeatured ? "Unpin from profile" : "Pin to profile"}</p><p className="text-xs text-slate-400 dark:text-white/40">{selectedCustomBadge.isFeatured ? "Remove from pinned shelf" : "Show in pinned shelf (max 3)"}</p></div>
+              </button>
+              <button onClick={() => setCustomBadgeDeleteConfirm(true)} className="flex items-center gap-3 w-full py-3 px-4 rounded-xl transition-all text-left" style={{ background: "rgba(239,68,68,0.06)", border: "1px solid rgba(239,68,68,0.15)" }}>
+                <svg className="w-4 h-4 shrink-0 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg>
+                <div><p className="text-sm font-semibold text-red-600 dark:text-red-400">Delete badge</p><p className="text-xs text-slate-400 dark:text-white/40">Permanently remove this badge</p></div>
+              </button>
+            </div>
+            <div className="px-5 pb-6">
+              <button onClick={() => setSelectedCustomBadge(null)} className="w-full py-3 rounded-xl text-sm font-semibold transition-all text-slate-600 dark:text-white/65 bg-black/[0.04] dark:bg-white/[0.06] border border-black/[0.08] dark:border-white/[0.11]">Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {customBadgeDeleteConfirm && selectedCustomBadge && (
+        <DeleteConfirmModal
+          title="Delete this badge?"
+          message="This will permanently remove the badge and its image. This cannot be undone."
+          onConfirm={() => { handleDelete(selectedCustomBadge.id); setCustomBadgeDeleteConfirm(false); setSelectedCustomBadge(null); }}
+          onCancel={() => setCustomBadgeDeleteConfirm(false)}
+        />
+      )}
+      {customBadgePinLimit && (
+        <InfoModal title="Pin limit reached" message="You can only pin up to 3 badges. Unpin one first to pin another." onClose={() => setCustomBadgePinLimit(false)} />
       )}
 
       {modalOpen && (

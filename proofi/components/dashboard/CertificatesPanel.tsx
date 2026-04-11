@@ -119,6 +119,17 @@ export default function CertificatesPanel({
   const [issuerCertDeleteConfirm, setIssuerCertDeleteConfirm] = useState(false);
   const [issuerCertPinLimit, setIssuerCertPinLimit] = useState(false);
 
+  // custom (flat) sort state
+  const customTouchRef = useRef<{ id: string; startX: number; startY: number; active: boolean; timer: ReturnType<typeof setTimeout> | null } | null>(null);
+  const customTouchOverRef = useRef<string | null>(null);
+  const [selectedCustomCert, setSelectedCustomCert] = useState<Certificate | null>(null);
+  const [customCertDeleteConfirm, setCustomCertDeleteConfirm] = useState(false);
+  const [customCertPinLimit, setCustomCertPinLimit] = useState(false);
+
+  // touch auto-scroll
+  const touchClientYRef = useRef(0);
+  const touchAutoScrollRafRef = useRef<number | null>(null);
+
   // Open edit modal when parent requests editing a specific cert
   useEffect(() => {
     if (externalEdit) {
@@ -134,7 +145,8 @@ export default function CertificatesPanel({
         domainTouchRef.current?.active ||
         issuerTouchRef.current?.active ||
         certInDomainTouchRef.current?.active ||
-        certInIssuerTouchRef.current?.active
+        certInIssuerTouchRef.current?.active ||
+        customTouchRef.current?.active
       ) {
         e.preventDefault();
       }
@@ -142,6 +154,45 @@ export default function CertificatesPanel({
     document.addEventListener("touchmove", handler, { passive: false });
     return () => document.removeEventListener("touchmove", handler);
   }, []);
+
+  // Auto-scroll during mouse drag — fires on the source element throughout the drag
+  useEffect(() => {
+    const ZONE = 100;
+    const MAX_SPEED = 15;
+    const onDrag = (e: DragEvent) => {
+      if (e.clientY === 0 && e.clientX === 0) return;
+      const vh = window.innerHeight;
+      let speed = 0;
+      if (e.clientY < ZONE) speed = -Math.round(MAX_SPEED * (1 - e.clientY / ZONE));
+      else if (e.clientY > vh - ZONE) speed = Math.round(MAX_SPEED * (1 - (vh - e.clientY) / ZONE));
+      if (speed !== 0) window.scrollBy(0, speed);
+    };
+    window.addEventListener("drag", onDrag);
+    return () => window.removeEventListener("drag", onDrag);
+  }, []);
+
+  const stopTouchAutoScroll = () => {
+    if (touchAutoScrollRafRef.current !== null) {
+      cancelAnimationFrame(touchAutoScrollRafRef.current);
+      touchAutoScrollRafRef.current = null;
+    }
+  };
+  const updateTouchAutoScroll = (clientY: number) => {
+    touchClientYRef.current = clientY;
+    if (touchAutoScrollRafRef.current !== null) return;
+    const ZONE = 100;
+    const MAX_SPEED = 12;
+    const tick = () => {
+      const y = touchClientYRef.current;
+      const vh = window.innerHeight;
+      let speed = 0;
+      if (y < ZONE) speed = -Math.round(MAX_SPEED * (1 - y / ZONE));
+      else if (y > vh - ZONE) speed = Math.round(MAX_SPEED * (1 - (vh - y) / ZONE));
+      if (speed !== 0) window.scrollBy(0, speed);
+      touchAutoScrollRafRef.current = requestAnimationFrame(tick);
+    };
+    touchAutoScrollRafRef.current = requestAnimationFrame(tick);
+  };
 
   const openAdd = () => { setEditTarget(null); setModalOpen(true); };
   const openEdit = (cert: Certificate) => { setEditTarget(cert); setModalOpen(true); };
@@ -512,6 +563,7 @@ export default function CertificatesPanel({
       }
       return;
     }
+    updateTouchAutoScroll(t.clientY);
     let targetId: string | null = null;
     document.querySelectorAll<HTMLElement>("[data-cert-domain-item-id]").forEach((el) => {
       const rect = el.getBoundingClientRect();
@@ -527,6 +579,7 @@ export default function CertificatesPanel({
   };
   const handleCertInDomainTouchEnd = (domain: string) => {
     if (certInDomainTouchRef.current?.timer) clearTimeout(certInDomainTouchRef.current.timer);
+    stopTouchAutoScroll();
     if (!certInDomainTouchRef.current?.active) { certInDomainTouchRef.current = null; return; }
     const dragged = certInDomainTouchRef.current.id;
     const target = certInDomainTouchOverRef.current;
@@ -579,6 +632,7 @@ export default function CertificatesPanel({
       }
       return;
     }
+    updateTouchAutoScroll(t.clientY);
     let targetId: string | null = null;
     document.querySelectorAll<HTMLElement>("[data-cert-issuer-item-id]").forEach((el) => {
       const rect = el.getBoundingClientRect();
@@ -594,6 +648,7 @@ export default function CertificatesPanel({
   };
   const handleCertInIssuerTouchEnd = (issuer: string) => {
     if (certInIssuerTouchRef.current?.timer) clearTimeout(certInIssuerTouchRef.current.timer);
+    stopTouchAutoScroll();
     if (!certInIssuerTouchRef.current?.active) { certInIssuerTouchRef.current = null; return; }
     const dragged = certInIssuerTouchRef.current.id;
     const target = certInIssuerTouchOverRef.current;
@@ -646,6 +701,7 @@ export default function CertificatesPanel({
       }
       return;
     }
+    updateTouchAutoScroll(t.clientY);
     let targetDomain: string | null = null;
     document.querySelectorAll<HTMLElement>("[data-cert-domain-id]").forEach((el) => {
       const rect = el.getBoundingClientRect();
@@ -661,6 +717,7 @@ export default function CertificatesPanel({
   };
   const handleDomainTouchEnd = () => {
     if (domainTouchRef.current?.timer) clearTimeout(domainTouchRef.current.timer);
+    stopTouchAutoScroll();
     if (!domainTouchRef.current?.active) { domainTouchRef.current = null; return; }
     const dragged = domainTouchRef.current.domain;
     const target = domainTouchOverRef.current;
@@ -709,6 +766,7 @@ export default function CertificatesPanel({
       }
       return;
     }
+    updateTouchAutoScroll(t.clientY);
     let targetIssuer: string | null = null;
     document.querySelectorAll<HTMLElement>("[data-cert-issuer-id]").forEach((el) => {
       const rect = el.getBoundingClientRect();
@@ -724,6 +782,7 @@ export default function CertificatesPanel({
   };
   const handleIssuerTouchEnd = () => {
     if (issuerTouchRef.current?.timer) clearTimeout(issuerTouchRef.current.timer);
+    stopTouchAutoScroll();
     if (!issuerTouchRef.current?.active) { issuerTouchRef.current = null; return; }
     const dragged = issuerTouchRef.current.issuer;
     const target = issuerTouchOverRef.current;
@@ -743,6 +802,71 @@ export default function CertificatesPanel({
     issuerTouchOverRef.current = null;
     setDraggedIssuer(null);
     setDragOverIssuer(null);
+  };
+
+  /* ── Touch drag (flat custom order — mobile) ─────────────────────────── */
+
+  const handleCustomTouchStart = (e: React.TouchEvent, certId: string) => {
+    const t = e.touches[0];
+    if (customTouchRef.current?.timer) clearTimeout(customTouchRef.current.timer);
+    const timer = setTimeout(() => {
+      if (customTouchRef.current) {
+        customTouchRef.current.active = true;
+        setDraggedId(certId);
+        navigator.vibrate?.(40);
+      }
+    }, 450);
+    customTouchRef.current = { id: certId, startX: t.clientX, startY: t.clientY, active: false, timer };
+  };
+  const handleCustomTouchMove = (e: React.TouchEvent) => {
+    if (!customTouchRef.current) return;
+    const t = e.touches[0];
+    const dx = t.clientX - customTouchRef.current.startX;
+    const dy = t.clientY - customTouchRef.current.startY;
+    if (!customTouchRef.current.active) {
+      if (Math.sqrt(dx * dx + dy * dy) > 10) {
+        if (customTouchRef.current.timer) clearTimeout(customTouchRef.current.timer);
+        customTouchRef.current = null;
+      }
+      return;
+    }
+    updateTouchAutoScroll(t.clientY);
+    let targetId: string | null = null;
+    document.querySelectorAll<HTMLElement>("[data-cert-custom-id]").forEach((el) => {
+      const rect = el.getBoundingClientRect();
+      if (t.clientX >= rect.left && t.clientX <= rect.right && t.clientY >= rect.top && t.clientY <= rect.bottom) {
+        const id = el.getAttribute("data-cert-custom-id");
+        if (id && id !== customTouchRef.current!.id) targetId = id;
+      }
+    });
+    if (targetId !== customTouchOverRef.current) {
+      setDragOverId(targetId);
+      customTouchOverRef.current = targetId;
+    }
+  };
+  const handleCustomTouchEnd = () => {
+    if (customTouchRef.current?.timer) clearTimeout(customTouchRef.current.timer);
+    stopTouchAutoScroll();
+    if (!customTouchRef.current?.active) { customTouchRef.current = null; return; }
+    const dragged = customTouchRef.current.id;
+    const target = customTouchOverRef.current;
+    if (dragged && target && dragged !== target) {
+      update(prev => {
+        const sorted = sortCerts(prev, "custom");
+        const fromIdx = sorted.findIndex(c => c.id === dragged);
+        const toIdx = sorted.findIndex(c => c.id === target);
+        if (fromIdx === -1 || toIdx === -1) return prev;
+        const reordered = [...sorted];
+        const [removed] = reordered.splice(fromIdx, 1);
+        reordered.splice(toIdx, 0, removed);
+        return prev.map(c => ({ ...c, sortOrder: reordered.findIndex(r => r.id === c.id) }));
+      });
+      setSortDirty(true);
+    }
+    customTouchRef.current = null;
+    customTouchOverRef.current = null;
+    setDraggedId(null);
+    setDragOverId(null);
   };
 
   /* ── Derived state ────────────────────────────────────────────────────── */
@@ -1141,7 +1265,8 @@ export default function CertificatesPanel({
                   background: "var(--surface)",
                   border: dragOverDomain === domain ? "2px dashed #7c3aed" : "1px solid var(--border)",
                   boxShadow: dragOverDomain === domain ? "0 0 0 4px rgba(124,58,237,0.12)" : "var(--card-shadow)",
-                  opacity: draggedDomain === domain ? 0.6 : 1,
+                  opacity: draggedDomain === domain ? 0.35 : 1,
+                  filter: draggedDomain === domain ? "grayscale(0.7)" : "none",
                   cursor: "grab",
                   userSelect: "none",
                   WebkitUserSelect: "none",
@@ -1186,10 +1311,10 @@ export default function CertificatesPanel({
                           background: "var(--surface)",
                           border: isDragOverCert ? "2px dashed #7c3aed" : `1.5px solid ${certAccent.from}33`,
                           boxShadow: isDragOverCert ? "0 0 0 3px rgba(124,58,237,0.12)" : "var(--card-shadow)",
-                          opacity: draggedCertInDomain === cert.id ? 0.5 : 1,
+                          opacity: draggedCertInDomain === cert.id ? 0.35 : 1,
                           cursor: draggedDomain ? "grabbing" : "pointer",
                           pointerEvents: draggedDomain ? "none" : "auto",
-                          filter: !cert.isPublic ? "grayscale(0.65)" : "none",
+                          filter: draggedCertInDomain === cert.id ? "grayscale(0.7)" : (!cert.isPublic ? "grayscale(0.65)" : "none"),
                           userSelect: "none",
                           WebkitUserSelect: "none",
                         }}
@@ -1291,7 +1416,8 @@ export default function CertificatesPanel({
                   background: "var(--surface)",
                   border: dragOverIssuer === issuer ? "2px dashed #7c3aed" : "1px solid var(--border)",
                   boxShadow: dragOverIssuer === issuer ? "0 0 0 4px rgba(124,58,237,0.12)" : "var(--card-shadow)",
-                  opacity: draggedIssuer === issuer ? 0.6 : 1,
+                  opacity: draggedIssuer === issuer ? 0.35 : 1,
+                  filter: draggedIssuer === issuer ? "grayscale(0.7)" : "none",
                   cursor: "grab",
                   userSelect: "none",
                   WebkitUserSelect: "none",
@@ -1338,10 +1464,10 @@ export default function CertificatesPanel({
                           background: "var(--surface)",
                           border: isDragOverCert ? "2px dashed #7c3aed" : `1.5px solid ${certAccent.from}33`,
                           boxShadow: isDragOverCert ? "0 0 0 3px rgba(124,58,237,0.12)" : "var(--card-shadow)",
-                          opacity: draggedCertInIssuer === cert.id ? 0.5 : 1,
+                          opacity: draggedCertInIssuer === cert.id ? 0.35 : 1,
                           cursor: draggedIssuer ? "grabbing" : "pointer",
                           pointerEvents: draggedIssuer ? "none" : "auto",
-                          filter: !cert.isPublic ? "grayscale(0.65)" : "none",
+                          filter: draggedCertInIssuer === cert.id ? "grayscale(0.7)" : (!cert.isPublic ? "grayscale(0.65)" : "none"),
                           userSelect: "none",
                           WebkitUserSelect: "none",
                         }}
@@ -1410,8 +1536,107 @@ export default function CertificatesPanel({
         </div>
       )}
 
-      {/* Regular grid — hidden when custom_domain or custom_issuer is active and unfiltered */}
-      {(sortStrategy !== "custom_domain" && sortStrategy !== "custom_issuer" || isFiltered) && sortedAndFiltered.length > 0 && (
+      {/* Custom flat sort — same compact grid cards as inside custom_domain / custom_issuer groups */}
+      {sortStrategy === "custom" && !isFiltered && sortedAndFiltered.length > 0 && (
+        <>
+          <div className="flex items-center gap-2 text-xs text-slate-400 dark:text-white/40 py-1 px-1">
+            <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 9h16.5m-16.5 6.75h16.5" />
+            </svg>
+            Drag to reorder. Click a certificate to manage it.
+          </div>
+          <div
+            className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3"
+            onDragLeave={() => {
+              if (dragCancelTimer.current) clearTimeout(dragCancelTimer.current);
+              dragCancelTimer.current = setTimeout(() => setDragOverId(null), 80);
+            }}
+          >
+            {sortedAndFiltered.map((cert) => {
+              const certAccent = DOMAIN_ACCENT[cert.domain] ?? DOMAIN_ACCENT["Other"];
+              const isPdf = cert.imageUrl?.toLowerCase().endsWith(".pdf") ?? false;
+              const issuerInitials = (cert.issuer || "?").split(" ").map((w: string) => w[0]).join("").toUpperCase().slice(0, 2);
+              const isDragOverCert = dragOverId === cert.id;
+              return (
+                <div
+                  key={cert.id}
+                  data-cert-custom-id={cert.id}
+                  draggable
+                  onDragStart={(e) => handleDragStart(e, cert.id)}
+                  onDragOver={(e) => { e.preventDefault(); if (dragCancelTimer.current) clearTimeout(dragCancelTimer.current); setDragOverId(cert.id); }}
+                  onDrop={(e) => handleDrop(e, cert.id)}
+                  onDragEnd={handleDragEnd}
+                  onTouchStart={(e) => handleCustomTouchStart(e, cert.id)}
+                  onTouchMove={handleCustomTouchMove}
+                  onTouchEnd={handleCustomTouchEnd}
+                  onClick={() => { if (!draggedId) setSelectedCustomCert(cert); }}
+                  className="relative rounded-xl overflow-hidden flex flex-col transition-all"
+                  style={{
+                    background: "var(--surface)",
+                    border: isDragOverCert ? "2px dashed #7c3aed" : `1.5px solid ${certAccent.from}33`,
+                    boxShadow: isDragOverCert ? "0 0 0 3px rgba(124,58,237,0.12)" : "var(--card-shadow)",
+                    opacity: draggedId === cert.id ? 0.35 : 1,
+                    filter: draggedId === cert.id ? "grayscale(0.7)" : (!cert.isPublic ? "grayscale(0.65)" : "none"),
+                    cursor: "pointer",
+                    userSelect: "none",
+                    WebkitUserSelect: "none",
+                  }}
+                  title={cert.name}
+                >
+                  {/* Domain accent bar */}
+                  <div className="h-[3px] w-full shrink-0" style={{ background: `linear-gradient(90deg, ${certAccent.from}, ${certAccent.to})` }} />
+                  {/* Certificate image */}
+                  <div className="relative h-32 sm:h-36 overflow-hidden shrink-0" style={{ background: "var(--surface-alt)", borderBottom: "1px solid var(--border)" }}>
+                    {cert.imageUrl && !isPdf ? (
+                      <>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={cert.imageUrl} alt="" aria-hidden className="absolute inset-0 w-full h-full object-cover scale-110 blur-xl opacity-30 pointer-events-none" />
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={cert.imageUrl} alt={cert.name} className="absolute inset-0 w-full h-full object-contain" />
+                      </>
+                    ) : cert.imageUrl && isPdf ? (
+                      <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 text-slate-400 dark:text-white/30">
+                        <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+                        </svg>
+                        <span className="text-[10px] font-medium">PDF</span>
+                      </div>
+                    ) : (
+                      <div className="absolute inset-0 flex items-center justify-center text-lg font-black text-white" style={{ background: `linear-gradient(135deg, ${certAccent.from}, ${certAccent.to})` }}>
+                        {issuerInitials}
+                      </div>
+                    )}
+                    {/* Private overlay */}
+                    {!cert.isPublic && (
+                      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                        <svg className="w-6 h-6 text-white/60 drop-shadow" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88" />
+                        </svg>
+                      </div>
+                    )}
+                    {/* Featured star */}
+                    {cert.isFeatured && (
+                      <div className="absolute top-1.5 left-1.5 w-5 h-5 flex items-center justify-center rounded-full" style={{ background: "rgba(245,158,11,0.25)" }}>
+                        <svg className="w-3 h-3 text-amber-400 drop-shadow" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z" />
+                        </svg>
+                      </div>
+                    )}
+                  </div>
+                  {/* Text */}
+                  <div className="px-2.5 py-2.5 flex-1">
+                    <p className="text-[11px] font-bold text-slate-900 dark:text-white line-clamp-2 leading-tight">{cert.name}</p>
+                    <p className="text-[10px] text-slate-400 dark:text-white/40 truncate mt-0.5">{cert.issuer}</p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
+
+      {/* Regular grid — for non-custom sort modes (recent, domain, expiring, etc.) */}
+      {(sortStrategy !== "custom_domain" && sortStrategy !== "custom_issuer" && sortStrategy !== "custom" || isFiltered) && sortedAndFiltered.length > 0 && (
         <div
           className="grid grid-cols-2 sm:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-5"
           onDragLeave={() => {
@@ -1428,7 +1653,7 @@ export default function CertificatesPanel({
               onVisibilityToggle={handleVisibilityToggle}
               onFeatureToggle={handleFeatureToggle}
               featuredCount={featuredCount}
-              isDraggable={sortStrategy === "custom" && !isFiltered}
+              isDraggable={false}
               onDragStart={handleDragStart}
               onDragOver={handleDragOver}
               onDrop={handleDrop}
@@ -1440,6 +1665,90 @@ export default function CertificatesPanel({
 
       {modalOpen && (
         <CertificateFormModal initialData={editTarget} onSave={handleSave} onClose={closeModal} autoFillEnabled={features.autoFillFromImage} aiVerificationEnabled={features.aiVerification} />
+      )}
+
+      {/* Custom flat sort — action sheet */}
+      {selectedCustomCert && (
+        <div
+          className="fixed inset-0 z-50 flex flex-col justify-end"
+          style={{ background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)" }}
+          onClick={() => setSelectedCustomCert(null)}
+        >
+          <div
+            className="rounded-t-2xl overflow-hidden w-full"
+            style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-3 px-5 py-4" style={{ borderBottom: "1px solid var(--border)" }}>
+              <div className="w-12 h-12 rounded-xl overflow-hidden shrink-0 flex items-center justify-center" style={{ background: "var(--surface-alt)", border: "1px solid var(--border)" }}>
+                {selectedCustomCert.imageUrl && !selectedCustomCert.imageUrl.toLowerCase().endsWith(".pdf") ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={selectedCustomCert.imageUrl} alt={selectedCustomCert.name} className="w-full h-full object-contain p-1" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-xs font-black text-white" style={{ background: `linear-gradient(135deg, ${(DOMAIN_ACCENT[selectedCustomCert.domain] ?? DOMAIN_ACCENT["Other"]).from}, ${(DOMAIN_ACCENT[selectedCustomCert.domain] ?? DOMAIN_ACCENT["Other"]).to})` }}>
+                    {selectedCustomCert.issuer.split(" ").map(w => w[0]).join("").toUpperCase().slice(0, 2)}
+                  </div>
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-bold text-slate-900 dark:text-white truncate">{selectedCustomCert.name}</p>
+                <p className="text-xs text-slate-400 dark:text-white/40 truncate">{selectedCustomCert.issuer} · {selectedCustomCert.domain}</p>
+              </div>
+              <button onClick={() => setSelectedCustomCert(null)} className="text-slate-400 dark:text-white/40 hover:text-slate-700 dark:hover:text-white transition-colors">
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+            <div className="px-5 py-4 flex flex-col gap-3">
+              <div className="flex items-center justify-between py-2">
+                <div>
+                  <p className="text-sm font-semibold text-slate-800 dark:text-white">Public visibility</p>
+                  <p className="text-xs text-slate-400 dark:text-white/40">{selectedCustomCert.isPublic ? "Visible on your public profile" : "Hidden from your public profile"}</p>
+                </div>
+                <button
+                  onClick={() => { handleVisibilityToggle(selectedCustomCert.id, !selectedCustomCert.isPublic); setSelectedCustomCert({ ...selectedCustomCert, isPublic: !selectedCustomCert.isPublic }); }}
+                  className={`relative w-11 h-6 rounded-full transition-colors duration-200 shrink-0 ${selectedCustomCert.isPublic ? "bg-emerald-500" : "bg-slate-300 dark:bg-white/15"}`}
+                >
+                  <span className={`absolute top-[3px] left-[3px] w-[18px] h-[18px] bg-white rounded-full shadow-sm transition-transform duration-200 ${selectedCustomCert.isPublic ? "translate-x-[20px]" : "translate-x-0"}`} />
+                </button>
+              </div>
+              <button onClick={() => { setSelectedCustomCert(null); openEdit(selectedCustomCert); }} className="flex items-center gap-3 w-full py-3 px-4 rounded-xl transition-all text-left" style={{ background: "var(--surface-alt)", border: "1px solid var(--border)" }}>
+                <svg className="w-4 h-4 shrink-0 text-slate-500 dark:text-white/50" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z" /></svg>
+                <div><p className="text-sm font-semibold text-slate-700 dark:text-white/80">Edit certificate</p><p className="text-xs text-slate-400 dark:text-white/40">Update name, image, dates and more</p></div>
+              </button>
+              <button
+                onClick={() => {
+                  if (!selectedCustomCert.isFeatured && featuredCount >= 3) { setCustomCertPinLimit(true); return; }
+                  const next = !selectedCustomCert.isFeatured;
+                  handleFeatureToggle(selectedCustomCert.id, next);
+                  setSelectedCustomCert({ ...selectedCustomCert, isFeatured: next });
+                }}
+                className="flex items-center gap-3 w-full py-3 px-4 rounded-xl transition-all text-left"
+                style={{ background: selectedCustomCert.isFeatured ? "rgba(245,158,11,0.08)" : "var(--surface-alt)", border: selectedCustomCert.isFeatured ? "1px solid rgba(245,158,11,0.25)" : "1px solid var(--border)" }}
+              >
+                <svg className={`w-4 h-4 shrink-0 ${selectedCustomCert.isFeatured ? "text-amber-500" : "text-slate-400 dark:text-white/40"}`} fill={selectedCustomCert.isFeatured ? "currentColor" : "none"} viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z" /></svg>
+                <div><p className={`text-sm font-semibold ${selectedCustomCert.isFeatured ? "text-amber-600 dark:text-amber-400" : "text-slate-700 dark:text-white/80"}`}>{selectedCustomCert.isFeatured ? "Unpin from profile" : "Pin to profile"}</p><p className="text-xs text-slate-400 dark:text-white/40">{selectedCustomCert.isFeatured ? "Remove from pinned shelf" : "Show in pinned shelf (max 3)"}</p></div>
+              </button>
+              <button onClick={() => setCustomCertDeleteConfirm(true)} className="flex items-center gap-3 w-full py-3 px-4 rounded-xl transition-all text-left" style={{ background: "rgba(239,68,68,0.06)", border: "1px solid rgba(239,68,68,0.15)" }}>
+                <svg className="w-4 h-4 shrink-0 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg>
+                <div><p className="text-sm font-semibold text-red-600 dark:text-red-400">Delete certificate</p><p className="text-xs text-slate-400 dark:text-white/40">Permanently remove this certificate</p></div>
+              </button>
+            </div>
+            <div className="px-5 pb-6">
+              <button onClick={() => setSelectedCustomCert(null)} className="w-full py-3 rounded-xl text-sm font-semibold transition-all text-slate-600 dark:text-white/65 bg-black/[0.04] dark:bg-white/[0.06] border border-black/[0.08] dark:border-white/[0.11]">Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {customCertDeleteConfirm && selectedCustomCert && (
+        <DeleteConfirmModal
+          title="Delete this certificate?"
+          message="This will permanently remove the certificate and its image. This cannot be undone."
+          onConfirm={() => { handleDelete(selectedCustomCert.id); setCustomCertDeleteConfirm(false); setSelectedCustomCert(null); }}
+          onCancel={() => setCustomCertDeleteConfirm(false)}
+        />
+      )}
+      {customCertPinLimit && (
+        <InfoModal title="Pin limit reached" message="You can only pin up to 3 certificates. Unpin one first to pin another." onClose={() => setCustomCertPinLimit(false)} />
       )}
 
       {/* Domain-view certificate action sheet */}
