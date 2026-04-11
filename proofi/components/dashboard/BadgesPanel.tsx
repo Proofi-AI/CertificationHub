@@ -118,7 +118,7 @@ export default function BadgesPanel({ initialBadges, onBadgesChange, initialSort
 
   // Prevent page scroll during active touch drag (non-passive listener required)
   useEffect(() => {
-    const handler = (e: TouchEvent) => {
+    const onTouchMove = (e: TouchEvent) => {
       if (
         orgTouchRef.current?.active ||
         domainTouchRef.current?.active ||
@@ -129,21 +129,47 @@ export default function BadgesPanel({ initialBadges, onBadgesChange, initialSort
         e.preventDefault();
       }
     };
-    document.addEventListener("touchmove", handler, { passive: false });
-    return () => document.removeEventListener("touchmove", handler);
+    // touchcancel: iOS cancels the touch when the system steals it — reset all drag state
+    const onTouchCancel = () => {
+      stopTouchAutoScroll();
+      if (orgTouchRef.current) { if (orgTouchRef.current.timer) clearTimeout(orgTouchRef.current.timer); orgTouchRef.current = null; }
+      if (domainTouchRef.current) { if (domainTouchRef.current.timer) clearTimeout(domainTouchRef.current.timer); domainTouchRef.current = null; }
+      if (badgeInOrgTouchRef.current) { if (badgeInOrgTouchRef.current.timer) clearTimeout(badgeInOrgTouchRef.current.timer); badgeInOrgTouchRef.current = null; }
+      if (badgeInDomainTouchRef.current) { if (badgeInDomainTouchRef.current.timer) clearTimeout(badgeInDomainTouchRef.current.timer); badgeInDomainTouchRef.current = null; }
+      if (customTouchRef.current) { if (customTouchRef.current.timer) clearTimeout(customTouchRef.current.timer); customTouchRef.current = null; }
+      setDraggedOrg(null); setDragOverOrg(null);
+      setDraggedDomain(null); setDragOverDomain(null);
+      setDraggedBadgeInOrg(null); setDragOverBadgeInOrg(null);
+      setDraggedBadgeInDomain(null); setDragOverBadgeInDomain(null);
+      setDraggedId(null); setDragOverId(null);
+    };
+    document.addEventListener("touchmove", onTouchMove, { passive: false });
+    document.addEventListener("touchcancel", onTouchCancel);
+    return () => {
+      document.removeEventListener("touchmove", onTouchMove);
+      document.removeEventListener("touchcancel", onTouchCancel);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Auto-scroll during mouse drag
   useEffect(() => {
-    const ZONE = 100;
-    const MAX_SPEED = 15;
     const onDrag = (e: DragEvent) => {
       if (e.clientY === 0 && e.clientX === 0) return;
       const vh = window.innerHeight;
+      const ZONE = Math.min(130, vh * 0.22);
+      const MAX_SPEED = 18;
       let speed = 0;
-      if (e.clientY < ZONE) speed = -Math.round(MAX_SPEED * (1 - e.clientY / ZONE));
-      else if (e.clientY > vh - ZONE) speed = Math.round(MAX_SPEED * (1 - (vh - e.clientY) / ZONE));
-      if (speed !== 0) window.scrollBy(0, speed);
+      if (e.clientY < ZONE) {
+        const r = 1 - e.clientY / ZONE;
+        speed = -(MAX_SPEED * r * r);
+      } else if (e.clientY > vh - ZONE) {
+        const r = 1 - (vh - e.clientY) / ZONE;
+        speed = MAX_SPEED * r * r;
+      }
+      if (speed !== 0) {
+        (document.scrollingElement ?? document.documentElement).scrollTop += speed;
+      }
     };
     window.addEventListener("drag", onDrag);
     return () => window.removeEventListener("drag", onDrag);
@@ -186,17 +212,27 @@ export default function BadgesPanel({ initialBadges, onBadgesChange, initialSort
   };
   const updateTouchAutoScroll = (clientY: number) => {
     touchClientYRef.current = clientY;
-    if (touchAutoScrollRafRef.current !== null) return;
-    const ZONE = 100;
-    const MAX_SPEED = 12;
+    if (touchAutoScrollRafRef.current !== null) return; // already looping
     const tick = () => {
       const y = touchClientYRef.current;
       const vh = window.innerHeight;
+      const ZONE = Math.min(130, vh * 0.22);
+      const MAX_SPEED = 14;
       let speed = 0;
-      if (y < ZONE) speed = -Math.round(MAX_SPEED * (1 - y / ZONE));
-      else if (y > vh - ZONE) speed = Math.round(MAX_SPEED * (1 - (vh - y) / ZONE));
-      if (speed !== 0) window.scrollBy(0, speed);
-      touchAutoScrollRafRef.current = requestAnimationFrame(tick);
+      if (y < ZONE) {
+        const r = 1 - y / ZONE;
+        speed = -(MAX_SPEED * r * r);
+      } else if (y > vh - ZONE) {
+        const r = 1 - (vh - y) / ZONE;
+        speed = MAX_SPEED * r * r;
+      }
+      if (speed !== 0) {
+        (document.scrollingElement ?? document.documentElement).scrollTop += speed;
+        touchAutoScrollRafRef.current = requestAnimationFrame(tick);
+      } else {
+        // Outside scroll zone — stop the loop; it restarts next touchmove
+        touchAutoScrollRafRef.current = null;
+      }
     };
     touchAutoScrollRafRef.current = requestAnimationFrame(tick);
   };
