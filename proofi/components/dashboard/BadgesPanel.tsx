@@ -115,6 +115,8 @@ export default function BadgesPanel({ initialBadges, onBadgesChange, initialSort
   // touch auto-scroll
   const touchClientYRef = useRef(0);
   const touchAutoScrollRafRef = useRef<number | null>(null);
+  const [liftingId, setLiftingId] = useState<string | null>(null);
+  const liftTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Prevent page scroll during active touch drag (non-passive listener required)
   useEffect(() => {
@@ -160,16 +162,9 @@ export default function BadgesPanel({ initialBadges, onBadgesChange, initialSort
       const ZONE = Math.min(130, vh * 0.22);
       const MAX_SPEED = 18;
       let speed = 0;
-      if (e.clientY < ZONE) {
-        const r = 1 - e.clientY / ZONE;
-        speed = -(MAX_SPEED * r * r);
-      } else if (e.clientY > vh - ZONE) {
-        const r = 1 - (vh - e.clientY) / ZONE;
-        speed = MAX_SPEED * r * r;
-      }
-      if (speed !== 0) {
-        (document.scrollingElement ?? document.documentElement).scrollTop += speed;
-      }
+      if (e.clientY < ZONE) speed = -Math.max(1, MAX_SPEED * (1 - e.clientY / ZONE));
+      else if (e.clientY > vh - ZONE) speed = Math.max(1, MAX_SPEED * (1 - (vh - e.clientY) / ZONE));
+      if (speed !== 0) window.scrollTo(0, Math.max(0, window.scrollY + speed));
     };
     window.addEventListener("drag", onDrag);
     return () => window.removeEventListener("drag", onDrag);
@@ -210,6 +205,12 @@ export default function BadgesPanel({ initialBadges, onBadgesChange, initialSort
       touchAutoScrollRafRef.current = null;
     }
   };
+  const activateLift = (id: string) => {
+    if (liftTimerRef.current) clearTimeout(liftTimerRef.current);
+    setLiftingId(id);
+    liftTimerRef.current = setTimeout(() => setLiftingId(null), 350);
+  };
+
   const updateTouchAutoScroll = (clientY: number) => {
     touchClientYRef.current = clientY;
     if (touchAutoScrollRafRef.current !== null) return; // already looping
@@ -217,20 +218,14 @@ export default function BadgesPanel({ initialBadges, onBadgesChange, initialSort
       const y = touchClientYRef.current;
       const vh = window.innerHeight;
       const ZONE = Math.min(130, vh * 0.22);
-      const MAX_SPEED = 14;
+      const MAX_SPEED = 12;
       let speed = 0;
-      if (y < ZONE) {
-        const r = 1 - y / ZONE;
-        speed = -(MAX_SPEED * r * r);
-      } else if (y > vh - ZONE) {
-        const r = 1 - (vh - y) / ZONE;
-        speed = MAX_SPEED * r * r;
-      }
+      if (y < ZONE) speed = -Math.max(1, MAX_SPEED * (1 - y / ZONE));
+      else if (y > vh - ZONE) speed = Math.max(1, MAX_SPEED * (1 - (vh - y) / ZONE));
       if (speed !== 0) {
-        (document.scrollingElement ?? document.documentElement).scrollTop += speed;
+        window.scrollTo(0, Math.max(0, window.scrollY + speed));
         touchAutoScrollRafRef.current = requestAnimationFrame(tick);
       } else {
-        // Outside scroll zone — stop the loop; it restarts next touchmove
         touchAutoScrollRafRef.current = null;
       }
     };
@@ -474,6 +469,7 @@ export default function BadgesPanel({ initialBadges, onBadgesChange, initialSort
         orgTouchRef.current.active = true;
         setDraggedOrg(org);
         navigator.vibrate?.(40);
+        activateLift(org);
       }
     }, 450);
     orgTouchRef.current = { org, startX: t.clientX, startY: t.clientY, active: false, timer };
@@ -580,6 +576,7 @@ export default function BadgesPanel({ initialBadges, onBadgesChange, initialSort
         badgeInOrgTouchRef.current.active = true;
         setDraggedBadgeInOrg(badgeId);
         navigator.vibrate?.(40);
+        activateLift(badgeId);
       }
     }, 450);
     badgeInOrgTouchRef.current = { id: badgeId, org, startX: t.clientX, startY: t.clientY, active: false, timer };
@@ -649,6 +646,7 @@ export default function BadgesPanel({ initialBadges, onBadgesChange, initialSort
         badgeInDomainTouchRef.current.active = true;
         setDraggedBadgeInDomain(badgeId);
         navigator.vibrate?.(40);
+        activateLift(badgeId);
       }
     }, 450);
     badgeInDomainTouchRef.current = { id: badgeId, domain, startX: t.clientX, startY: t.clientY, active: false, timer };
@@ -743,6 +741,7 @@ export default function BadgesPanel({ initialBadges, onBadgesChange, initialSort
         domainTouchRef.current.active = true;
         setDraggedDomain(domain);
         navigator.vibrate?.(40);
+        activateLift(domain);
       }
     }, 450);
     domainTouchRef.current = { domain, startX: t.clientX, startY: t.clientY, active: false, timer };
@@ -808,6 +807,7 @@ export default function BadgesPanel({ initialBadges, onBadgesChange, initialSort
         customTouchRef.current.active = true;
         setDraggedId(badgeId);
         navigator.vibrate?.(40);
+        activateLift(badgeId);
       }
     }, 450);
     customTouchRef.current = { id: badgeId, startX: t.clientX, startY: t.clientY, active: false, timer };
@@ -1303,15 +1303,19 @@ export default function BadgesPanel({ initialBadges, onBadgesChange, initialSort
               onTouchStart={(e) => handleOrgTouchStart(e, org)}
               onTouchMove={handleOrgTouchMove}
               onTouchEnd={handleOrgTouchEnd}
+              onContextMenu={(e) => e.preventDefault()}
               className="rounded-2xl p-4 transition-all"
               style={{
                 background: "var(--surface)",
                 border: dragOverOrg === org ? "2px dashed #7c3aed" : "1px solid var(--border)",
                 boxShadow: dragOverOrg === org ? "0 0 0 4px rgba(124,58,237,0.12)" : "var(--card-shadow)",
-                opacity: draggedOrg === org ? 0.6 : 1,
+                opacity: liftingId === org ? 1 : (draggedOrg === org ? 0.6 : 1),
+                transform: liftingId === org ? "scale(1.04) rotate(-0.8deg)" : "scale(1)",
+                zIndex: liftingId === org ? 10 : undefined,
                 cursor: "grab",
                 userSelect: "none",
                 WebkitUserSelect: "none",
+                WebkitTouchCallout: "none" as "none",
               }}
             >
               {/* Org header */}
@@ -1340,16 +1344,20 @@ export default function BadgesPanel({ initialBadges, onBadgesChange, initialSort
                       onTouchMove={(e) => { if (!draggedOrg) handleBadgeInOrgTouchMove(e); }}
                       onTouchEnd={(e) => { if (!draggedOrg) { e.stopPropagation(); handleBadgeInOrgTouchEnd(org); } }}
                       onClick={() => { if (!draggedBadgeInOrg) setSelectedOrgBadge(badge); }}
+                      onContextMenu={(e) => e.preventDefault()}
                       className="relative aspect-square rounded-xl overflow-hidden flex items-center justify-center transition-all"
                       style={{
                         background: "var(--surface-alt)",
                         border: !draggedOrg && dragOverBadgeInOrg === badge.id ? "2px dashed #7c3aed" : "1px solid var(--border)",
-                        opacity: draggedBadgeInOrg === badge.id ? 0.5 : 1,
+                        opacity: liftingId === badge.id ? 1 : (draggedBadgeInOrg === badge.id ? 0.5 : 1),
+                        transform: liftingId === badge.id ? "scale(1.05) rotate(-1deg)" : "scale(1)",
+                        zIndex: liftingId === badge.id ? 10 : undefined,
                         cursor: draggedOrg ? "grabbing" : "pointer",
                         pointerEvents: draggedOrg ? "none" : "auto",
-                        filter: !badge.isPublic ? "grayscale(1)" : "none",
+                        filter: liftingId === badge.id ? "none" : (!badge.isPublic ? "grayscale(1)" : "none"),
                         userSelect: "none",
                         WebkitUserSelect: "none",
+                        WebkitTouchCallout: "none" as "none",
                       }}
                       title={badge.title}
                     >
@@ -1358,6 +1366,8 @@ export default function BadgesPanel({ initialBadges, onBadgesChange, initialSort
                         <img
                           src={badge.imageUrl}
                           alt={badge.title}
+                          draggable={false}
+                          onDragStart={(e) => e.preventDefault()}
                           className="w-full h-full object-contain p-1.5"
                           style={{ opacity: badge.isPublic ? 1 : 0.5 }}
                         />
@@ -1412,15 +1422,19 @@ export default function BadgesPanel({ initialBadges, onBadgesChange, initialSort
               onTouchStart={(e) => handleDomainTouchStart(e, domain)}
               onTouchMove={handleDomainTouchMove}
               onTouchEnd={handleDomainTouchEnd}
+              onContextMenu={(e) => e.preventDefault()}
               className="rounded-2xl p-4 transition-all"
               style={{
                 background: "var(--surface)",
                 border: dragOverDomain === domain ? "2px dashed #7c3aed" : "1px solid var(--border)",
                 boxShadow: dragOverDomain === domain ? "0 0 0 4px rgba(124,58,237,0.12)" : "var(--card-shadow)",
-                opacity: draggedDomain === domain ? 0.6 : 1,
+                opacity: liftingId === domain ? 1 : (draggedDomain === domain ? 0.6 : 1),
+                transform: liftingId === domain ? "scale(1.04) rotate(-0.8deg)" : "scale(1)",
+                zIndex: liftingId === domain ? 10 : undefined,
                 cursor: "grab",
                 userSelect: "none",
                 WebkitUserSelect: "none",
+                WebkitTouchCallout: "none" as "none",
               }}
             >
               {/* Domain header */}
@@ -1449,22 +1463,26 @@ export default function BadgesPanel({ initialBadges, onBadgesChange, initialSort
                       onTouchMove={(e) => { if (!draggedDomain) handleBadgeInDomainTouchMove(e); }}
                       onTouchEnd={(e) => { if (!draggedDomain) { e.stopPropagation(); handleBadgeInDomainTouchEnd(domain); } }}
                       onClick={() => { if (!draggedBadgeInDomain) setSelectedDomainBadge(badge); }}
+                      onContextMenu={(e) => e.preventDefault()}
                       className="relative aspect-square rounded-xl overflow-hidden flex items-center justify-center transition-all"
                       style={{
                         background: "var(--surface-alt)",
                         border: !draggedDomain && dragOverBadgeInDomain === badge.id ? "2px dashed #7c3aed" : "1px solid var(--border)",
-                        opacity: draggedBadgeInDomain === badge.id ? 0.5 : 1,
+                        opacity: liftingId === badge.id ? 1 : (draggedBadgeInDomain === badge.id ? 0.5 : 1),
+                        transform: liftingId === badge.id ? "scale(1.05) rotate(-1deg)" : "scale(1)",
+                        zIndex: liftingId === badge.id ? 10 : undefined,
                         cursor: draggedDomain ? "grabbing" : "pointer",
                         pointerEvents: draggedDomain ? "none" : "auto",
-                        filter: !badge.isPublic ? "grayscale(1)" : "none",
+                        filter: liftingId === badge.id ? "none" : (!badge.isPublic ? "grayscale(1)" : "none"),
                         userSelect: "none",
                         WebkitUserSelect: "none",
+                        WebkitTouchCallout: "none" as "none",
                       }}
                       title={badge.title}
                     >
                       {badge.imageUrl && !isPdf ? (
                         // eslint-disable-next-line @next/next/no-img-element
-                        <img src={badge.imageUrl} alt={badge.title} className="w-full h-full object-contain p-1.5" style={{ opacity: badge.isPublic ? 1 : 0.5 }} />
+                        <img src={badge.imageUrl} alt={badge.title} draggable={false} onDragStart={(e) => e.preventDefault()} className="w-full h-full object-contain p-1.5" style={{ opacity: badge.isPublic ? 1 : 0.5 }} />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center text-[9px] font-black text-white" style={{ background: "linear-gradient(135deg, #7c3aed, #4f46e5)" }}>
                           {domainInitials}
@@ -1526,21 +1544,25 @@ export default function BadgesPanel({ initialBadges, onBadgesChange, initialSort
                   onTouchMove={handleCustomTouchMove}
                   onTouchEnd={handleCustomTouchEnd}
                   onClick={() => { if (!draggedId) setSelectedCustomBadge(badge); }}
+                  onContextMenu={(e) => e.preventDefault()}
                   className="relative aspect-square rounded-xl overflow-hidden flex items-center justify-center transition-all"
                   style={{
                     background: "var(--surface-alt)",
                     border: isDragOverBadge ? "2px dashed #7c3aed" : "1px solid var(--border)",
-                    opacity: draggedId === badge.id ? 0.35 : 1,
-                    filter: draggedId === badge.id ? "grayscale(0.7)" : (!badge.isPublic ? "grayscale(1)" : "none"),
+                    opacity: liftingId === badge.id ? 1 : (draggedId === badge.id ? 0.35 : 1),
+                    filter: liftingId === badge.id ? "none" : (draggedId === badge.id ? "grayscale(0.7)" : (!badge.isPublic ? "grayscale(1)" : "none")),
+                    transform: liftingId === badge.id ? "scale(1.05) rotate(-1deg)" : "scale(1)",
+                    zIndex: liftingId === badge.id ? 10 : undefined,
                     cursor: "pointer",
                     userSelect: "none",
                     WebkitUserSelect: "none",
+                    WebkitTouchCallout: "none" as "none",
                   }}
                   title={badge.title}
                 >
                   {badge.imageUrl && !isPdf ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={badge.imageUrl} alt={badge.title} className="w-full h-full object-contain p-1.5" style={{ opacity: badge.isPublic ? 1 : 0.5 }} />
+                    <img src={badge.imageUrl} alt={badge.title} draggable={false} onDragStart={(e) => e.preventDefault()} className="w-full h-full object-contain p-1.5" style={{ opacity: badge.isPublic ? 1 : 0.5 }} />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center text-[9px] font-black text-white" style={{ background: "linear-gradient(135deg, #7c3aed, #4f46e5)" }}>{orgInitials}</div>
                   )}

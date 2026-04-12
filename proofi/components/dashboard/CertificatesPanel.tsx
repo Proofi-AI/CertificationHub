@@ -129,6 +129,8 @@ export default function CertificatesPanel({
   // touch auto-scroll
   const touchClientYRef = useRef(0);
   const touchAutoScrollRafRef = useRef<number | null>(null);
+  const [liftingId, setLiftingId] = useState<string | null>(null);
+  const liftTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Open edit modal when parent requests editing a specific cert
   useEffect(() => {
@@ -183,16 +185,9 @@ export default function CertificatesPanel({
       const ZONE = Math.min(130, vh * 0.22);
       const MAX_SPEED = 18;
       let speed = 0;
-      if (e.clientY < ZONE) {
-        const r = 1 - e.clientY / ZONE;
-        speed = -(MAX_SPEED * r * r);
-      } else if (e.clientY > vh - ZONE) {
-        const r = 1 - (vh - e.clientY) / ZONE;
-        speed = MAX_SPEED * r * r;
-      }
-      if (speed !== 0) {
-        (document.scrollingElement ?? document.documentElement).scrollTop += speed;
-      }
+      if (e.clientY < ZONE) speed = -Math.max(1, MAX_SPEED * (1 - e.clientY / ZONE));
+      else if (e.clientY > vh - ZONE) speed = Math.max(1, MAX_SPEED * (1 - (vh - e.clientY) / ZONE));
+      if (speed !== 0) window.scrollTo(0, Math.max(0, window.scrollY + speed));
     };
     window.addEventListener("drag", onDrag);
     return () => window.removeEventListener("drag", onDrag);
@@ -204,6 +199,12 @@ export default function CertificatesPanel({
       touchAutoScrollRafRef.current = null;
     }
   };
+  const activateLift = (id: string) => {
+    if (liftTimerRef.current) clearTimeout(liftTimerRef.current);
+    setLiftingId(id);
+    liftTimerRef.current = setTimeout(() => setLiftingId(null), 350);
+  };
+
   const updateTouchAutoScroll = (clientY: number) => {
     touchClientYRef.current = clientY;
     if (touchAutoScrollRafRef.current !== null) return; // already looping
@@ -211,20 +212,14 @@ export default function CertificatesPanel({
       const y = touchClientYRef.current;
       const vh = window.innerHeight;
       const ZONE = Math.min(130, vh * 0.22);
-      const MAX_SPEED = 14;
+      const MAX_SPEED = 12;
       let speed = 0;
-      if (y < ZONE) {
-        const r = 1 - y / ZONE;
-        speed = -(MAX_SPEED * r * r);
-      } else if (y > vh - ZONE) {
-        const r = 1 - (vh - y) / ZONE;
-        speed = MAX_SPEED * r * r;
-      }
+      if (y < ZONE) speed = -Math.max(1, MAX_SPEED * (1 - y / ZONE));
+      else if (y > vh - ZONE) speed = Math.max(1, MAX_SPEED * (1 - (vh - y) / ZONE));
       if (speed !== 0) {
-        (document.scrollingElement ?? document.documentElement).scrollTop += speed;
+        window.scrollTo(0, Math.max(0, window.scrollY + speed));
         touchAutoScrollRafRef.current = requestAnimationFrame(tick);
       } else {
-        // Outside scroll zone — stop the loop; it restarts next touchmove
         touchAutoScrollRafRef.current = null;
       }
     };
@@ -584,6 +579,7 @@ export default function CertificatesPanel({
         certInDomainTouchRef.current.active = true;
         setDraggedCertInDomain(certId);
         navigator.vibrate?.(40);
+        activateLift(certId);
       }
     }, 450);
     certInDomainTouchRef.current = { id: certId, domain, startX: t.clientX, startY: t.clientY, active: false, timer };
@@ -653,6 +649,7 @@ export default function CertificatesPanel({
         certInIssuerTouchRef.current.active = true;
         setDraggedCertInIssuer(certId);
         navigator.vibrate?.(40);
+        activateLift(certId);
       }
     }, 450);
     certInIssuerTouchRef.current = { id: certId, issuer, startX: t.clientX, startY: t.clientY, active: false, timer };
@@ -721,6 +718,7 @@ export default function CertificatesPanel({
         domainTouchRef.current.active = true;
         setDraggedDomain(domain);
         navigator.vibrate?.(40);
+        activateLift(domain);
       }
     }, 450);
     domainTouchRef.current = { domain, startX: t.clientX, startY: t.clientY, active: false, timer };
@@ -786,6 +784,7 @@ export default function CertificatesPanel({
         issuerTouchRef.current.active = true;
         setDraggedIssuer(issuer);
         navigator.vibrate?.(40);
+        activateLift(issuer);
       }
     }, 450);
     issuerTouchRef.current = { issuer, startX: t.clientX, startY: t.clientY, active: false, timer };
@@ -851,6 +850,7 @@ export default function CertificatesPanel({
         customTouchRef.current.active = true;
         setDraggedId(certId);
         navigator.vibrate?.(40);
+        activateLift(certId);
       }
     }, 450);
     customTouchRef.current = { id: certId, startX: t.clientX, startY: t.clientY, active: false, timer };
@@ -1297,16 +1297,20 @@ export default function CertificatesPanel({
                 onTouchStart={(e) => handleDomainTouchStart(e, domain)}
                 onTouchMove={handleDomainTouchMove}
                 onTouchEnd={handleDomainTouchEnd}
+                onContextMenu={(e) => e.preventDefault()}
                 className="rounded-2xl p-4 transition-all"
                 style={{
                   background: "var(--surface)",
                   border: dragOverDomain === domain ? "2px dashed #7c3aed" : "1px solid var(--border)",
                   boxShadow: dragOverDomain === domain ? "0 0 0 4px rgba(124,58,237,0.12)" : "var(--card-shadow)",
-                  opacity: draggedDomain === domain ? 0.35 : 1,
-                  filter: draggedDomain === domain ? "grayscale(0.7)" : "none",
+                  opacity: liftingId === domain ? 1 : (draggedDomain === domain ? 0.35 : 1),
+                  filter: liftingId === domain ? "none" : (draggedDomain === domain ? "grayscale(0.7)" : "none"),
+                  transform: liftingId === domain ? "scale(1.04) rotate(-0.8deg)" : "scale(1)",
+                  zIndex: liftingId === domain ? 10 : undefined,
                   cursor: "grab",
                   userSelect: "none",
                   WebkitUserSelect: "none",
+                  WebkitTouchCallout: "none" as "none",
                 }}
               >
                 {/* Domain header */}
@@ -1343,17 +1347,21 @@ export default function CertificatesPanel({
                         onTouchMove={(e) => { if (!draggedDomain) handleCertInDomainTouchMove(e); }}
                         onTouchEnd={(e) => { if (!draggedDomain) { e.stopPropagation(); handleCertInDomainTouchEnd(domain); } }}
                         onClick={() => { if (!draggedCertInDomain) setSelectedDomainCert(cert); }}
+                        onContextMenu={(e) => e.preventDefault()}
                         className="relative rounded-xl overflow-hidden flex flex-col transition-all"
                         style={{
                           background: "var(--surface)",
                           border: isDragOverCert ? "2px dashed #7c3aed" : `1.5px solid ${certAccent.from}33`,
                           boxShadow: isDragOverCert ? "0 0 0 3px rgba(124,58,237,0.12)" : "var(--card-shadow)",
-                          opacity: draggedCertInDomain === cert.id ? 0.35 : 1,
+                          opacity: liftingId === cert.id ? 1 : (draggedCertInDomain === cert.id ? 0.35 : 1),
                           cursor: draggedDomain ? "grabbing" : "pointer",
                           pointerEvents: draggedDomain ? "none" : "auto",
-                          filter: draggedCertInDomain === cert.id ? "grayscale(0.7)" : (!cert.isPublic ? "grayscale(1)" : "none"),
+                          filter: liftingId === cert.id ? "none" : (draggedCertInDomain === cert.id ? "grayscale(0.7)" : (!cert.isPublic ? "grayscale(1)" : "none")),
+                          transform: liftingId === cert.id ? "scale(1.05) rotate(-1deg)" : "scale(1)",
+                          zIndex: liftingId === cert.id ? 10 : undefined,
                           userSelect: "none",
                           WebkitUserSelect: "none",
+                          WebkitTouchCallout: "none" as "none",
                         }}
                         title={cert.name}
                       >
@@ -1378,6 +1386,8 @@ export default function CertificatesPanel({
                               <img
                                 src={cert.imageUrl}
                                 alt={cert.name}
+                                draggable={false}
+                                onDragStart={(e) => e.preventDefault()}
                                 className="absolute inset-0 w-full h-full object-contain"
                               />
                             </>
@@ -1449,16 +1459,20 @@ export default function CertificatesPanel({
                 onTouchStart={(e) => handleIssuerTouchStart(e, issuer)}
                 onTouchMove={handleIssuerTouchMove}
                 onTouchEnd={handleIssuerTouchEnd}
+                onContextMenu={(e) => e.preventDefault()}
                 className="rounded-2xl p-4 transition-all"
                 style={{
                   background: "var(--surface)",
                   border: dragOverIssuer === issuer ? "2px dashed #7c3aed" : "1px solid var(--border)",
                   boxShadow: dragOverIssuer === issuer ? "0 0 0 4px rgba(124,58,237,0.12)" : "var(--card-shadow)",
-                  opacity: draggedIssuer === issuer ? 0.35 : 1,
-                  filter: draggedIssuer === issuer ? "grayscale(0.7)" : "none",
+                  opacity: liftingId === issuer ? 1 : (draggedIssuer === issuer ? 0.35 : 1),
+                  filter: liftingId === issuer ? "none" : (draggedIssuer === issuer ? "grayscale(0.7)" : "none"),
+                  transform: liftingId === issuer ? "scale(1.04) rotate(-0.8deg)" : "scale(1)",
+                  zIndex: liftingId === issuer ? 10 : undefined,
                   cursor: "grab",
                   userSelect: "none",
                   WebkitUserSelect: "none",
+                  WebkitTouchCallout: "none" as "none",
                 }}
               >
                 {/* Issuer header */}
@@ -1497,17 +1511,21 @@ export default function CertificatesPanel({
                         onTouchMove={(e) => { if (!draggedIssuer) handleCertInIssuerTouchMove(e); }}
                         onTouchEnd={(e) => { if (!draggedIssuer) { e.stopPropagation(); handleCertInIssuerTouchEnd(issuer); } }}
                         onClick={() => { if (!draggedCertInIssuer) setSelectedIssuerCert(cert); }}
+                        onContextMenu={(e) => e.preventDefault()}
                         className="relative rounded-xl overflow-hidden flex flex-col transition-all"
                         style={{
                           background: "var(--surface)",
                           border: isDragOverCert ? "2px dashed #7c3aed" : `1.5px solid ${certAccent.from}33`,
                           boxShadow: isDragOverCert ? "0 0 0 3px rgba(124,58,237,0.12)" : "var(--card-shadow)",
-                          opacity: draggedCertInIssuer === cert.id ? 0.35 : 1,
+                          opacity: liftingId === cert.id ? 1 : (draggedCertInIssuer === cert.id ? 0.35 : 1),
                           cursor: draggedIssuer ? "grabbing" : "pointer",
                           pointerEvents: draggedIssuer ? "none" : "auto",
-                          filter: draggedCertInIssuer === cert.id ? "grayscale(0.7)" : (!cert.isPublic ? "grayscale(1)" : "none"),
+                          filter: liftingId === cert.id ? "none" : (draggedCertInIssuer === cert.id ? "grayscale(0.7)" : (!cert.isPublic ? "grayscale(1)" : "none")),
+                          transform: liftingId === cert.id ? "scale(1.05) rotate(-1deg)" : "scale(1)",
+                          zIndex: liftingId === cert.id ? 10 : undefined,
                           userSelect: "none",
                           WebkitUserSelect: "none",
+                          WebkitTouchCallout: "none" as "none",
                         }}
                         title={cert.name}
                       >
@@ -1524,7 +1542,7 @@ export default function CertificatesPanel({
                               {/* eslint-disable-next-line @next/next/no-img-element */}
                               <img src={cert.imageUrl} alt="" aria-hidden className="absolute inset-0 w-full h-full object-cover scale-110 blur-xl opacity-30 pointer-events-none" />
                               {/* eslint-disable-next-line @next/next/no-img-element */}
-                              <img src={cert.imageUrl} alt={cert.name} className="absolute inset-0 w-full h-full object-contain" />
+                              <img src={cert.imageUrl} alt={cert.name} draggable={false} onDragStart={(e) => e.preventDefault()} className="absolute inset-0 w-full h-full object-contain" />
                             </>
                           ) : cert.imageUrl && isPdf ? (
                             <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 text-slate-400 dark:text-white/30">
@@ -1609,16 +1627,20 @@ export default function CertificatesPanel({
                   onTouchMove={handleCustomTouchMove}
                   onTouchEnd={handleCustomTouchEnd}
                   onClick={() => { if (!draggedId) setSelectedCustomCert(cert); }}
+                  onContextMenu={(e) => e.preventDefault()}
                   className="relative rounded-xl overflow-hidden flex flex-col transition-all"
                   style={{
                     background: "var(--surface)",
                     border: isDragOverCert ? "2px dashed #7c3aed" : `1.5px solid ${certAccent.from}33`,
                     boxShadow: isDragOverCert ? "0 0 0 3px rgba(124,58,237,0.12)" : "var(--card-shadow)",
-                    opacity: draggedId === cert.id ? 0.35 : 1,
-                    filter: draggedId === cert.id ? "grayscale(0.7)" : (!cert.isPublic ? "grayscale(1)" : "none"),
+                    opacity: liftingId === cert.id ? 1 : (draggedId === cert.id ? 0.35 : 1),
+                    filter: liftingId === cert.id ? "none" : (draggedId === cert.id ? "grayscale(0.7)" : (!cert.isPublic ? "grayscale(1)" : "none")),
+                    transform: liftingId === cert.id ? "scale(1.05) rotate(-1deg)" : "scale(1)",
+                    zIndex: liftingId === cert.id ? 10 : undefined,
                     cursor: "pointer",
                     userSelect: "none",
                     WebkitUserSelect: "none",
+                    WebkitTouchCallout: "none" as "none",
                   }}
                   title={cert.name}
                 >
@@ -1631,7 +1653,7 @@ export default function CertificatesPanel({
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img src={cert.imageUrl} alt="" aria-hidden className="absolute inset-0 w-full h-full object-cover scale-110 blur-xl opacity-30 pointer-events-none" />
                         {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={cert.imageUrl} alt={cert.name} className="absolute inset-0 w-full h-full object-contain" />
+                        <img src={cert.imageUrl} alt={cert.name} draggable={false} onDragStart={(e) => e.preventDefault()} className="absolute inset-0 w-full h-full object-contain" />
                       </>
                     ) : cert.imageUrl && isPdf ? (
                       <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 text-slate-400 dark:text-white/30">
